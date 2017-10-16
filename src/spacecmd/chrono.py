@@ -50,11 +50,11 @@ class Curses:
 
 
 def visi(sat, sta, start, stop, step, threshold=10):
-    ephem = sat.ephem()
+    tle = sat.tle()
     p = Pass(sat, sta)
     passes = []
 
-    for orb in sta.visibility(ephem, start, stop, step, events=True):
+    for orb in sta.visibility(tle, start, stop, step, events=True):
 
         if orb.info:
             elev = np.degrees(orb.phi)
@@ -73,9 +73,9 @@ def visi(sat, sta, start, stop, step, threshold=10):
 
 def compute_pass(pass_obj, step):
     pass_details = []
-    ephem = pass_obj.satellite.ephem()
+    tle = pass_obj.satellite.tle()
 
-    for orb in pass_obj.station.visibility(ephem, start=pass_obj.aos - step, stop=timedelta(hours=24), step=step, events=True):
+    for orb in pass_obj.station.visibility(tle, start=pass_obj.aos - step, stop=timedelta(hours=24), step=step, events=True):
         pass_details.append(orb)
         if orb.info.startswith("LOS"):
             return pass_details
@@ -199,11 +199,11 @@ def spacecmd_chrono(*argv):
     Compute available passes for the day
 
     Usage:
-        space-chrono <station> [-t <threshold>] [--live] [-d <days>] [-s <sat>] [--no-cache]
+        space-chrono <station> [-t <thresh>] [--live] [-d <days>] [-s <sat>] [-n]
 
     Options:
         <station>       Station for which to compute the passes
-        -t <threshold>  Minimun angle to keep a pass [default: 10]
+        -t <thresh>  Minimun angle to keep a pass [default: 10]
         -l, --live      Dynamic display
         -d <days>       How long should be the prediction (in days) [default: 0.5]
         -s <sat>        Only for the desired satellite

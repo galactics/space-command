@@ -37,7 +37,7 @@ def spacecmd_passes(*argv):
       -f, --freq <f>   Frequency in MHz used do compute doppler shift
     """
 
-    args = docopt(dedent(space_passes.__doc__), argv=argv)
+    args = docopt(dedent(spacecmd_passes.__doc__), argv=argv)
 
     if args['<date>'] is None:
         now = Date.now()
@@ -48,8 +48,6 @@ def spacecmd_passes(*argv):
     pass_nb = int(args['-p'])
 
     sat = Satellite.get(name=args['<sat>'])
-    ephem = sat.ephem()
-
     station = get_station(args["<station>"])
 
     count = 0
@@ -68,7 +66,7 @@ def spacecmd_passes(*argv):
     light = LightListener()
 
     print("==================================================================")
-    for orb in station.visibility(ephem, start=start, stop=timedelta(hours=24), step=timedelta(seconds=30), events=True):
+    for orb in station.visibility(sat.ephem(), start=start, stop=timedelta(hours=24), step=timedelta(seconds=30), events=True):
 
         if orb.info.startswith("LOS"):
             sun = get_body('Sun').propagate(orb.date)

@@ -34,7 +34,7 @@ def create_ephem(sat, start, stop, step, frame=None, interp=None):
 
         CCSDS.dump(
             ephem,
-            get_ephem_path(sat.name),
+            ephem_path,
             name=sat.name,
             cospar_id=sat.cospar_id,
             originator=config.get('center', 'name', "Unknown")

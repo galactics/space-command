@@ -10,6 +10,7 @@ install_requires = [
     'docopt',
     'matplotlib'
 ]
+
 version = "0.1"
 
 setup(
