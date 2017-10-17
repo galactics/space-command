@@ -35,42 +35,42 @@ class TleDatabase:
     CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
     CELESTRAK_PAGES = [
         "stations.txt",
-        # "tle-new.txt",
-        # "visual.txt",
-        # "weather.txt",
+        "tle-new.txt",
+        "visual.txt",
+        "weather.txt",
         "noaa.txt",
-        # "goes.txt",
+        "goes.txt",
         "resource.txt",
-        # "sarsat.txt",
-        # "dmc.txt",
-        # "tdrss.txt",
-        # "argos.txt",
-        # "geo.txt",
-        # "intelsat.txt",
-        # "gorizont.txt",
-        # "raduga.txt",
-        # "molniya.txt",
-        # "iridium.txt",
-        # "orbcomm.txt",
-        # "globalstar.txt",
+        "sarsat.txt",
+        "dmc.txt",
+        "tdrss.txt",
+        "argos.txt",
+        "geo.txt",
+        "intelsat.txt",
+        "gorizont.txt",
+        "raduga.txt",
+        "molniya.txt",
+        "iridium.txt",
+        "orbcomm.txt",
+        "globalstar.txt",
         "amateur.txt",
-        # "x-comm.txt",
-        # "other-comm.txt",
-        # "gps-ops.txt",
-        # "glo-ops.txt",
-        # "galileo.txt",
-        # "beidou.txt",
-        # "sbas.txt",
-        # "nnss.txt",
-        # "musson.txt",
-        # "science.txt",
-        # "geodetic.txt",
-        # "engineering.txt",
-        # "education.txt",
-        # "military.txt",
-        # "radar.txt",
-        # "cubesat.txt",
-        # "other.txt"
+        "x-comm.txt",
+        "other-comm.txt",
+        "gps-ops.txt",
+        "glo-ops.txt",
+        "galileo.txt",
+        "beidou.txt",
+        "sbas.txt",
+        "nnss.txt",
+        "musson.txt",
+        "science.txt",
+        "geodetic.txt",
+        "engineering.txt",
+        "education.txt",
+        "military.txt",
+        "radar.txt",
+        "cubesat.txt",
+        "other.txt"
     ]
 
     dbfilename = "tle.db"
@@ -108,13 +108,13 @@ class TleDatabase:
             # Vidage de la table
             self.model.delete().execute()
 
-    def fetch(self, src=None):
+    def fetch(self, src=None, sat_list=None):
         if src == 'spacetrack':
-            self.fetch_spacetrack()
+            self.fetch_spacetrack(sat_list)
         else:
-            self.fetch_celestrak()
+            self.fetch_celestrak(sat_list)
 
-    def fetch_spacetrack(self):
+    def fetch_spacetrack(self, sat_list=None):
         auth = config['spacetrack']
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
         full = requests.get(self.SPACETRACK_URL, cookies=init.cookies)
@@ -140,9 +140,21 @@ class TleDatabase:
                 i = self.insert(text, "celestrak", filename)
                 print("{:<20} {:>3}".format(filename, i))
 
-    def fetch_celestrak(self):
+    def fetch_celestrak(self, sat_list=None):
         """Retrieve TLE from the celestrak.com website asynchronously
         """
+
+        # if a list of satellites is provided, filter the files which will be
+        # download in order to minimize the number of requests
+        if sat_list is not None:
+            filelist = []
+            for sat in sat_list:
+                filename = sat._raw_raw_tle().src.replace("celestrak, ", "")
+                filelist.append(filename)
+
+            filelist = list(set(filelist).intersection(self.CELESTRAK_PAGES))
+        else:
+            filelist = self.CELESTRAK_PAGES
 
         loop = asyncio.get_event_loop()
 
@@ -159,7 +171,7 @@ class TleDatabase:
 
             # Task list initialisation
             tasks = []
-            for p in self.CELESTRAK_PAGES:
+            for p in filelist:
                 tasks.append(asyncio.ensure_future(self.fetch_file(session, p)))
 
             # Triggering of tasks (asyncio.wait())
@@ -179,7 +191,7 @@ class TleDatabase:
             Tle:
         """
         entity = cls()._get_last_raw(**kwargs)
-        return Tle("%s\n%s" % (entity.name, entity.data))
+        return Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
 
     def _get_last_raw(self, **kwargs):
         """
@@ -239,12 +251,12 @@ class TleDatabase:
         return len(entities)
 
 
-def spacecmd_tle(*argv):
+def space_tle(*argv):
     """\
     Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
-      space-tle get [--src <src>]
+      space-tle get [--src <src>] [--full]
       space-tle show <mode> <selector>
       space-tle insert <file>
 
@@ -259,18 +271,25 @@ def spacecmd_tle(*argv):
       <file>       File to insert in the database
       --src <src>  Selection of the source of data ('celestrak' or
                    'spacetrack') [default: celestrak]
+      --full       Retrieve the entire database
     """
 
+    from .satellites import Satellite
     from docopt import docopt
     from textwrap import dedent
 
     from glob import glob
 
-    args = docopt(dedent(spacecmd_tle.__doc__), argv=argv)
+    args = docopt(dedent(space_tle.__doc__), argv=argv)
     site = TleDatabase()
 
+    if args["--full"]:
+        sat_list = None  # None means all satellites of the database
+    else:
+        sat_list = list(Satellite.get_all())
+
     if args['get']:
-        site.fetch(args['--src'])
+        site.fetch(src=args['--src'], sat_list=sat_list)
     elif args['show']:
         modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
         kwargs = {modes[args['<mode>']]: args['<selector>']}

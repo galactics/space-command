@@ -18,6 +18,10 @@ class Satellite:
         self.emitters = kwargs.get('emitters', {})
         self.default_i = kwargs.get('default', '')
         self.color = kwargs.get('color', '')
+        self.celestrak_file = kwargs.get('celestrak_file', '')
+
+    def __repr__(self):
+        return "<Satellite '%s'>" % self.name
 
     @classmethod
     def db_path(cls):
@@ -102,6 +106,7 @@ class Satellite:
             'emitters': emitters,
             'default': self.default_i,
             'color': self.color,
+            'celestrak_file': self.celestrak_file
         }
         self.db(complete_db)
 
@@ -115,7 +120,7 @@ class Emitter:
         self.passband = int(passband)
 
 
-def spacecmd_sats(*argv):
+def space_sats(*argv):
     """\
     Informations concerning the satellite database
 
@@ -133,33 +138,49 @@ def spacecmd_sats(*argv):
     from docopt import docopt
     from textwrap import dedent
 
-    args = docopt(dedent(spacecmd_sats.__doc__))
+    args = docopt(dedent(space_sats.__doc__), argv=argv)
 
     if args['create']:
-        tle = TleDatabase.get_last(**{args['<mode>'] + "_id": args['<id>']})
+
+        params = {args['<mode>'] + "_id": args['<id>']}
+        tle = TleDatabase.get_last(**params)
+
+        source = tle.kwargs['src'].replace("celestrak, ", "") if tle.kwargs['src'].startswith('celestrak') else ""
+
         sat = Satellite(tle.name, **{
             'cospar_id': tle.cospar_id,
             'norad_id': tle.norad_id,
-            'color': [0, 0, 0, 1]
+            'color': [0, 0, 0, 1],
+            'celestrak_file': source
         })
         sat.save()
     else:
         for sat in Satellite.get_all():
             print(sat.name)
-            print("=" * len(sat.name))
+            print("-" * len(sat.name))
 
-            print("   Norad:     %d" % sat.norad_id)
-            print("   Cospar:    %s" % sat.cospar_id)
+            print("Norad      %d" % sat.norad_id)
+            print("Cospar     %s" % sat.cospar_id)
+
             tle = sat.tle()
             raw = sat._raw_raw_tle()
-            ephem = sat.ephem()
-            print("   TLE:       {:%Y-%m-%d %H:%M:%S} from {}".format(tle.date, raw.src))
-            print("   ephem:")
-            print("      start:  {e.start:%Y-%m-%d %H:%M}\n      stop:   {e.stop:%Y-%m-%d %H:%M}\n      frame:  {e.frame}".format(e=ephem))
-            print("   emitters:")
-            for e in sat.emitters.values():
-                print("      {e.name} = {e.mode} {freq:7.3f} MHz {e.passband} Hz".format(
-                    e=e,
-                    freq=e.freq * 1e-6,
-                ))
+            print("TLE        {:%Y-%m-%d %H:%M:%S} from {}".format(tle.date, raw.src))
+            print("TLE name   %s" % raw.name)
+
+            try:
+                ephem = sat.ephem()
+            except:
+                pass
+            else:
+                print("ephem:")
+                print("   start:  {e.start:%Y-%m-%d %H:%M}\n      stop:   {e.stop:%Y-%m-%d %H:%M}\n      frame:  {e.frame}".format(e=ephem))
+
+            if sat.emitters:
+                print("emitters:")
+                for e in sat.emitters.values():
+                    print("   {e.name} = {e.mode} {freq:7.3f} MHz {e.passband} Hz".format(
+                        e=e,
+                        freq=e.freq * 1e-6,
+                    ))
+
             print()

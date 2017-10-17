@@ -49,7 +49,7 @@ def get_station(name):
         return list_stations()[name]
 
 
-def spacecmd_stations(*argv):
+def space_stations(*argv):
     """\
     List available stations
     """

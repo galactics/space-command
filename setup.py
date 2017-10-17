@@ -38,7 +38,7 @@ setup(
     install_requires=install_requires,
     entry_points={
         'console_scripts': [
-            "space = spacecmd.main:main"
+            "space = space.__main__:main"
         ]
     }
 )

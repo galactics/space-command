@@ -9,39 +9,21 @@ from collections import OrderedDict, namedtuple
 from importlib import import_module
 from textwrap import dedent
 
-from beyond.config import config
+from . import init
 
 
 def exception(type, value, tb):
+    """Exception hook, in order to start pdb when an exception occurs
+    """
     import pdb
     import traceback
     traceback.print_exception(type, value, tb)
     pdb.pm()
 
 
-def init():
-    """Create a basic environment
-    """
-    config_path = Path.home() / '.space'
-    if not config_path.exists():
-        print("creation of '%s'" % config_path)
-        config_path.mkdir()
-
-    conf_file = config_path / "beyond.conf"
-    if not conf_file.exists():
-        print("beyond.conf initialisation")
-
-        (config_path / "tmp").mkdir()
-
-        with conf_file.open('w') as f:
-            f.write("[env]\neop_source = daily")
-
-        config.load(config_path)
-    else:
-        config.load(config_path)
-
-
 def get_commands():
+    """Retrieve available commands
+    """
 
     Command = namedtuple('Command', ['func', 'doc'])
 
@@ -51,9 +33,9 @@ def get_commands():
 
     for file in path.iterdir():
         try:
-            module = import_module(".%s" % file.stem, 'spacecmd')
-            for cmd in [getattr(module, x) for x in dir(module) if x.startswith('spacecmd_')]:
-                name = cmd.__name__[9:]
+            module = import_module(".%s" % file.stem, 'space')
+            for cmd in [getattr(module, x) for x in dir(module) if x.startswith('space_')]:
+                name = cmd.__name__[6:]
                 doc = dedent(cmd.__doc__.splitlines()[0]) if cmd.__doc__ is not None else ""
                 commands[name] = Command(cmd, doc)
         except ModuleNotFoundError as e:
@@ -63,24 +45,38 @@ def get_commands():
 
 
 def main():
+    """Direct the user to the right subcommand
+    """
+
+    # List of available subcommands
     commands = get_commands()
-    init()
 
     if "--pdb" in sys.argv:
         sys.excepthook = exception
         sys.argv.remove('--pdb')
 
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
+        # No or wrong subcommand
 
         helper = "Available sub-commands :\n"
-        helper += "\n".join(["  {:<8} {}".format(k, v[1]) for k, v in sorted(commands.items())])
+        for name, cmd in sorted(commands.items()):
+            helper += " {:<10} {}\n".format(name, cmd.doc)
 
         print(__doc__)
         print(helper)
         sys.exit(-1)
 
-    command = sys.argv[1]
-    sys.argv.pop(0)
-    func = commands[command][0]
+    # retrieve the subcommand and its arguments
+    _, command, *args = sys.argv
+    # get the function associated with the subcommand
+    func = commands[command].func
 
-    func(*sys.argv[1:])
+    # load configuration and create missing folders
+    init()
+
+    # Call the function associated with the subcommand
+    func(*args)
+
+
+if __name__ == "__main__":
+    main()

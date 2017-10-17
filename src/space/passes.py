@@ -19,7 +19,7 @@ from .circle import circle
 from .stations import get_station
 
 
-def spacecmd_passes(*argv):
+def space_passes(*argv):
     """\
     Compute and plot passes geometry
 
@@ -37,7 +37,7 @@ def spacecmd_passes(*argv):
       -f, --freq <f>   Frequency in MHz used do compute doppler shift
     """
 
-    args = docopt(dedent(spacecmd_passes.__doc__), argv=argv)
+    args = docopt(dedent(space_passes.__doc__), argv=argv)
 
     if args['<date>'] is None:
         now = Date.now()
@@ -66,7 +66,7 @@ def spacecmd_passes(*argv):
     light = LightListener()
 
     print("==================================================================")
-    for orb in station.visibility(sat.ephem(), start=start, stop=timedelta(hours=24), step=timedelta(seconds=30), events=True):
+    for orb in station.visibility(sat.tle(), start=start, stop=timedelta(hours=24), step=timedelta(seconds=30), events=True):
 
         if orb.info.startswith("LOS"):
             sun = get_body('Sun').propagate(orb.date)

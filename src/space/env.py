@@ -34,7 +34,7 @@ async def fetch(session, address, dst):
     print("finished", filepath)
 
 
-def spacecmd_env(*argv):
+def space_env(*argv):
     """\
     Retrieve environement data
 
@@ -52,7 +52,7 @@ def spacecmd_env(*argv):
     from docopt import docopt
     from textwrap import dedent
 
-    args = docopt(dedent(spacecmd_env.__doc__), argv=argv)
+    args = docopt(dedent(space_env.__doc__), argv=argv)
     env_folder = config['folder'] / "env"
 
     if not args['get']:
