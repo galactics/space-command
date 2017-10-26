@@ -286,7 +286,11 @@ def space_tle(*argv):
     if args["--full"]:
         sat_list = None  # None means all satellites of the database
     else:
-        sat_list = list(Satellite.get_all())
+        try:
+            sat_list = list(Satellite.get_all())
+        except Exception:
+            # In case of missing file
+            sat_list = None
 
     if args['get']:
         site.fetch(src=args['--src'], sat_list=sat_list)

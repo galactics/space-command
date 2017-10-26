@@ -37,6 +37,8 @@ def space_passes(*argv):
       -f, --freq <f>   Frequency in MHz used do compute doppler shift
     """
 
+    import sys
+
     args = docopt(dedent(space_passes.__doc__), argv=argv)
 
     if args['<date>'] is None:
@@ -47,8 +49,17 @@ def space_passes(*argv):
 
     pass_nb = int(args['-p'])
 
-    sat = Satellite.get(name=args['<sat>'])
-    station = get_station(args["<station>"])
+    try:
+        station = get_station(args["<station>"])
+    except ValueError:
+        print("Unknwon station '{}'".format(args['<station>']))
+        sys.exit(-1)
+
+    try:
+        sat = Satellite.get(name=args['<sat>'])
+    except ValueError:
+        print("Unknwon satellite '{}'".format(args['<sat>']))
+        sys.exit(-1)
 
     count = 0
     lats, lons = [], []
