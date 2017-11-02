@@ -34,42 +34,14 @@ class TleDatabase:
 
     CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
     CELESTRAK_PAGES = [
-        "stations.txt",
-        "tle-new.txt",
-        "visual.txt",
-        "weather.txt",
-        "noaa.txt",
-        "goes.txt",
-        "resource.txt",
-        "sarsat.txt",
-        "dmc.txt",
-        "tdrss.txt",
-        "argos.txt",
-        "geo.txt",
-        "intelsat.txt",
-        "gorizont.txt",
-        "raduga.txt",
-        "molniya.txt",
-        "iridium.txt",
-        "orbcomm.txt",
-        "globalstar.txt",
-        "amateur.txt",
-        "x-comm.txt",
-        "other-comm.txt",
-        "gps-ops.txt",
-        "glo-ops.txt",
-        "galileo.txt",
-        "beidou.txt",
-        "sbas.txt",
-        "nnss.txt",
-        "musson.txt",
-        "science.txt",
-        "geodetic.txt",
-        "engineering.txt",
-        "education.txt",
-        "military.txt",
-        "radar.txt",
-        "cubesat.txt",
+        "stations.txt", "tle-new.txt", "visual.txt", "weather.txt", "noaa.txt",
+        "goes.txt", "resource.txt", "sarsat.txt", "dmc.txt", "tdrss.txt",
+        "argos.txt", "geo.txt", "intelsat.txt", "gorizont.txt", "raduga.txt",
+        "molniya.txt", "iridium.txt", "orbcomm.txt", "globalstar.txt",
+        "amateur.txt", "x-comm.txt", "other-comm.txt", "gps-ops.txt",
+        "glo-ops.txt", "galileo.txt", "beidou.txt", "sbas.txt", "nnss.txt",
+        "musson.txt", "science.txt", "geodetic.txt", "engineering.txt",
+        "education.txt", "military.txt", "radar.txt", "cubesat.txt",
         "other.txt"
     ]
 
@@ -108,11 +80,11 @@ class TleDatabase:
             # Vidage de la table
             self.model.delete().execute()
 
-    def fetch(self, src=None, sat_list=None):
+    def fetch(self, src=None, sat_list=None, file=None):
         if src == 'spacetrack':
             self.fetch_spacetrack(sat_list)
         else:
-            self.fetch_celestrak(sat_list)
+            self.fetch_celestrak(sat_list, file)
 
     def fetch_spacetrack(self, sat_list=None):
         auth = config['spacetrack']
@@ -134,13 +106,13 @@ class TleDatabase:
             async with session.get(self.CELESTRAK_URL + filename) as response:
                 text = await response.text()
 
-                with open(config['folder'] / "tmp" / ("celestrak_%s" % filename), "w") as fp:
+                with open(config['folder'] / "tmp" / "celestrak" / filename, "w") as fp:
                     fp.write(text)
 
                 i = self.insert(text, "celestrak", filename)
                 print("{:<20} {:>3}".format(filename, i))
 
-    def fetch_celestrak(self, sat_list=None):
+    def fetch_celestrak(self, sat_list=None, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
         """
 
@@ -153,6 +125,11 @@ class TleDatabase:
                 filelist.append(filename)
 
             filelist = list(set(filelist).intersection(self.CELESTRAK_PAGES))
+        elif file is not None:
+            if file not in self.CELESTRAK_PAGES:
+                raise ValueError("Unknown celestrak page '%s'" % file)
+
+            filelist = [file]
         else:
             filelist = self.CELESTRAK_PAGES
 
@@ -256,22 +233,29 @@ def space_tle(*argv):
     Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
-      space-tle get [--src <src>] [--full]
-      space-tle show <mode> <selector>
+      space-tle get [--full|--file <file>]
+      space-tle show <mode> <selector> ...
       space-tle insert <file>
 
     Options:
-      get          Retrieve data from Celestrak or Spacetrack websites
-      show         Display TLE format for a given object
-      insert       Insert a file into the database
-      <mode>       Define the criterion on which the research will be done
-                   Available modes are 'norad', 'cospar', 'name'
-      <selector>   Depending on <mode>, this field should be the NORAD-ID,
-                   COSPAR-ID, or name of the desired object.
-      <file>       File to insert in the database
-      --src <src>  Selection of the source of data ('celestrak' or
-                   'spacetrack') [default: celestrak]
-      --full       Retrieve the entire database
+      get            Retrieve data from Celestrak or Spacetrack websites
+      show           Display TLE format for a given object
+      insert         Insert a file into the database
+      <mode>         Define the criterion on which the research will be done
+                     Available modes are 'norad', 'cospar', 'name'
+      <selector>     Depending on <mode>, this field should be the NORAD-ID,
+                     COSPAR-ID, or name of the desired object.
+      <file>         File to insert in the database
+      --full         Retrieve the entire database
+      --file <file>  In the case of celestrak, only retrieve one file
+
+    Examples:
+      space tle get         # Retrieve only the TLE of the satellites in the DB
+      space tle get --full  # Retrieve all the files of celestrak
+      space tle get --file visual.txt  # Retrieve only that file from celestrak
+      space tle show norad 25544       # Display the TLE of the ISS
+      space tle show cospar 1998-067A  # Display the TLE of the ISS, too
+      space insert file.txt  # Insert all the TLE found in the file to the DB
     """
 
     from .satellites import Satellite
@@ -283,20 +267,24 @@ def space_tle(*argv):
     args = docopt(dedent(space_tle.__doc__), argv=argv)
     site = TleDatabase()
 
-    if args["--full"]:
-        sat_list = None  # None means all satellites of the database
-    else:
-        try:
-            sat_list = list(Satellite.get_all())
-        except Exception:
-            # In case of missing file
-            sat_list = None
-
     if args['get']:
-        site.fetch(src=args['--src'], sat_list=sat_list)
+
+        kwargs = dict(src="celestrak", sat_list=None)
+
+        if not args["--full"]:
+            if args['--file']:
+                kwargs['file'] = args['--file']
+            else:
+                try:
+                    kwargs['sat_list'] = list(Satellite.get_all())
+                except Exception:
+                    # In case of missing file
+                    kwargs['sat_list'] = None
+
+        site.fetch(**kwargs)
     elif args['show']:
         modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
-        kwargs = {modes[args['<mode>']]: args['<selector>']}
+        kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
         entity = site._get_last_raw(**kwargs)
         print("%s\n%s" % (entity.name, entity.data))
     elif args['insert']:
