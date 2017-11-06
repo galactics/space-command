@@ -8,8 +8,6 @@ from .tle import TleDatabase
 
 class Satellite:
 
-    _ephem = None
-
     def __init__(self, name, **kwargs):
 
         self.name = name
@@ -49,13 +47,6 @@ class Satellite:
 
     def _raw_raw_tle(self):
         return TleDatabase()._get_last_raw(norad_id=self.norad_id)
-
-    def ephem(self):
-
-        if self._ephem is None:
-            from .ephem import get_ephem
-            self._ephem = get_ephem(self.name)
-        return self._ephem
 
     @classmethod
     def get_all(cls):
@@ -166,14 +157,6 @@ def space_sats(*argv):
             raw = sat._raw_raw_tle()
             print("TLE        {:%Y-%m-%d %H:%M:%S} from {}".format(tle.date, raw.src))
             print("TLE name   %s" % raw.name)
-
-            try:
-                ephem = sat.ephem()
-            except:
-                pass
-            else:
-                print("ephem:")
-                print("   start:  {e.start:%Y-%m-%d %H:%M}\n      stop:   {e.stop:%Y-%m-%d %H:%M}\n      frame:  {e.frame}".format(e=ephem))
 
             if sat.emitters:
                 print("emitters:")
