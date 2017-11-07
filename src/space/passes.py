@@ -23,20 +23,31 @@ def space_passes(*argv):
     Compute and plot passes geometry
 
     Usage:
-      space-passes <station> [<satellite>] [-d <date>] [-s <sec>] [-p <nb>]
-      space-passes <station> [<satellite>] [-negf <f>]
+      space-passes <station> [<satellite>...] [options]
 
     Option:
-      -h --help          Show this help
-      <station>          Location from which the satellite is tracked
-      <satellite>        Satellite
-      -d, --date <date>  Starting date of the simulation. Default is now
-                         format: "%Y-%m-%dT%H:%M:%S")
-      -n, --no-events    Don't compute AOS, MAX and LOS
-      -e, --events-only  Only show AOS, MAX and LOS
-      -s, --step <sec>   Step-size (in seconds) [default: 30]
-      -p, --passes <nb>  Number of passes to display [default: 1]
-      -g, --graphs       Display graphics with matplotlib
+      -h --help      Show this help
+      <station>      Location from which the satellite is tracked
+      <satellite>    Satellite to track. If absent the orbit of the satellite(s)
+                     should be provided as stdin in TLE format (see example)
+      --date <date>  Starting date of the simulation. Default is now
+                     format: "%Y-%m-%dT%H:%M:%S")
+      --no-events    Don't compute AOS, MAX and LOS
+      --events-only  Only show AOS, MAX and LOS
+      --step <sec>   Step-size (in seconds) [default: 30]
+      --passes <nb>  Number of passes to display [default: 1]
+      --graphs       Display graphics with matplotlib
+
+    Examples:
+      Simple computation of the ISS, TLS is the name of my station
+
+          $ space passes TLS ISS
+
+      Hubble is not part of my satellite database, but I want to compute its
+      visibility just once
+
+          $ space tle show norad 20580 | space passes TLS
+
     """
 
     import sys
@@ -63,7 +74,7 @@ def space_passes(*argv):
 
     if args['<satellite>'] is not None:
         try:
-            sats = [Satellite.get(name=args['<satellite>'])]
+            sats = [Satellite.get(name=sat) for sat in args['<satellite>']]
         except ValueError:
             print("Unknwon satellite '{}'".format(args['<satellite>']))
             sys.exit(-1)
