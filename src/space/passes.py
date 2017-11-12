@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from docopt import docopt
-from textwrap import dedent
+from textwrap import dedent, indent
 from datetime import timedelta
 from pathlib import Path
 
@@ -46,7 +46,7 @@ def space_passes(*argv):
       Hubble is not part of my satellite database, but I want to compute its
       visibility just once
 
-          $ space tle show norad 20580 | space passes TLS
+          $ space tle norad 20580 | space passes TLS
 
     """
 
@@ -58,7 +58,7 @@ def space_passes(*argv):
         now = Date.now()
         start = Date(now.d, round(now.s))
     else:
-        start = Date.strptime(args['<date>'], "%Y-%m-%dT%H:%M:%S")
+        start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
 
     step = timedelta(seconds=float(args['--step']))
     stop = timedelta(days=1)
@@ -72,7 +72,7 @@ def space_passes(*argv):
         print("Unknwon station '{}'".format(args['<station>']))
         sys.exit(-1)
 
-    if args['<satellite>'] is not None:
+    if len(args['<satellite>']) > 0:
         try:
             sats = [Satellite.get(name=sat) for sat in args['<satellite>']]
         except ValueError:
@@ -81,13 +81,18 @@ def space_passes(*argv):
     elif not sys.stdin.isatty():
         # Retrieve orbit from stdin (as a list of TLE)
         sats = []
-        tles = Tle.from_string(sys.stdin.read())
-        for tle in tles:
+        stdin = sys.stdin.read()
+        for tle in Tle.from_string(stdin):
             sats.append(Satellite(
                 name=tle.name,
                 cospar_id=tle.cospar_id,
                 norad_id=tle.norad_id
             ))
+
+        if not sats:
+            print("No TLE provided, data in stdin was:\n")
+            print(indent(stdin, "   "))
+            sys.exit(-1)
     else:
         print("No satellite defined")
         sys.exit(-1)
