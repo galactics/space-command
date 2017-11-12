@@ -52,6 +52,9 @@ def space_passes(*argv):
 
     import sys
 
+    ######################
+    # Arguments handling #
+    ######################
     args = docopt(dedent(space_passes.__doc__), argv=argv)
 
     if args['--date'] is None:
@@ -80,14 +83,13 @@ def space_passes(*argv):
             sys.exit(-1)
     elif not sys.stdin.isatty():
         # Retrieve orbit from stdin (as a list of TLE)
-        sats = []
+
         stdin = sys.stdin.read()
-        for tle in Tle.from_string(stdin):
-            sats.append(Satellite(
+
+        sats = [Satellite(
                 name=tle.name,
                 cospar_id=tle.cospar_id,
-                norad_id=tle.norad_id
-            ))
+                norad_id=tle.norad_id) for tle in Tle.from_string(stdin)]
 
         if not sats:
             print("No TLE provided, data in stdin was:\n")
@@ -97,10 +99,13 @@ def space_passes(*argv):
         print("No satellite defined")
         sys.exit(-1)
 
+    ######################
+    # Actual computation #
+    ######################
     lats, lons = [], []
     azims, elevs = [], []
 
-    header = "Infos      Time                        Azim    Elev    Dist (km)  Light   "
+    header = "Infos    Sat  Time                        Azim    Elev    Dist (km)  Light    "
     print(header)
     print("=" * len(header))
 
@@ -119,7 +124,7 @@ def space_passes(*argv):
             elevs.append(90 - elev)
             r = orb.r / 1000.
 
-            print("{orb.info:10} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+            print("{orb.info:8} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
                 orb=orb, r=r, azim=azim, elev=elev, light=light.info(orb),
                 sat=sat
             ))
@@ -135,11 +140,13 @@ def space_passes(*argv):
                 if count == pass_nb:
                     break
 
+    # Plotting
     if args['--graphs']:
         path = Path(__file__).parent
 
         im = plt.imread("%s/static/earth.png" % path)
 
+        # Polar plot of the passes
         plt.figure()
         ax = plt.subplot(111, projection='polar')
         ax.set_theta_zero_location('N')
@@ -148,6 +155,7 @@ def space_passes(*argv):
         ax.set_yticklabels(map(str, range(90, 0, -20)))
         ax.set_rmax(90)
 
+        # Ground-track of the passes
         plt.figure(figsize=(15.2, 8.2))
         plt.imshow(im, extent=[-180, 180, -90, 90])
         plt.plot(lons, lats, 'r.')
