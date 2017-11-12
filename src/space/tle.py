@@ -12,20 +12,6 @@ from beyond.orbits.tle import Tle
 from beyond.config import config
 
 
-class TleModel(Model):
-
-    norad_id = IntegerField()
-    cospar_id = CharField()
-    name = CharField()
-    data = TextField()
-    epoch = DateField()
-    src = TextField()
-    insert_date = DateField()
-
-    class Meta:
-        pass
-
-
 class TleDatabase:
 
     SPACETRACK_URL_AUTH = "https://www.space-track.org/ajaxauth/login"
@@ -45,7 +31,7 @@ class TleDatabase:
         "other.txt"
     ]
 
-    dbfilename = "tle.db"
+    db = SqliteDatabase(None)
 
     def __new__(cls, *args, **kwargs):
         if not hasattr(cls, '_instance'):
@@ -56,21 +42,8 @@ class TleDatabase:
 
         self._cache = {}
         self.model = TleModel
-        self.model._meta.database = self.db
-
-        if not self.dbpath.exists():
-            # Création de la table
-            self.db.create_table(self.model)
-
-    @property
-    def db(self):
-        if 'db' not in self._cache:
-            self._cache['db'] = SqliteDatabase(str(self.dbpath))
-        return self._cache['db']
-
-    @property
-    def dbpath(self):
-        return config['folder'] / self.dbfilename
+        self.db.init(str(config['folder'] / "tle.db"))
+        self.model.create_table(fail_silently=True)
 
     def purge(self):
         if not self.dbpath.exists():
@@ -119,11 +92,7 @@ class TleDatabase:
         # if a list of satellites is provided, filter the files which will be
         # download in order to minimize the number of requests
         if sat_list is not None:
-            filelist = []
-            for sat in sat_list:
-                filename = sat._raw_raw_tle().src.replace("celestrak, ", "")
-                filelist.append(filename)
-
+            filelist = [sat.celestrak_file for sat in sat_list]
             filelist = list(set(filelist).intersection(self.CELESTRAK_PAGES))
         elif file is not None:
             if file not in self.CELESTRAK_PAGES:
@@ -184,7 +153,7 @@ class TleDatabase:
             return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
         except TleModel.DoesNotExist:
             raise KeyError(
-                "unknow TLE for {0[0]} = '{0[1]}'".format(list(kwargs.items())[0])
+                "Unknown TLE for {0[0]} = '{0[1]}'".format(list(kwargs.items())[0])
             )
 
     def load(self, filepath):
@@ -228,33 +197,47 @@ class TleDatabase:
         return len(entities)
 
 
+class TleModel(Model):
+
+    norad_id = IntegerField()
+    cospar_id = CharField()
+    name = CharField()
+    data = TextField()
+    epoch = DateField()
+    src = TextField()
+    insert_date = DateField()
+
+    class Meta:
+        database = TleDatabase.db
+
+
 def space_tle(*argv):
     """\
     Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
+      space-tle <mode> <selector> ...
       space-tle get [--full|--file <file>]
-      space-tle show <mode> <selector> ...
       space-tle insert <file>
 
     Options:
-      get            Retrieve data from Celestrak or Spacetrack websites
-      show           Display TLE format for a given object
-      insert         Insert a file into the database
-      <mode>         Define the criterion on which the research will be done
-                     Available modes are 'norad', 'cospar', 'name'
+      <mode>         Display the last TLE of an object. <mode> is the criterion
+                     on which the research will be done. Available modes are
+                     'norad', 'cospar' and 'name'
       <selector>     Depending on <mode>, this field should be the NORAD-ID,
                      COSPAR-ID, or name of the desired object.
-      <file>         File to insert in the database
+      get            Retrieve data from Celestrak website
       --full         Retrieve the entire database
-      --file <file>  In the case of celestrak, only retrieve one file
+      --file <file>  Only retrieve one file from Celestrak
+      insert         Insert a file into the database
+      <file>         File to insert in the database
 
     Examples:
       space tle get         # Retrieve only the TLE of the satellites in the DB
       space tle get --full  # Retrieve all the files of celestrak
       space tle get --file visual.txt  # Retrieve only that file from celestrak
-      space tle show norad 25544       # Display the TLE of the ISS
-      space tle show cospar 1998-067A  # Display the TLE of the ISS, too
+      space tle norad 25544       # Display the TLE of the ISS
+      space tle cospar 1998-067A  # Display the TLE of the ISS, too
       space insert file.txt  # Insert all the TLE found in the file to the DB
     """
 
@@ -268,7 +251,6 @@ def space_tle(*argv):
     site = TleDatabase()
 
     if args['get']:
-
         kwargs = dict(src="celestrak", sat_list=None)
 
         if not args["--full"]:
@@ -282,11 +264,6 @@ def space_tle(*argv):
                     kwargs['sat_list'] = None
 
         site.fetch(**kwargs)
-    elif args['show']:
-        modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
-        kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
-        entity = site._get_last_raw(**kwargs)
-        print("%s\n%s" % (entity.name, entity.data))
     elif args['insert']:
         if "*" in args['<file>']:
             files = glob(args['<file>'])
@@ -295,3 +272,9 @@ def space_tle(*argv):
 
         for file in files:
             site.load(file)
+    else:
+        # Simply show a TLE
+        modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
+        kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
+        entity = site._get_last_raw(**kwargs)
+        print("%s\n%s" % (entity.name, entity.data))
