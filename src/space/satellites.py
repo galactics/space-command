@@ -45,9 +45,6 @@ class Satellite:
     def raw_tle(self):
         return TleDatabase.get_last(norad_id=self.norad_id)
 
-    def _raw_raw_tle(self):
-        return TleDatabase()._get_last_raw(norad_id=self.norad_id)
-
     @classmethod
     def get_all(cls):
         for name, sat in cls.db().items():
@@ -116,27 +113,45 @@ def space_sats(*argv):
     Informations concerning the satellite database
 
     Usage:
-        space-sats [create <mode> <id>]
+        space-sats [create <mode> <selector> ...]
 
     Options:
-        create  Create a new satellite instance in the database
-        <mode>  Mode
-        <id>    ID
+      create      Create a new satellite with data extracted from the TLE database
+      <mode>      Define the criterion on which the research will be done
+                  Available modes are 'norad', 'cospar', 'name'
+      <selector>  Depending on <mode>, this field should be the NORAD-ID,
+                  COSPAR-ID, or name of the desired object.
 
-    If no option is passed, the command will only display informations
+    If no option is passed, the command will only display informations about
+    the currently defined satellites
     """
 
+    import sys
     from docopt import docopt
     from textwrap import dedent
 
     args = docopt(dedent(space_sats.__doc__), argv=argv)
 
     if args['create']:
+        # Create a satellite object from the data available in the TLE database
 
-        params = {args['<mode>'] + "_id": args['<id>']}
-        tle = TleDatabase.get_last(**params)
+        mode = args['<mode>']
 
-        source = tle.kwargs['src'].replace("celestrak, ", "") if tle.kwargs['src'].startswith('celestrak') else ""
+        if mode in ("norad", "cospar"):
+            mode += "_id"
+
+        selector = " ".join(args['<selector>'])
+        params = {mode: selector}
+        try:
+            tle = TleDatabase.get_last(**params)
+        except KeyError:
+            print("No satellite with {} = '{}'".format(mode, selector))
+            sys.exit(-1)
+
+        if tle.kwargs['src'].startswith('celestrak'):
+            source = tle.kwargs['src'].replace("celestrak, ", "")
+        else:
+            source = ""
 
         sat = Satellite(tle.name, **{
             'cospar_id': tle.cospar_id,
@@ -145,6 +160,7 @@ def space_sats(*argv):
             'celestrak_file': source
         })
         sat.save()
+        print("Satellite created '{sat.name}' (norad_id={sat.norad_id}, cospar_id={sat.cospar_id})".format(sat=sat))
     else:
         for sat in Satellite.get_all():
             print(sat.name)
@@ -153,10 +169,9 @@ def space_sats(*argv):
             print("Norad      %d" % sat.norad_id)
             print("Cospar     %s" % sat.cospar_id)
 
-            tle = sat.tle()
-            raw = sat._raw_raw_tle()
-            print("TLE        {:%Y-%m-%d %H:%M:%S} from {}".format(tle.date, raw.src))
-            print("TLE name   %s" % raw.name)
+            tle = sat.raw_tle()
+            print("TLE        {:%Y-%m-%d %H:%M:%S} from {}".format(tle.epoch, sat.celestrak_file))
+            print("TLE name   %s" % tle.name)
 
             if sat.emitters:
                 print("emitters:")
