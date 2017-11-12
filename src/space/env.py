@@ -13,6 +13,8 @@ from beyond.config import config
 
 
 def fetch_sync(filelist, dst):
+    """Sequential retrieval of data
+    """
     for f in filelist:
         filepath = dst / Path(f).name
         print(filepath.name)
@@ -20,10 +22,8 @@ def fetch_sync(filelist, dst):
             fh.write(requests.get(f).text)
 
 
-async def fetch(session, address, dst):
-    """Coroutine de récupération de la page web
-
-    Dès que celle-ci est terminée, elle va donner la main à la fonction parse
+async def fetch_async(session, address, dst):
+    """Coroutine ro retrieve file asynchronously
     """
     filepath = dst / Path(address).name
     # with aiohttp.Timeout(10):
@@ -41,12 +41,15 @@ def space_env(*argv):
     Namely, pole motion and time-scales differences
 
     Usage:
-        space-env [get [--sync]]
+        space-env
+        space-env get [--sync]
 
     Options:
-        get     Retrieve new data. If ommited, the command will display the
-                current status of previously retrieved data.
-        --sync  Retrieve data without asynchronous
+        get     Retrieve available data
+        --sync  Retrieve data sequentially instead of asynchronously
+
+    Without argument the command shows the current status of local data
+    For more informations about environment data, check the doc
     """
 
     from docopt import docopt
@@ -125,7 +128,7 @@ def space_env(*argv):
                 signal.signal(signal.SIGINT, signal_handler)
 
                 # Crétion de la liste des tâches
-                tasks = [asyncio.ensure_future(fetch(session, p, env_folder)) for p in filelist]
+                tasks = [asyncio.ensure_future(fetch_async(session, p, env_folder)) for p in filelist]
 
                 # Déclenchement des tâches (asyncio.wait()) et ajout à la boucle
                 # d'évènements.
