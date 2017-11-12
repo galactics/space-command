@@ -3,7 +3,7 @@ import json
 
 from beyond.config import config
 
-from .tle import TleDatabase
+from .tle import TleDatabase, TleNotFound
 
 
 class Satellite:
@@ -144,8 +144,8 @@ def space_sats(*argv):
         params = {mode: selector}
         try:
             tle = TleDatabase.get_last(**params)
-        except KeyError:
-            print("No satellite with {} = '{}'".format(mode, selector))
+        except TleNotFound as e:
+            print(str(e))
             sys.exit(-1)
 
         if tle.kwargs['src'].startswith('celestrak'):

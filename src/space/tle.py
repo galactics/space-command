@@ -12,6 +12,16 @@ from beyond.orbits.tle import Tle
 from beyond.config import config
 
 
+class TleNotFound(Exception):
+
+    def __init__(self, mode, selector):
+        self.mode = mode
+        self.selector = selector
+
+    def __str__(self):
+        return f"Unknown TLE for {self.mode} = '{self.selector}'"
+
+
 class TleDatabase:
 
     SPACETRACK_URL_AUTH = "https://www.space-track.org/ajaxauth/login"
@@ -151,10 +161,9 @@ class TleDatabase:
 
         try:
             return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
-        except TleModel.DoesNotExist:
-            raise KeyError(
-                "Unknown TLE for {0[0]} = '{0[1]}'".format(list(kwargs.items())[0])
-            )
+        except TleModel.DoesNotExist as e:
+            mode, selector = kwargs.popitem()
+            raise TleNotFound(mode, selector) from e
 
     def load(self, filepath):
         with open(filepath) as fh:
@@ -276,5 +285,10 @@ def space_tle(*argv):
         # Simply show a TLE
         modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
         kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
-        entity = site._get_last_raw(**kwargs)
-        print("%s\n%s" % (entity.name, entity.data))
+        try:
+            entity = site._get_last_raw(**kwargs)
+        except TleNotFound as e:
+            print(str(e))
+            sys.exit(-1)
+        else:
+            print("%s\n%s" % (entity.name, entity.data))
