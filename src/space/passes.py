@@ -105,7 +105,7 @@ def space_passes(*argv):
     lats, lons = [], []
     azims, elevs = [], []
 
-    header = "Infos    Sat  Time                        Azim    Elev    Dist (km)  Light    "
+    header = "Infos    Sat  Time                 Azim    Elev    Dist (km)  Light    "
     print(header)
     print("=" * len(header))
 
@@ -124,7 +124,7 @@ def space_passes(*argv):
             elevs.append(90 - elev)
             r = orb.r / 1000.
 
-            print("{orb.info:8} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+            print("{orb.info:8} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
                 orb=orb, r=r, azim=azim, elev=elev, light=light.info(orb),
                 sat=sat
             ))
