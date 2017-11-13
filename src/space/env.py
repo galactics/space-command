@@ -27,26 +27,29 @@ async def fetch_async(session, address, dst):
     """
     filepath = dst / Path(address).name
     # with aiohttp.Timeout(10):
-    print("start", filepath)
     async with session.get(address) as response:
         with open(str(filepath), 'w') as fh:
             fh.write(await response.text())
-    print("finished", filepath)
+    print(filepath, 'downloaded')
 
 
 def space_env(*argv):
     """\
     Retrieve environement data
 
-    Namely, pole motion and time-scales differences
+    Namely, pole orientation and time-scales differences
 
     Usage:
         space-env
-        space-env get [--sync]
+        space-env get [--sync] [--all|--daily]
+        space-env insert <folder> [--all|--daily]
 
     Options:
-        get     Retrieve available data
-        --sync  Retrieve data sequentially instead of asynchronously
+        get             Retrieve available data
+        --sync          Retrieve data sequentially instead of asynchronously
+        insert          Insert local data into the database
+        <folder>        Folder where all data are available
+        --all, --daily  Force the kind of file that will be retrieved/inserted
 
     Without argument the command shows the current status of local data
     For more informations about environment data, check the doc
@@ -54,84 +57,112 @@ def space_env(*argv):
 
     from docopt import docopt
     from textwrap import dedent
+    from beyond.env.poleandtimes import (EnvDatabase, TaiUtc, Finals,
+                                         Finals2000A, EnvError)
+
+    default_kind = "daily"
 
     args = docopt(dedent(space_env.__doc__), argv=argv)
-    env_folder = config['folder'] / "env"
+    env_folder = config['folder'] / "tmp" / "env"
 
-    if not args['get']:
-        from datetime import datetime
-        from beyond.env.poleandtimes import TaiUtc, Finals
+    if not args['get'] and not args['insert']:
         from beyond.utils import Date
 
         date = Date.now().mjd
-        past, future = TaiUtc().get_last_next(date)
+        try:
+            leap_past, leap_next = EnvDatabase.get_framing_leap_seconds(date)
+            range_start, range_stop = EnvDatabase.get_range()
+        except EnvError as e:
+            print(str(e))
+            sys.exit(-1)
 
-        timestamp = (env_folder / 'tai-utc.dat').stat().st_mtime
-        update = datetime.fromtimestamp(timestamp)
-
-        print("Last update:      {:%Y-%m-%d %H:%M}".format(update))
-
+        # print("Last update:      {:%Y-%m-%d %H:%M}".format(update))
         print("Last leap-second: {:%Y-%m-%d}, TAI-UTC = {}s".format(
-            Date(past[0]), past[1]
+            Date(leap_past[0]), leap_past[1]
         ))
 
-        if future == (None, None):
+        if leap_next == (None, None):
             print("Next leap-second: Unknown")
         else:
             print("Next leap-second: {:%Y-%m-%d}, TAI-UTC = {}s".format(
-                Date(future[0]), future[1]
+                Date(leap_next[0]), leap_next[1]
             ))
 
-        final = Finals()
-        print("Finals mode:      {}".format(final.path.suffix[1:]))
+        finals_mode = config.get('env', 'eop_source', default_kind)
+        print("Finals mode:      {}".format(finals_mode))
         print("Finals range:     {:%Y-%m-%d} to {:%Y-%m-%d}".format(
-            Date(min(final.data.keys())),
-            Date(max(final.data.keys())),
+            Date(range_start),
+            Date(range_stop),
         ))
         print("")
     else:
 
-        baseurl = "http://maia.usno.navy.mil/ser7/"
-
-        filelist = [
-            baseurl + 'tai-utc.dat',
-        ]
-
-        if config['env']['eop_source'] == "all":
-            filelist.extend([
-                baseurl + 'finals2000A.all',
-                baseurl + 'finals.all',
-            ])
+        # Force the kind of data to retrieve/read locally
+        if args["--all"]:
+            kind = "all"
+        elif args['--daily']:
+            kind = "daily"
         else:
-            filelist.extend([
-                baseurl + 'finals2000A.daily',
-                baseurl + 'finals.daily',
-            ])
+            kind = config.get('env', 'eop_source', default_kind)
 
-        if not env_folder.exists():
-            env_folder.mkdir()
+        tai_utc = "tai-utc.dat"
+        finals = "finals.%s" % kind
+        finals2000a = "finals2000A.%s" % kind
 
-        if args['--sync']:
-            fetch_sync(filelist, env_folder)
-        else:
-            loop = asyncio.get_event_loop()
+        if args['get']:
+            baseurl = Path("http://maia.usno.navy.mil/ser7/")
 
-            with aiohttp.ClientSession(loop=loop) as session:
+            filelist = [
+                baseurl / tai_utc,
+                baseurl / finals,
+                baseurl / finals2000a,
+            ]
 
-                def signal_handler(signal, frame):
-                    """Gestion de l'interruption du programme
-                    """
+            if not env_folder.exists():
+                env_folder.mkdir()
+
+            if args['--sync']:
+                fetch_sync(filelist, env_folder)
+            else:
+                loop = asyncio.get_event_loop()
+
+                with aiohttp.ClientSession(loop=loop) as session:
+
+                    def signal_handler(signal, frame):
+                        """Interuption handling
+                        """
+                        loop.stop()
+                        session.close()
+                        sys.exit(0)
+
+                    signal.signal(signal.SIGINT, signal_handler)
+
+                    tasks = []
+                    for p in filelist:
+                        tasks.append(asyncio.ensure_future(
+                            fetch_async(session, p, env_folder)
+                        ))
+
+                    loop.run_until_complete(asyncio.wait(tasks))
                     loop.stop()
                     session.close()
-                    sys.exit(0)
 
-                signal.signal(signal.SIGINT, signal_handler)
+        elif args['insert']:
+            # Insert local data
+            env_folder = Path(args['<folder>'])
 
-                # Crétion de la liste des tâches
-                tasks = [asyncio.ensure_future(fetch_async(session, p, env_folder)) for p in filelist]
+        try:
+            tai_utc = TaiUtc(env_folder / tai_utc)
+            finals = Finals(env_folder / finals)
+            finals2000a = Finals2000A(env_folder / finals2000a)
+        except FileNotFoundError as e:
+            print(e.strerror, ":", e.filename)
+            sys.exit(-1)
 
-                # Déclenchement des tâches (asyncio.wait()) et ajout à la boucle
-                # d'évènements.
-                loop.run_until_complete(asyncio.wait(tasks))
-                loop.stop()
-                session.close()
+        EnvDatabase.insert(
+            finals=finals,
+            finals2000a=finals2000a,
+            tai_utc=tai_utc
+        )
+
+        print("Env updated with '{}' data".format(kind))
