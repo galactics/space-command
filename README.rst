@@ -12,18 +12,17 @@ Features
 * Compute passes over a station for a list of satellites
 * Ephemeris for rapid computation
 
-
-
-One context by station
-
-    $ space station TLS
-    $ space chrono --sat ISS
-    
-    or
-
-    $ space chrono --station TLS --sat ISS
+Ideas
+-----
 
 Output ephem whereever
 
     $ space ephem ISS --frame EME2000 --stdout > <filename>
 
+Folder as namespaces
+
+    $ space init            # Create an empty space-command repo at ~/.space/default and link it
+                            # with ~/.space/current
+    $ space init <name>     # Create an empty space-command repo at ~/.space/<name>
+    $ space switch <name>   # Change of repo by switching the ~/.space/current symbolic link to the
+                            # name
