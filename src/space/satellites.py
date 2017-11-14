@@ -23,7 +23,7 @@ class Satellite:
 
     @classmethod
     def db_path(cls):
-        return config['folder'] / 'satellites.json'
+        return config.folder / 'satellites.json'
 
     @classmethod
     def db(cls, to_save=None):

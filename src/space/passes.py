@@ -6,10 +6,9 @@ import matplotlib.pyplot as plt
 
 from docopt import docopt
 from textwrap import dedent, indent
-from datetime import timedelta
 from pathlib import Path
 
-from beyond.utils import Date
+from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
 from .satellites import Satellite

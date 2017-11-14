@@ -25,7 +25,7 @@ def list_stations():
     if not hasattr(list_stations, 'stations'):
 
         list_stations.stations = {}
-        station_file = config['folder'] / "stations.json"
+        station_file = config.folder / "stations.json"
         for name, caract in json.load(station_file.open()).items():
             for i, elem in enumerate(caract['latlonalt'][:2]):
                 if type(elem) is str:

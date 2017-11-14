@@ -9,7 +9,7 @@ from collections import OrderedDict, namedtuple
 from importlib import import_module
 from textwrap import dedent
 
-from . import init
+from . import load_config
 
 
 def exception(type, value, tb):
@@ -72,7 +72,7 @@ def main():
     func = commands[command].func
 
     # load configuration and create missing folders
-    init()
+    load_config()
 
     # Call the function associated with the subcommand
     func(*args)

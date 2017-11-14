@@ -52,7 +52,7 @@ class TleDatabase:
 
         self._cache = {}
         self.model = TleModel
-        self.db.init(str(config['folder'] / "tle.db"))
+        self.db.init(str(config.folder / "tle.db"))
         self.model.create_table(fail_silently=True)
 
     def purge(self):
@@ -74,7 +74,7 @@ class TleDatabase:
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
         full = requests.get(self.SPACETRACK_URL, cookies=init.cookies)
 
-        with open(config['folder'] / "tmp" / "spacetrack.txt", "w") as fp:
+        with open(config.folder / "tmp" / "spacetrack.txt", "w") as fp:
             fp.write(full.text)
 
         i = self.insert(full.text, "spacetrack")

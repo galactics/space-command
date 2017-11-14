@@ -27,7 +27,7 @@ async def fetch_async(session, address, dst):
     """
     filepath = dst / Path(address).name
     # with aiohttp.Timeout(10):
-    async with session.get(address) as response:
+    async with session.get(str(address)) as response:
         with open(str(filepath), 'w') as fh:
             fh.write(await response.text())
     print(filepath, 'downloaded')
@@ -57,8 +57,8 @@ def space_env(*argv):
 
     from docopt import docopt
     from textwrap import dedent
-    from beyond.env.poleandtimes import (EnvDatabase, TaiUtc, Finals,
-                                         Finals2000A, EnvError)
+    from beyond.dates import Date
+    from beyond.dates.eop import EnvDatabase, EnvError
 
     default_kind = "daily"
 
@@ -66,10 +66,9 @@ def space_env(*argv):
     env_folder = config['folder'] / "tmp" / "env"
 
     if not args['get'] and not args['insert']:
-        from beyond.utils import Date
 
-        date = Date.now().mjd
         try:
+            date = Date.now().mjd
             leap_past, leap_next = EnvDatabase.get_framing_leap_seconds(date)
             range_start, range_stop = EnvDatabase.get_range()
         except EnvError as e:
@@ -110,12 +109,12 @@ def space_env(*argv):
         finals2000a = "finals2000A.%s" % kind
 
         if args['get']:
-            baseurl = Path("http://maia.usno.navy.mil/ser7/")
+            baseurl = "http://maia.usno.navy.mil/ser7/%s"
 
             filelist = [
-                baseurl / tai_utc,
-                baseurl / finals,
-                baseurl / finals2000a,
+                baseurl % tai_utc,
+                baseurl % finals,
+                baseurl % finals2000a,
             ]
 
             if not env_folder.exists():
@@ -145,24 +144,19 @@ def space_env(*argv):
 
                     loop.run_until_complete(asyncio.wait(tasks))
                     loop.stop()
-                    session.close()
 
         elif args['insert']:
             # Insert local data
             env_folder = Path(args['<folder>'])
 
         try:
-            tai_utc = TaiUtc(env_folder / tai_utc)
-            finals = Finals(env_folder / finals)
-            finals2000a = Finals2000A(env_folder / finals2000a)
+            EnvDatabase.insert(
+                finals=env_folder / finals,
+                finals2000a=env_folder / finals2000a,
+                tai_utc=env_folder / tai_utc
+            )
         except FileNotFoundError as e:
             print(e.strerror, ":", e.filename)
             sys.exit(-1)
-
-        EnvDatabase.insert(
-            finals=finals,
-            finals2000a=finals2000a,
-            tai_utc=tai_utc
-        )
 
         print("Env updated with '{}' data".format(kind))
