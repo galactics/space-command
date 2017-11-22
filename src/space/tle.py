@@ -282,13 +282,24 @@ def space_tle(*argv):
         for file in files:
             site.load(file)
     else:
+
         # Simply show a TLE
         modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
         kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
+
+        if args['<mode>'] == "name":
+            # Try to match the name of the TLE with the satellite DB
+            # If it doesn't work out, fallback to the names in the TLE DB
+            try:
+                sat = Satellite.get(**kwargs)
+                kwargs = {'cospar_id': sat.cospar_id}
+            except ValueError:
+                pass
+
         try:
-            entity = site._get_last_raw(**kwargs)
+            entity = site.get_last(**kwargs)
         except TleNotFound as e:
             print(str(e))
             sys.exit(-1)
-        else:
-            print("%s\n%s" % (entity.name, entity.data))
+
+        print("%s\n%s" % (entity.name, entity))
