@@ -13,7 +13,7 @@ from beyond.orbits.listeners import LightListener
 
 from .satellites import Satellite
 from .circle import circle
-from .stations import get_station
+from .stations import StationDatabase
 from .tle import Tle
 
 
@@ -69,7 +69,7 @@ def space_passes(*argv):
     events = True if not args['--no-events'] else False
 
     try:
-        station = get_station(args["<station>"])
+        station = StationDatabase.get(args["<station>"])
     except ValueError:
         print("Unknwon station '{}'".format(args['<station>']))
         sys.exit(-1)
