@@ -9,7 +9,7 @@ from collections import OrderedDict, namedtuple
 from importlib import import_module
 from textwrap import dedent
 
-from . import load_config
+from . import load_config, __version__
 
 
 def exception(type, value, tb):
@@ -55,6 +55,13 @@ def main():
         sys.excepthook = exception
         sys.argv.remove('--pdb')
 
+    if "--version" in sys.argv:
+        import beyond
+
+        print("Space-Command  {}".format(__version__))
+        print("Beyond         {}".format(beyond.__version__))
+        sys.exit(0)
+
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
         # No or wrong subcommand
 
@@ -64,6 +71,11 @@ def main():
 
         print(__doc__)
         print(helper)
+
+        print("Options :")
+        print(" --pdb      Launch the python debugger when an exception is raised")
+        print(" --version  Show the version of the space-command utility")
+        print()
         sys.exit(-1)
 
     # retrieve the subcommand and its arguments
