@@ -225,9 +225,9 @@ def space_tle(*argv):
     Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
-      space-tle <mode> <selector> ...
-      space-tle get [--full|--file <file>]
       space-tle insert <file>
+      space-tle get [--full|--file <file>]
+      space-tle <mode> <selector> ...
 
     Options:
       <mode>         Display the last TLE of an object. <mode> is the criterion

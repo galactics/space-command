@@ -30,7 +30,7 @@ async def fetch_async(session, address, dst):
     async with session.get(str(address)) as response:
         with open(str(filepath), 'w') as fh:
             fh.write(await response.text())
-    print(filepath, 'downloaded')
+    print(filepath.name, 'downloaded')
 
 
 def space_env(*argv):
