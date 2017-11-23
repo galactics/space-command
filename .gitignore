@@ -1,3 +1,4 @@
 src/space/__pycache__/
 src/*.egg-info
 *.egg-info
+dist/
