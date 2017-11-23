@@ -8,21 +8,14 @@ In order to do this, it uses the `beyond <https://github.com/galactics/beyond>`_
 Features
 --------
 
-* Retrieve orbits as TLE from celestrak
-* Compute passes over a station for a list of satellites
-* Ephemeris for rapid computation
+**Retrieve orbits as TLE from celestrak**
 
-Ideas
------
+.. code-block:: shell
 
-Output ephem whereever
+    $ space tle get
 
-    $ space ephem ISS --frame EME2000 --stdout > <filename>
+**Compute passes over a station for a list of satellites**
 
-Folder as namespaces
+.. code-block:: shell
 
-    $ space init            # Create an empty space-command repo at ~/.space/default and link it
-                            # with ~/.space/current
-    $ space init <name>     # Create an empty space-command repo at ~/.space/<name>
-    $ space switch <name>   # Change of repo by switching the ~/.space/current symbolic link to the
-                            # name
+    $ space passes <station> <sat>
