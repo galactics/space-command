@@ -25,17 +25,17 @@ def space_passes(*argv):
       space-passes <station> [<satellite>...] [options]
 
     Option:
-      -h --help      Show this help
-      <station>      Location from which the satellite is tracked
-      <satellite>    Satellite to track. If absent the orbit of the satellite(s)
-                     should be provided as stdin in TLE format (see example)
-      --date <date>  Starting date of the simulation. Default is now
-                     format: "%Y-%m-%dT%H:%M:%S")
-      --no-events    Don't compute AOS, MAX and LOS
-      --events-only  Only show AOS, MAX and LOS
-      --step <sec>   Step-size (in seconds) [default: 30]
-      --passes <nb>  Number of passes to display [default: 1]
-      --graphs       Display graphics with matplotlib
+      -h --help          Show this help
+      <station>          Location from which the satellite is tracked
+      <satellite>        Satellite to track. If absent the orbit of the satellite(s)
+                         should be provided as stdin in TLE format (see example)
+      -d, --date <date>  Starting date of the simulation. Default is now
+                         format: "%Y-%m-%dT%H:%M:%S")
+      -n, --no-events    Don't compute AOS, MAX and LOS
+      -e, --events-only  Only show AOS, MAX and LOS
+      -s, --step <sec>   Step-size (in seconds) [default: 30]
+      -p, --passes <nb>  Number of passes to display [default: 1]
+      -g, --graphs       Display graphics with matplotlib
 
     Examples:
       Simple computation of the ISS, TLS is the name of my station

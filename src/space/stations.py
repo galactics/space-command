@@ -1,5 +1,5 @@
 
-import json
+import yaml
 from numpy import degrees, pi
 
 from beyond.config import config
@@ -27,7 +27,7 @@ class StationDatabase:
         if not hasattr(cls, '_instance'):
             # Singleton
             cls._instance = super().__new__(cls)
-            cls._instance._db = config.folder / "stations.json"
+            cls._instance._db = config['env']['folder'] / "stations.yaml"
 
         return cls._instance
 
@@ -39,7 +39,7 @@ class StationDatabase:
         if not hasattr(self, '_stations'):
 
             self._stations = {}
-            for abbr, caract in json.load(self._db.open()).items():
+            for abbr, caract in yaml.load(self._db.open()).items():
                 for i, elem in enumerate(caract['latlonalt'][:2]):
                     if type(elem) is str:
                         caract['latlonalt'][i] = dms2deg(elem)
@@ -68,11 +68,13 @@ class StationDatabase:
     def save(cls, station):
         self = cls()
 
-        stations = json.load(self._db.open())
+        try:
+            stations = yaml.load(self._db.open())
+        except FileNotFoundError:
+            stations = {}
+
         stations.update(station)
-        from pprint import pprint
-        pprint(stations)
-        json.dump(stations, self._db.open("w"), indent=4)
+        yaml.dump(stations, self._db.open("w"), indent=4)
 
         if hasattr(self, "_stations"):
             del self._stations
@@ -120,8 +122,8 @@ def space_stations(*argv):
             print("-" * len(station.name))
             lat, lon, alt = station.latlonalt
             lat, lon = degrees([lat, lon])
-            print("   abbr:     {}".format(station.abbr))
-            print("   altitude: {} m\n   position: {:8.5f}°N, {:9.5f}°E".format(alt, lat, lon))
+            print("abbr:     {}".format(station.abbr))
+            print("altitude: {} m\nposition: {:8.5f}°N, {:9.5f}°E".format(alt, lat, lon))
 
             choices = {
                 0.: "South",
@@ -130,5 +132,5 @@ def space_stations(*argv):
 
             orient = choices.get(station.orientation, 180 - degrees(station.orientation))
 
-            print("  ", "orient:  ", orient)
+            print("orient:  ", orient)
             print()

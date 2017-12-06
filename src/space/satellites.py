@@ -1,5 +1,5 @@
 
-import json
+import yaml
 
 from beyond.config import config
 
@@ -14,8 +14,6 @@ class Satellite:
         self.norad_id = kwargs.get('norad_id')
         self.cospar_id = kwargs.get('cospar_id')
         self.emitters = kwargs.get('emitters', {})
-        self.default_i = kwargs.get('default', '')
-        self.color = kwargs.get('color', '')
         self.celestrak_file = kwargs.get('celestrak_file', '')
 
     def __repr__(self):
@@ -23,14 +21,14 @@ class Satellite:
 
     @classmethod
     def db_path(cls):
-        return config.folder / 'satellites.json'
+        return config['env']['folder'] / 'satellites.yaml'
 
     @classmethod
     def db(cls, to_save=None):
         if to_save is None:
-            return json.load(cls.db_path().open())
+            return yaml.load(cls.db_path().open())
         else:
-            json.dump(to_save, cls.db_path().open('w'), indent=4)
+            yaml.dump(to_save, cls.db_path().open('w'), indent=4)
 
     @property
     def default(self):
@@ -92,8 +90,6 @@ class Satellite:
             'norad_id': self.norad_id,
             'cospar_id': self.cospar_id,
             'emitters': emitters,
-            'default': self.default_i,
-            'color': self.color,
             'celestrak_file': self.celestrak_file
         }
         self.db(complete_db)

@@ -48,9 +48,6 @@ def main():
     """Direct the user to the right subcommand
     """
 
-    # List of available subcommands
-    commands = get_commands()
-
     if "--pdb" in sys.argv:
         sys.excepthook = exception
         sys.argv.remove('--pdb')
@@ -61,6 +58,12 @@ def main():
         print("Space-Command  {}".format(__version__))
         print("Beyond         {}".format(beyond.__version__))
         sys.exit(0)
+
+    # load configuration and create missing folders
+    load_config()
+
+    # List of available subcommands
+    commands = get_commands()
 
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
         # No or wrong subcommand
@@ -82,9 +85,6 @@ def main():
     _, command, *args = sys.argv
     # get the function associated with the subcommand
     func = commands[command].func
-
-    # load configuration and create missing folders
-    load_config()
 
     # Call the function associated with the subcommand
     func(*args)
