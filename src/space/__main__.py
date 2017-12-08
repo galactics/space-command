@@ -9,7 +9,8 @@ from collections import OrderedDict, namedtuple
 from importlib import import_module
 from textwrap import dedent
 
-from . import load_config, __version__
+from . import __version__
+from space.config import config
 
 
 def exception(type, value, tb):
@@ -60,7 +61,7 @@ def main():
         sys.exit(0)
 
     # load configuration and create missing folders
-    load_config()
+    config.load()
 
     # List of available subcommands
     commands = get_commands()

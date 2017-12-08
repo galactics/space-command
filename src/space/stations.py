@@ -1,9 +1,9 @@
 
-import yaml
 from numpy import degrees, pi
 
-from beyond.config import config
 from beyond.frames.frame import create_station, get_frame
+
+from .config import config
 
 
 def dms2deg(angle):
@@ -27,7 +27,6 @@ class StationDatabase:
         if not hasattr(cls, '_instance'):
             # Singleton
             cls._instance = super().__new__(cls)
-            cls._instance._db = config['env']['folder'] / "stations.yaml"
 
         return cls._instance
 
@@ -39,7 +38,7 @@ class StationDatabase:
         if not hasattr(self, '_stations'):
 
             self._stations = {}
-            for abbr, caract in yaml.load(self._db.open()).items():
+            for abbr, caract in config['stations'].items():
                 for i, elem in enumerate(caract['latlonalt'][:2]):
                     if type(elem) is str:
                         caract['latlonalt'][i] = dms2deg(elem)
@@ -68,13 +67,8 @@ class StationDatabase:
     def save(cls, station):
         self = cls()
 
-        try:
-            stations = yaml.load(self._db.open())
-        except FileNotFoundError:
-            stations = {}
-
-        stations.update(station)
-        yaml.dump(stations, self._db.open("w"), indent=4)
+        config['stations'].update(station)
+        config.save()
 
         if hasattr(self, "_stations"):
             del self._stations

@@ -1,8 +1,5 @@
 
-import yaml
-
-from beyond.config import config
-
+from .config import config
 from .tle import TleDatabase, TleNotFound
 
 
@@ -20,15 +17,12 @@ class Satellite:
         return "<Satellite '%s'>" % self.name
 
     @classmethod
-    def db_path(cls):
-        return config['env']['folder'] / 'satellites.yaml'
-
-    @classmethod
     def db(cls, to_save=None):
         if to_save is None:
-            return yaml.load(cls.db_path().open())
+            return config['satellites'].copy()
         else:
-            yaml.dump(to_save, cls.db_path().open('w'), indent=4)
+            config['satellites'] = to_save
+            config.save()
 
     @property
     def default(self):

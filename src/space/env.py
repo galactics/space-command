@@ -344,7 +344,7 @@ def space_env(*argv):
         elif args['--daily']:
             kind = "daily"
         else:
-            kind = config.get('eop', 'source', default_kind)
+            kind = config.get('eop', 'source', fallback=default_kind)
 
         tai_utc = "tai-utc.dat"
         finals = "finals.%s" % kind
