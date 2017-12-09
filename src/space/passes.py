@@ -63,7 +63,7 @@ def space_passes(*argv):
         start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
 
     step = timedelta(seconds=float(args['--step']))
-    stop = timedelta(days=1)
+    stop = timedelta(days=2)
 
     pass_nb = int(args['--passes'])
     events = True if not args['--no-events'] else False
@@ -114,7 +114,7 @@ def space_passes(*argv):
         count = 0
         for orb in station.visibility(sat.tle(), start=start, stop=stop, step=step, events=events):
 
-            if args['--events-only'] and orb.info[:3] not in ('AOS', 'MAX', 'LOS'):
+            if args['--events-only'] and (orb.event is None or orb.event.info not in ('AOS', 'MAX', 'LOS')):
                 continue
 
             azim = -np.degrees(orb.theta) % 360
@@ -123,9 +123,9 @@ def space_passes(*argv):
             elevs.append(90 - elev)
             r = orb.r / 1000.
 
-            print("{orb.info:8} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+            print("{event:9} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
                 orb=orb, r=r, azim=azim, elev=elev, light=light.info(orb),
-                sat=sat
+                sat=sat, event=orb.event if orb.event is not None else ""
             ))
 
             orb_itrf = orb.copy(frame='ITRF')
@@ -133,7 +133,7 @@ def space_passes(*argv):
             lats.append(lat)
             lons.append(lon)
 
-            if orb.info.startswith("LOS"):
+            if orb.event is not None and orb.event.info == "LOS":
                 print()
                 count += 1
                 if count == pass_nb:
@@ -159,18 +159,15 @@ def space_passes(*argv):
         plt.imshow(im, extent=[-180, 180, -90, 90])
         plt.plot(lons, lats, 'r.')
 
-        lonlat = np.degrees(circle(*orb.copy(frame=station)[:3]))
-        lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
-
-        plt.plot(lonlat[:, 0], lonlat[:, 1], 'g:')
+        color = "#202020"
 
         # Ground Station
         lat, lon = np.degrees(station.latlonalt[:-1])
-        plt.plot([lon], [lat], 'bo')
-        plt.text(lon + 1, lat + 1, station.abbr, color='blue')
+        plt.plot([lon], [lat], 'o', color=color)
+        plt.text(lon + 1, lat + 1, station.abbr, color=color)
         lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(lon), np.radians(lat)))))
         lon = ((lon + 180) % 360) - 180
-        plt.plot(lon, lat, 'b', lw=2)
+        plt.plot(lon, lat, '.', color=color, ms=2)
 
         plt.xlim([-180, 180])
         plt.ylim([-90, 90])
