@@ -7,28 +7,28 @@ import signal
 import asyncio
 import aiohttp
 import requests
-import sqlite3
 import warnings
 from pathlib import Path
-from contextlib import contextmanager
+from peewee import (
+    Model, IntegerField, SqliteDatabase, FloatField, fn
+)
 
 from beyond.config import config
 from beyond.utils.memoize import memoize
 from beyond.dates.eop import (
-    register, Finals2000A, Finals, TaiUtc, Eop, EnvError
+    register, Finals2000A, Finals, TaiUtc, Eop, EnvError, policy
 )
 
 
 @register
-class SqliteEnvDatabase:
+class EnvDatabase:
     """Database storing and providing data for Earth Orientation Parameters
     and Timescales differences.
 
     It uses sqlite3 as engine.
     """
 
-    _instance = None
-    _cursor = None
+    db = SqliteDatabase(None)
 
     PASS = "pass"
     EXTRA = "extrapolate"
@@ -39,28 +39,9 @@ class SqliteEnvDatabase:
     """Default behaviour in case of missing value, see :ref:`configuration <eop-missing-policy>`."""
 
     def __init__(self):
-        self.path = config.get('env', "folder", fallback=Path.cwd()) / "env.db"
-
-    def uri(self, create=False):
-        return "{uri}?mode={mode}".format(
-            uri=self.path.as_uri(),
-            mode="rwc" if create else "rw"
-        )
-
-    @contextmanager
-    def connect(self, create=False):
-        with sqlite3.connect(self.uri(create=create), uri=True) as connect:
-            yield connect.cursor()
-
-    @property
-    def cursor(self):
-        if self._cursor is None:
-            try:
-                connect = sqlite3.connect(self.uri(), uri=True)
-            except sqlite3.DatabaseError as e:
-                raise EnvError("{} : {}".format(e, self.path))
-            self._cursor = connect.cursor()
-        return self._cursor
+        self.path = config.get('env', "folder", fallback=Path.cwd()) / "space.db"
+        self.db.init(str(self.path))
+        self.db.create_tables([FinalsModel, TaiUtcModel], safe=True)
 
     @memoize
     def __getitem__(self, mjd: float):
@@ -86,35 +67,39 @@ class SqliteEnvDatabase:
     @memoize
     def _get_finals(self, mjd: int):
 
-        self.cursor.execute("SELECT * FROM finals WHERE mjd = ?", (mjd, ))
-        raw_data = self.cursor.fetchone()
+        query = FinalsModel.select().where(FinalsModel.mjd == mjd)
 
-        # In the case of a missing value, we take the last available
-        if raw_data is None and self._policy in (self.WARN, self.EXTRA):
+        try:
+            data = query.get()
+        except FinalsModel.DoesNotExist as e:
+            # In the case of a missing value, we take the last available
+            if policy() in (self.WARN, self.EXTRA):
+                query = FinalsModel.select().where(FinalsModel.mjd <= mjd).order_by(FinalsModel.mjd.desc()).limit(1)
 
-            self.cursor.execute("SELECT * FROM finals WHERE mjd <= ? ORDER BY mjd DESC LIMIT 1", (mjd, ))
-            raw_data = self.cursor.fetchone()
+                try:
+                    data = query.get()
+                except FinalsModel.DoesNotExist as e:
+                    raise KeyError(mjd) from e
+                else:
+                    if policy() == self.WARN:
+                        warnings.warn("Missing EOP data. Extrapolating from previous")
 
-            if raw_data is not None and self._policy == self.WARN:
-                warnings.warn("Missing EOP data. Extrapolating from previous")
+            else:
+                raise KeyError(mjd) from e
 
-        if raw_data is None:
-            raise KeyError(mjd)
-
-        # removal of MJD
-        keys = ("x", "y", "dx", "dy", "deps", "dpsi", "lod", "ut1_utc")
-        return dict(zip(keys, raw_data[1:]))
+        return data.as_dict()
 
     @memoize
     def _get_tai_utc(self, mjd: int):
-        self.cursor.execute("SELECT * FROM tai_utc WHERE mjd <= ? ORDER BY mjd DESC LIMIT 1", (mjd, ))
-        raw_data = self.cursor.fetchone()
+        query = TaiUtcModel.select().where(TaiUtcModel.mjd <= mjd)
 
-        if raw_data is None:
-            raise KeyError(mjd)
+        try:
+            data = query.get()
+        except TaiUtcModel.DoesNotExist as e:
+            raise KeyError(mjd) from e
 
         # only return the tai-utc data, not the mjd
-        return raw_data[1]
+        return data.tai_utc
 
     @classmethod
     def get_range(cls):
@@ -123,14 +108,14 @@ class SqliteEnvDatabase:
         Return:
             tuple
         """
-        self = cls()
-        self.cursor.execute("SELECT MIN(mjd) AS min, MAX(mjd) AS max FROM finals")
-        raw_data = self.cursor.fetchone()
+        query = FinalsModel.select(fn.Min(FinalsModel.mjd), fn.Max(FinalsModel.mjd))
 
-        if raw_data is None:
+        try:
+            data = query.scalar(as_tuple=True)
+        except FinalsModel.DoesNotExist:
             raise EnvError("No data for range")
 
-        return raw_data
+        return data
 
     @classmethod
     def get_framing_leap_seconds(cls, mjd: float):
@@ -142,16 +127,15 @@ class SqliteEnvDatabase:
 
         If no data is available, return None
         """
-        self = cls()
-        self.cursor.execute("SELECT * FROM tai_utc ORDER BY mjd DESC")
+        data = TaiUtcModel.select().order_by(TaiUtcModel.mjd.desc())
 
         l, n = (None, None), (None, None)
 
-        for mjd_i, value in self.cursor:
-            if mjd_i <= mjd:
-                l = (mjd_i, value)
+        for entity in data:
+            if entity.mjd <= mjd:
+                l = (entity.mjd, entity.tai_utc)
                 break
-            n = (mjd_i, value)
+            n = (entity.mjd, entity.tai_utc)
 
         return l, n
 
@@ -174,15 +158,6 @@ class SqliteEnvDatabase:
 
         if None in (finals, finals2000a, tai_utc):
             raise TypeError("All three arguments are required")
-
-        if not self.path.exists():
-            self.create_database()  # file doesn't exists
-        else:
-            # The file exists, but we can't connect
-            try:
-                self.connect()
-            except sqlite3.OperationalError:
-                self.create_database()  # file exists
 
         finals = Finals(finals)
         finals2000a = Finals2000A(finals2000a)
@@ -207,52 +182,47 @@ class SqliteEnvDatabase:
                 values are dictionaries containing the x, y, dx, dy, deps, dpsi,
                 lod and ut1_utc data
         """
-        with self.connect() as cursor:
-            for mjd, eop in eops.items():
-                cursor.execute(
-                    "INSERT OR REPLACE INTO finals VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        mjd, eop['x'], eop["y"], eop["dx"], eop["dy"],
-                        eop["deps"], eop["dpsi"], eop["lod"], eop["ut1_utc"],
-                    )
-                )
+        with self.db.atomic():
+            FinalsModel.insert_many(eops.values()).execute()
 
-    def _insert_tai_utc(self, tai_utcs: dict):
+    def _insert_tai_utc(self, tai_utcs: list):
         """Insert TAI-UTC values into the database
         """
 
-        with self.connect() as cursor:
-
-            try:
-                cursor.execute("DELETE FROM tai_utc")
-            except sqlite3.OperationalError:
-                pass
-
+        with self.db.atomic():
             for mjd, tai_utc in tai_utcs:
-                cursor.execute("INSERT INTO tai_utc VALUES (?, ?)", (mjd, tai_utc))
+                TaiUtcModel.create(mjd=mjd, tai_utc=tai_utc)
 
-    def create_database(self):
-        """Create the base tables to store all the data
-        """
-        with self.connect(create=True) as cursor:
-            cursor.executescript("""
-                CREATE TABLE `finals` (
-                    `mjd`       INTEGER NOT NULL UNIQUE,
-                    `x`         REAL NOT NULL,
-                    `y`         REAL NOT NULL,
-                    `dx`        REAL NOT NULL,
-                    `dy`        REAL NOT NULL,
-                    `dpsi`      REAL NOT NULL,
-                    `deps`      REAL NOT NULL,
-                    `lod`       REAL NOT NULL,
-                    `ut1_utc`   REAL NOT NULL,
-                    PRIMARY KEY(`mjd`)
-                );
-                CREATE TABLE `tai_utc` (
-                    `mjd`   INTEGER NOT NULL,
-                    `tai_utc`   INTEGER NOT NULL,
-                    PRIMARY KEY(`mjd`)
-                );""")
+
+class FinalsModel(Model):
+
+    mjd = IntegerField()
+    x = FloatField()
+    y = FloatField()
+    dx = FloatField()
+    dy = FloatField()
+    dpsi = FloatField()
+    deps = FloatField()
+    lod = FloatField()
+    ut1_utc = FloatField()
+
+    class Meta:
+        database = EnvDatabase.db
+
+    def as_dict(self):
+        return {
+            "x": self.x, "y": self.y, "dx": self.dx, "dy": self.dy,
+            "deps": self.deps, "dpsi": self.dpsi, "lod": self.lod,
+            "ut1_utc": self.ut1_utc,
+        }
+
+
+class TaiUtcModel(Model):
+    mjd = IntegerField()
+    tai_utc = IntegerField()
+
+    class Meta:
+        database = EnvDatabase.db
 
 
 def fetch_sync(filelist, dst):
@@ -311,9 +281,10 @@ def space_env(*argv):
 
         try:
             date = Date.now().mjd
-            leap_past, leap_next = SqliteEnvDatabase.get_framing_leap_seconds(date)
-            range_start, range_stop = SqliteEnvDatabase.get_range()
+            leap_past, leap_next = EnvDatabase.get_framing_leap_seconds(date)
+            range_start, range_stop = EnvDatabase.get_range()
         except EnvError as e:
+            raise
             print(str(e))
             sys.exit(-1)
 
@@ -329,7 +300,7 @@ def space_env(*argv):
                 Date(leap_next[0]), leap_next[1]
             ))
 
-        finals_mode = config.get('eop', 'source', default_kind)
+        finals_mode = config.get('eop', 'source', fallback=default_kind)
         print("Finals mode       {}".format(finals_mode))
         print("Finals range      {:%Y-%m-%d} to {:%Y-%m-%d}".format(
             Date(range_start),
@@ -392,7 +363,7 @@ def space_env(*argv):
             env_folder = Path(args['<folder>'])
 
         try:
-            SqliteEnvDatabase.insert(
+            EnvDatabase.insert(
                 finals=env_folder / finals,
                 finals2000a=env_folder / finals2000a,
                 tai_utc=env_folder / tai_utc
