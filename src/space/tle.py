@@ -52,7 +52,7 @@ class TleDatabase:
 
         self._cache = {}
         self.model = TleModel
-        self.db.init(str(config['env']['folder'] / "tle.db"))
+        self.db.init(str(config['env']['folder'] / "space.db"))
         self.model.create_table(fail_silently=True)
 
     def purge(self):
@@ -252,7 +252,7 @@ def space_tle(*argv):
       space tle get --file visual.txt  # Retrieve only that file from celestrak
       space tle norad 25544       # Display the TLE of the ISS
       space tle cospar 1998-067A  # Display the TLE of the ISS, too
-      space insert file.txt  # Insert all the TLE found in the file to the DB
+      space tle insert file.txt  # Insert all the TLE found in the file to the DB
     """
 
     from .satellites import Satellite
