@@ -1,4 +1,3 @@
-src/space/__pycache__/
-src/*.egg-info
+space/__pycache__/
 *.egg-info
 dist/
