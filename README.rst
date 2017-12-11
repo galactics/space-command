@@ -5,6 +5,11 @@ The space command allows to compute the position of satellites and their passes 
 
 In order to do this, it uses the `beyond <https://github.com/galactics/beyond>`__ library.
 
+Installation
+------------
+
+    $ pip install space-command
+
 Features
 --------
 
