@@ -24,10 +24,6 @@ class Satellite:
             config['satellites'] = to_save
             config.save()
 
-    @property
-    def default(self):
-        return self.emitters[self.default_i]
-
     def add_emitter(self, emitter):
         self.emitter.append(emitter)
 
@@ -99,8 +95,7 @@ class Emitter:
 
 
 def space_sats(*argv):
-    """\
-    Informations concerning the satellite database
+    """Informations concerning the satellite database
 
     Usage:
         space-sats [create <mode> <selector> ...]
@@ -120,7 +115,7 @@ def space_sats(*argv):
     from docopt import docopt
     from textwrap import dedent
 
-    args = docopt(dedent(space_sats.__doc__), argv=argv)
+    args = docopt(dedent("    " + space_sats.__doc__), argv=argv)
 
     if args['create']:
         # Create a satellite object from the data available in the TLE database

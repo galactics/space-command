@@ -75,8 +75,7 @@ class StationDatabase:
 
 
 def space_stations(*argv):
-    """\
-    List available stations
+    """List available stations
 
     Usage:
       space-stations [create]
@@ -90,7 +89,7 @@ def space_stations(*argv):
     from textwrap import dedent
     from docopt import docopt
 
-    args = docopt(dedent(space_stations.__doc__), argv=argv)
+    args = docopt(dedent("    " + space_stations.__doc__), argv=argv)
 
     station = StationDatabase()
 

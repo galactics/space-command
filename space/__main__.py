@@ -4,10 +4,8 @@
 """
 
 import sys
-from pathlib import Path
 from collections import OrderedDict, namedtuple
-from importlib import import_module
-from textwrap import dedent
+from pkg_resources import iter_entry_points
 
 from . import __version__
 from space.config import config
@@ -26,21 +24,20 @@ def get_commands():
     """Retrieve available commands
     """
 
-    Command = namedtuple('Command', ['func', 'doc'])
+    def get_doc(func):
+        return func.__doc__.splitlines()[0] if func.__doc__ is not None else ""
 
-    path = Path(__file__).parent
+    Command = namedtuple('Command', ['func', 'doc'])
 
     commands = OrderedDict()
 
-    for file in path.iterdir():
+    for entry in iter_entry_points('subspace'):
         try:
-            module = import_module(".%s" % file.stem, 'space')
-            for cmd in [getattr(module, x) for x in dir(module) if x.startswith('space_')]:
-                name = cmd.__name__[6:]
-                doc = dedent(cmd.__doc__.splitlines()[0]) if cmd.__doc__ is not None else ""
-                commands[name] = Command(cmd, doc)
-        except ModuleNotFoundError as e:
-            print("%s : \"%s\"" % (file.stem, e))
+            func = entry.load()
+            doc = get_doc(func)
+            commands[entry.name] = Command(func, doc)
+        except Exception as e:
+            print(entry.name, ":", e)
 
     return commands
 

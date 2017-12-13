@@ -247,8 +247,7 @@ async def fetch_async(session, address, dst):
 
 
 def space_env(*argv):
-    """\
-    Retrieve environement data
+    """Retrieve environement data
 
     Namely, pole orientation and time-scales differences
 
@@ -274,7 +273,7 @@ def space_env(*argv):
 
     default_kind = "daily"
 
-    args = docopt(dedent(space_env.__doc__), argv=argv)
+    args = docopt(dedent("    " + space_env.__doc__), argv=argv)
     env_folder = config['env']['folder'] / "tmp" / "env"
 
     if not args['get'] and not args['insert']:

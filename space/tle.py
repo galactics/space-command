@@ -226,8 +226,7 @@ class TleModel(Model):
 
 
 def space_tle(*argv):
-    """\
-    Caching of TLE date from Space-Track and Celestrak websites
+    """Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
       space-tle insert <file>
@@ -261,7 +260,7 @@ def space_tle(*argv):
 
     from glob import glob
 
-    args = docopt(dedent(space_tle.__doc__), argv=argv)
+    args = docopt(dedent("    " + space_tle.__doc__), argv=argv)
     site = TleDatabase()
 
     if args['get']:

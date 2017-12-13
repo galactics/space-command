@@ -18,8 +18,7 @@ from .tle import Tle
 
 
 def space_passes(*argv):
-    """\
-    Compute and plot passes geometry
+    """Compute and plot passes geometry
 
     Usage:
       space-passes <station> [<satellite>...] [options]
@@ -54,7 +53,7 @@ def space_passes(*argv):
     ######################
     # Arguments handling #
     ######################
-    args = docopt(dedent(space_passes.__doc__), argv=argv)
+    args = docopt(dedent("    " + space_passes.__doc__), argv=argv)
 
     if args['--date'] is None:
         now = Date.now()
