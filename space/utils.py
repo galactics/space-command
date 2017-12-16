@@ -2,6 +2,9 @@
 from numpy import cos, sin, arccos, arcsin, pi, ones, linspace
 
 from beyond.constants import Earth
+from beyond.utils.ccsds import CCSDS
+
+from .tle import Tle
 
 
 __all__ = ['circle']
@@ -53,44 +56,11 @@ def circle(alt, lon, lat, mask=0):
 
     return result
 
-if __name__ == "__main__":
 
-    import numpy as np
-    import matplotlib.pyplot as plt
+def parse_orbits(txt):
 
-    def degcir(*args, **kwargs):
-        c = np.degrees(circle(*args, **kwargs))
-        c[:, 0] = ((c[:, 0] + 180) % 360) - 180
-        return c
+    orbits = [tle.orbit() for tle in Tle.from_string(txt)]
+    if not orbits:
+        orbits = [CCSDS.loads(txt)]
 
-    altlonlat = 36000000 + Earth.r, 0, np.pi / 4.
-
-    m = [[0, 44.9, 45, 75, 75.1, 119.9, 120, 140, 140.1, 360], [0, 0, -50, -50, 0, 0, 30, 30, 0, 0]]
-
-    azim = np.arange(0, 360)
-    elev = np.interp(azim, m[0], m[1])
-
-    m = azim, elev
-
-    c0 = degcir(*altlonlat)
-    plt.plot(c0[:, 0], c0[:, 1], ":", label="0 deg")
-    c1 = degcir(*altlonlat, mask=np.radians(5))
-    plt.plot(c1[:, 0], c1[:, 1], ":", label="5 deg")
-    c2 = degcir(*altlonlat, mask=np.radians(m))
-    plt.plot(c2[:, 0], c2[:, 1], label="mask")
-
-    plt.axis('equal')
-    plt.xlim(-180, 180)
-    plt.ylim(-90, 90)
-
-    plt.legend()
-
-    plt.figure()
-
-    x = np.linspace(380000 + Earth.r, 8000000 + Earth.r, 50)
-    y1 = np.pi / 2 - np.arcsin(Earth.r / x)
-    y2 = np.arccos(Earth.r / x)
-
-    plt.plot(x, y1)
-    plt.plot(x, y2, "o")
-    plt.show()
+    return orbits

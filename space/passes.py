@@ -14,7 +14,6 @@ from beyond.orbits.listeners import LightListener
 from .satellites import Satellite
 from .circle import circle
 from .stations import StationDatabase
-from .tle import Tle
 
 
 def space_passes(*argv):
