@@ -4,7 +4,7 @@
 """
 
 import sys
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from pkg_resources import iter_entry_points
 
 from . import __version__
@@ -24,22 +24,16 @@ def get_commands():
     """Retrieve available commands
     """
 
-    def get_doc(func):
-        return func.__doc__.splitlines()[0] if func.__doc__ is not None else ""
-
-    Command = namedtuple('Command', ['func', 'doc'])
-
     commands = OrderedDict()
 
     for entry in iter_entry_points('subspace'):
-        try:
-            func = entry.load()
-            doc = get_doc(func)
-            commands[entry.name] = Command(func, doc)
-        except Exception as e:
-            print(entry.name, ":", e)
+        commands[entry.name] = entry
 
     return commands
+
+
+def get_doc(func):
+    return func.__doc__.splitlines()[0] if func.__doc__ is not None else ""
 
 
 def main():
@@ -68,7 +62,8 @@ def main():
 
         helper = "Available sub-commands :\n"
         for name, cmd in sorted(commands.items()):
-            helper += " {:<10} {}\n".format(name, cmd.doc)
+            cmd = cmd.load()
+            helper += " {:<10} {}\n".format(name, get_doc(cmd))
 
         print(__doc__)
         print(helper)
@@ -82,7 +77,10 @@ def main():
     # retrieve the subcommand and its arguments
     _, command, *args = sys.argv
     # get the function associated with the subcommand
-    func = commands[command].func
+    func = commands[command].load()
+
+    # Load environment
+    commands['env'].load()
 
     # Call the function associated with the subcommand
     func(*args)
