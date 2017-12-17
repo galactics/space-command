@@ -79,9 +79,6 @@ def main():
     # get the function associated with the subcommand
     func = commands[command].load()
 
-    # Load environment
-    commands['env'].load()
-
     # Call the function associated with the subcommand
     func(*args)
 
