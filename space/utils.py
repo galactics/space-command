@@ -55,12 +55,3 @@ def circle(alt, lon, lat, mask=0):
         result.append((point_lon, point_lat))
 
     return result
-
-
-def parse_orbits(txt):
-
-    orbits = [tle.orbit() for tle in Tle.from_string(txt)]
-    if not orbits:
-        orbits = [CCSDS.loads(txt)]
-
-    return orbits

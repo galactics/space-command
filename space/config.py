@@ -39,13 +39,8 @@ class SpaceConfig(LegacyConfig):
                         'missing_policy': "pass",
                     }
                 },
-                'satellites': {
-                    'ISS': {
-                        'celestrak_file': 'visual.txt',
-                        'cospar_id': '1998-067A',
-                        'emitters': {},
-                        'norad_id': 25544
-                    },
+                'aliases': {
+                    'ISS': 25544
                 },
                 'stations': {
                     'TLS': {

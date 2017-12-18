@@ -11,9 +11,10 @@ from pathlib import Path
 from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
-from .satellites import Satellite
-from .circle import circle
+from .tle import TleDatabase
+from .utils import circle
 from .stations import StationDatabase
+from .satellites import Satellite
 
 
 def space_passes(*argv):
@@ -74,24 +75,19 @@ def space_passes(*argv):
 
     if len(args['<satellite>']) > 0:
         try:
-            sats = [Satellite.get(name=sat) for sat in args['<satellite>']]
+            sats = (TleDatabase.get(name=sat) for sat in args['<satellite>'])
         except ValueError:
             print("Unknwon satellite '{}'".format(args['<satellite>']))
             sys.exit(-1)
     elif not sys.stdin.isatty():
-        # Retrieve orbit from stdin (as a list of TLE)
-
         stdin = sys.stdin.read()
-
-        sats = [Satellite(
-                name=tle.name,
-                cospar_id=tle.cospar_id,
-                norad_id=tle.norad_id) for tle in Tle.from_string(stdin)]
+        sats = Satellite.parse(stdin)
 
         if not sats:
-            print("No TLE provided, data in stdin was:\n")
+            print("No orbit provided, data in stdin was:\n")
             print(indent(stdin, "   "))
             sys.exit(-1)
+
     else:
         print("No satellite defined")
         sys.exit(-1)
@@ -110,7 +106,7 @@ def space_passes(*argv):
 
     for sat in sats:
         count = 0
-        for orb in station.visibility(sat.tle(), start=start, stop=stop, step=step, events=events):
+        for orb in station.visibility(sat.orb, start=start, stop=stop, step=step, events=events):
 
             if args['--events-only'] and (orb.event is None or orb.event.info not in ('AOS', 'MAX', 'LOS')):
                 continue

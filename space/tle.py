@@ -11,6 +11,9 @@ from datetime import datetime
 from beyond.orbits.tle import Tle
 from beyond.config import config
 
+from .config import config as space_cfg
+from .satellites import Satellite
+
 
 class TleNotFound(Exception):
 
@@ -141,7 +144,7 @@ class TleDatabase:
             session.close()
 
     @classmethod
-    def get_last(cls, **kwargs):
+    def get(cls, **kwargs):
         """Retrieve one TLE from the table from one of the available fields
 
         Keyword Arguments:
@@ -149,10 +152,18 @@ class TleDatabase:
             cospar_id (str)
             name (str)
         Return:
-            Tle:
+            Satellite:
         """
         entity = cls()._get_last_raw(**kwargs)
-        return Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
+        tle = Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
+        sat = Satellite(
+                name=tle.name,
+                cospar_id=tle.cospar_id,
+                norad_id=tle.norad_id,
+                orb=tle.orbit(),
+                tle=tle
+            )
+        return sat
 
     def _get_last_raw(self, **kwargs):
         """
@@ -163,6 +174,9 @@ class TleDatabase:
         Return:
             TleModel:
         """
+
+        if 'name' in kwargs and kwargs['name'] in space_cfg['aliases']:
+            kwargs = {"norad_id": space_cfg['aliases'][kwargs['name']]}
 
         try:
             return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
@@ -252,9 +266,22 @@ def space_tle(*argv):
       space tle norad 25544       # Display the TLE of the ISS
       space tle cospar 1998-067A  # Display the TLE of the ISS, too
       space tle insert file.txt  # Insert all the TLE found in the file to the DB
+
+    It is also possible to define aliases in the config dict to simplify name
+    lookup
+
+        $ space tle name "ISS (ZARYA)"
+
+    becomes
+
+        $ space tle name ISS
+
+    if the config.yml contains
+
+        aliases:
+            ISS: 25544
     """
 
-    from .satellites import Satellite
     from docopt import docopt
     from textwrap import dedent
 
@@ -291,19 +318,10 @@ def space_tle(*argv):
         modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
         kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
 
-        if args['<mode>'] == "name":
-            # Try to match the name of the TLE with the satellite DB
-            # If it doesn't work out, fallback to the names in the TLE DB
-            try:
-                sat = Satellite.get(**kwargs)
-                kwargs = {'cospar_id': sat.cospar_id}
-            except ValueError:
-                pass
-
         try:
-            entity = site.get_last(**kwargs)
+            sat = site.get(**kwargs)
         except TleNotFound as e:
             print(str(e))
             sys.exit(-1)
 
-        print("%s\n%s" % (entity.name, entity))
+        print("%s\n%s" % (sat.name, sat.tle))
