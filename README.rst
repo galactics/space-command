@@ -8,6 +8,8 @@ In order to do this, it uses the `beyond <https://github.com/galactics/beyond>`_
 Installation
 ------------
 
+.. code-block:: shell
+
     $ pip install space-command
 
 Features
