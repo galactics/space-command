@@ -157,12 +157,12 @@ class TleDatabase:
         entity = cls()._get_last_raw(**kwargs)
         tle = Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
         sat = Satellite(
-                name=tle.name,
-                cospar_id=tle.cospar_id,
-                norad_id=tle.norad_id,
-                orb=tle.orbit(),
-                tle=tle
-            )
+            name=tle.name,
+            cospar_id=tle.cospar_id,
+            norad_id=tle.norad_id,
+            orb=tle.orbit(),
+            tle=tle
+        )
         return sat
 
     def _get_last_raw(self, **kwargs):
@@ -224,6 +224,38 @@ class TleDatabase:
 
         return len(entities)
 
+    def find(self, txt):
+        """Retrieve every TLE containing a string. For each object, only get the
+        last TLE in database
+
+        Args:
+            txt (str)
+        Return:
+            Satellite:
+        """
+
+        try:
+            entities = (self.model.select()
+                .where(self.model.data.contains(txt) | self.model.name.contains(txt))
+                .order_by(self.model.epoch.desc())
+                .group_by(self.model.norad_id)
+                .order_by(self.model.norad_id))
+        except TleModel.DoesNotExist as e:
+            raise TleNotFound("*", txt) from e
+
+        sats = []
+        for entity in entities:
+            tle = Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
+            sats.append(Satellite(
+                name=tle.name,
+                cospar_id=tle.cospar_id,
+                norad_id=tle.norad_id,
+                orb=tle.orbit(),
+                tle=tle
+            ))
+
+        return sats
+
 
 class TleModel(Model):
 
@@ -244,6 +276,7 @@ def space_tle(*argv):
 
     Usage:
       space-tle insert <file>
+      space-tle find <text> ...
       space-tle get [--full|--file <file>]
       space-tle <mode> <selector> ...
 
@@ -253,6 +286,7 @@ def space_tle(*argv):
                      'norad', 'cospar' and 'name'
       <selector>     Depending on <mode>, this field should be the NORAD-ID,
                      COSPAR-ID, or name of the desired object.
+      find           Search for a string in the database of TLE. Case insensitive
       get            Retrieve data from Celestrak website
       --full         Retrieve the entire database
       --file <file>  Only retrieve one file from Celestrak
@@ -312,6 +346,18 @@ def space_tle(*argv):
 
         for file in files:
             site.load(file)
+    elif args['find']:
+        txt = " ".join(args['<text>'])
+        try:
+            result = site.find(txt)
+        except TleNotFound as e:
+            print(str(e))
+            sys.exit(-1)
+
+        for sat in result:
+            print("%s\n%s\n" % (sat.name, sat.tle))
+
+        print("==> {} entries found".format(len(result)))
     else:
 
         # Simply show a TLE
