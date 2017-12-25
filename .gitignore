@@ -1,3 +1,4 @@
 space/__pycache__/
 *.egg-info
 dist/
+.cache/

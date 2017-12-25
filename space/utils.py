@@ -2,9 +2,6 @@
 from numpy import cos, sin, arccos, arcsin, pi, ones, linspace
 
 from beyond.constants import Earth
-from beyond.utils.ccsds import CCSDS
-
-from .tle import Tle
 
 
 __all__ = ['circle']
@@ -55,3 +52,78 @@ def circle(alt, lon, lat, mask=0):
         result.append((point_lon, point_lat))
 
     return result
+
+
+def deg2dmstuple(deg):
+    mnt, sec = divmod(deg * 3600, 60)
+    deg, mnt = divmod(mnt, 60)
+    return int(deg), int(mnt), sec
+
+
+def deg2dms(deg, heading=None, sec_prec=3):
+    """Convert from degrees to degrees, minutes seconds
+
+    Args:
+        deg (float): angle in degrees
+        heading (str): 'latitude' or 'longitude'
+        sec_prec (int): precision given to the seconds
+    return:
+        str: String representation of the angle
+
+    Example:
+        >>> print(deg2dms(43.56984611, 'latitude'))
+        N43°34'11.446"
+        >>> print(deg2dms(3.77059194, 'longitude'))
+        E3°46'14.131"
+    """
+
+    d, m, s = deg2dmstuple(deg)
+
+    if heading:
+        if "lon" in heading:
+            head = "E" if d >= 0 else "W"
+        elif "lat" in heading:
+            head = "N" if d >= 0 else "S"
+
+        txt = "{}{}°{}'{:0.{}f}\"".format(head, abs(d), m, s, sec_prec)
+    else:
+        txt = "{}°{}'{}\"".format(d, m, s)
+
+    return txt
+
+
+def dms_split(dms):
+    if "S" in dms or "W" in dms:
+        sign = -1
+    else:
+        sign = 1
+
+    dms = dms.strip().strip("NSEW")
+
+    d, _, rest = dms.partition("°")
+    m, _, rest = rest.partition("'")
+    s, _, rest = rest.partition('"')
+
+    return int(d), int(m), float(s), sign
+
+
+def dms2deg(dms):
+    """Convert from degrees, minutes, seconds text representation to degrees
+
+    Args:
+        dms (str): String to be converted to degrees
+    Return:
+        float: signed with respect to N-S/E-W
+    Example:
+        >>> print("{:0.8f}".format(dms2deg("N43°34'11.446\\"")))
+        43.56984611
+        >>> print("{:0.8f}".format(dms2deg("E3°46'14.131\\"")))
+        3.77059194
+    """
+    d, m, s, sign = dms_split(dms)
+
+    return sign * (d + m / 60. + s / 3600.)
+
+
+def hms2deg(h, m, s):
+    return h * 360 / 24 + m / 60. + s / 3600.

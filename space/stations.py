@@ -4,20 +4,7 @@ from numpy import degrees, pi
 from beyond.frames.frame import create_station, get_frame
 
 from .config import config
-
-
-def dms2deg(angle):
-
-    if angle[0] in 'NE':
-        sign = 1
-    else:
-        sign = -1
-
-    d, _, rest = angle[1:].partition('°')
-    m, _, rest = rest.partition("'")
-    s = rest.replace('"', "")
-
-    return sign * (int(d) + int(m) / 60. + float(s) / 3600.)
+from .utils import dms2deg, deg2dms
 
 
 class StationDatabase:
@@ -39,9 +26,6 @@ class StationDatabase:
 
             self._stations = {}
             for abbr, caract in config['stations'].items():
-                for i, elem in enumerate(caract['latlonalt'][:2]):
-                    if type(elem) is str:
-                        caract['latlonalt'][i] = dms2deg(elem)
 
                 caract['parent_frame'] = get_frame(caract['parent_frame'])
                 full_name = caract.pop('name')
@@ -97,8 +81,19 @@ def space_stations(*argv):
         print("Create a new station")
         abbr = input("Abbreviation : ")
         name = input("Name : ")
-        latitude = float(input("Latitude : "))
-        longitude = float(input("Longitude : "))
+
+        latitude = input("Latitude : ")
+        if "°" in latitude:
+            latitude = dms2deg(latitude)
+        else:
+            latitude = float(latitude)
+
+        longitude = input("Longitude : ")
+        if "°" in longitude:
+            longitude = dms2deg(longitude)
+        else:
+            longitude = float(longitude)
+
         altitude = float(input("Altitude : "))
 
         StationDatabase.save({
@@ -116,7 +111,7 @@ def space_stations(*argv):
             lat, lon, alt = station.latlonalt
             lat, lon = degrees([lat, lon])
             print("abbr:     {}".format(station.abbr))
-            print("altitude: {} m\nposition: {:8.5f}°N, {:9.5f}°E".format(alt, lat, lon))
+            print("altitude: {} m\nposition: {}, {}".format(alt, deg2dms(lat, "lat"), deg2dms(lon, "lon")))
 
             choices = {
                 0.: "South",
