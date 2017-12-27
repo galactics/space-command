@@ -100,8 +100,8 @@ class TleDatabase:
                 with filepath.open("w") as fp:
                     fp.write(text)
 
-                i = self.insert(text, "celestrak", filename)
-                print("{:<20} {:>3}".format(filename, i))
+                i, total = self.insert(text, "celestrak, %s" % filename)
+                print("{:<20} : {:>3}/{}".format(filename, i, total))
 
     def fetch_celestrak(self, sat_list=None, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
@@ -185,19 +185,25 @@ class TleDatabase:
             raise TleNotFound(mode, selector) from e
 
     def load(self, filepath):
+        """Insert the TLEs contained in a file in the database
+        """
         with open(filepath) as fh:
-            i = self.insert(fh.read(), "user input", filepath)
+            i, total = self.insert(fh.read(), "user input, %s" % filepath)
 
-        print(filepath, i)
+        print("{} : {}/{}".format(filepath, i, total))
 
-    def insert(self, text, src, filename=""):
-
-        if filename != "":
-            src = "%s, %s" % (src, filename)
+    def insert(self, text, src):
+        """
+        Args:
+            text (str): text containing the TLEs
+            src (str): Where those TLEs come from
+        Return:
+            2-tuple: Number of tle inserted, total tle found in the text
+        """
 
         with self.db.atomic():
             entities = []
-            for tle in Tle.from_string(text):
+            for i, tle in enumerate(Tle.from_string(text)):
                 try:
                     # An entry in the table correponding to this TLE has been
                     # found, there is no need to update it
@@ -222,7 +228,7 @@ class TleDatabase:
             if entities:
                 TleModel.insert_many(entities).execute()
 
-        return len(entities)
+        return len(entities), i + 1
 
     def find(self, txt):
         """Retrieve every TLE containing a string. For each object, only get the
