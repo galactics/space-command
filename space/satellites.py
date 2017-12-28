@@ -1,5 +1,6 @@
 
-from beyond.orbits import Tle
+from beyond.orbits import Tle, Ephem, Orbit
+from beyond.utils.ccsds import loads
 
 
 class Satellite:
@@ -26,9 +27,25 @@ class Satellite:
         )
 
     @classmethod
+    def from_ccsds(cls, ccsds):
+        return cls(
+            name=ccsds.name,
+            cospar_id=ccsds.cospar_id,
+            orb=ccsds
+        )
+
+    @classmethod
     def parse(cls, txt):
         sats = [cls.from_tle(tle) for tle in Tle.from_string(txt)]
         if not sats:
-            raise ValueError("No TLE")
+            try:
+                ccsds = loads(txt)
+            except ValueError:
+                raise ValueError("No TLE nor CCSDS")
+            else:
+                if isinstance(ccsds, (Ephem, Orbit)):
+                    sats = [cls.from_ccsds(ccsds)]
+                else:
+                    sats = [cls.from_ccsds(ephem) for ephem in ccsds]
 
         return sats
