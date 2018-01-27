@@ -4,7 +4,6 @@
 """
 
 import sys
-from collections import OrderedDict
 from pkg_resources import iter_entry_points
 
 from . import __version__
@@ -24,7 +23,7 @@ def get_commands():
     """Retrieve available commands
     """
 
-    commands = OrderedDict()
+    commands = {}
 
     for entry in iter_entry_points('subspace'):
         commands[entry.name] = entry
@@ -69,12 +68,20 @@ def main():
         # No or wrong subcommand
 
         helper = "Available sub-commands :\n"
-        for name, cmd in sorted(commands.items()):
-            cmd = cmd.load()
-            helper += " {:<10} {}\n".format(name, get_doc(cmd))
+        addons = ""
+        for name, entry in sorted(commands.items()):
+            cmd = entry.load()
+            if entry.dist.project_name == "space-command":
+                helper += " {:<10} {}\n".format(name, get_doc(cmd))
+            else:
+                addons += " {:<10} {}\n".format(name, get_doc(cmd))
 
         print(__doc__)
         print(helper)
+
+        if addons:
+            print("Available addons sub-commands :")
+            print(addons)
 
         print("Options :")
         print(" --pdb       Launch the python debugger when an exception is raised")
