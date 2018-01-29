@@ -184,6 +184,29 @@ class TleDatabase:
             mode, selector = kwargs.popitem()
             raise TleNotFound(mode, selector) from e
 
+    def _get_history(self, **kwargs):
+        """Retrieve all the TLE of a given object
+
+        Keyword Arguments:
+            norad_id (int)
+            cospar_id (str)
+            name (str)
+        Yield:
+            TleModel:
+        """
+
+        if 'name' in kwargs and kwargs['name'] in space_cfg['aliases']:
+            kwargs = {"norad_id": space_cfg['aliases'][kwargs['name']]}
+
+        try:
+            query = self.model.select().filter(**kwargs).order_by(self.model.epoch)
+        except TleModel.DoesNotExist as e:
+            mode, selector = kwargs.popitem()
+            raise TleNotFound(mode, selector) from e
+
+        for el in query:
+            yield Tle("%s\n%s" % (el.name, el.data), src=el.src)
+
     def load(self, filepath):
         """Insert the TLEs contained in a file in the database
         """
