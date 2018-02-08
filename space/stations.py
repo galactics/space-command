@@ -1,7 +1,7 @@
 
 from numpy import degrees, pi
 
-from beyond.frames.frame import create_station, get_frame
+from beyond.frames import get_frame, create_station
 
 from .config import config
 from .utils import dms2deg, deg2dms
