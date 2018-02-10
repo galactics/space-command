@@ -22,7 +22,7 @@ class TleNotFound(Exception):
         self.selector = selector
 
     def __str__(self):
-        return f"Unknown TLE for {self.mode} = '{self.selector}'"
+        return "Unknown TLE for {obj.mode} = '{obj.selector}'".format(obj=self)
 
 
 class TleDatabase:
@@ -264,11 +264,13 @@ class TleDatabase:
         """
 
         try:
-            entities = (self.model.select()
+            entities = (
+                self.model.select()
                 .where(self.model.data.contains(txt) | self.model.name.contains(txt))
                 .order_by(self.model.epoch.desc())
                 .group_by(self.model.norad_id)
-                .order_by(self.model.norad_id))
+                .order_by(self.model.norad_id)
+            )
         except TleModel.DoesNotExist as e:
             raise TleNotFound("*", txt) from e
 
@@ -306,41 +308,34 @@ def space_tle(*argv):
     Usage:
       space-tle insert <file>
       space-tle find <text> ...
-      space-tle get [--full|--file <file>]
+      space-tle get [--file <file>]
       space-tle <mode> <selector> ...
 
     Options:
       <mode>         Display the last TLE of an object. <mode> is the criterion
                      on which the research will be done. Available modes are
-                     'norad', 'cospar' and 'name'
+                     'norad', 'cospar' and 'name' (case sensitive)
       <selector>     Depending on <mode>, this field should be the NORAD-ID,
                      COSPAR-ID, or name of the desired object.
-      find           Search for a string in the database of TLE. Case insensitive
+      find           Search for a string in the database of TLE (case insensitive)
       get            Retrieve data from Celestrak website
-      --full         Retrieve the entire database
       --file <file>  Only retrieve one file from Celestrak
       insert         Insert a file into the database
       <file>         File to insert in the database
 
     Examples:
       space tle get         # Retrieve only the TLE of the satellites in the DB
-      space tle get --full  # Retrieve all the files of celestrak
       space tle get --file visual.txt  # Retrieve only that file from celestrak
       space tle norad 25544       # Display the TLE of the ISS
       space tle cospar 1998-067A  # Display the TLE of the ISS, too
       space tle insert file.txt  # Insert all the TLE found in the file to the DB
 
-    It is also possible to define aliases in the config dict to simplify name
-    lookup
-
+      It's also possible to define aliases in the config dict to simplify name
+      lookup:
         $ space tle name "ISS (ZARYA)"
-
-    becomes
-
+      becomes
         $ space tle name ISS
-
-    if the config.yml contains
-
+      if the config.yml contains
         aliases:
             ISS: 25544
     """
@@ -356,15 +351,8 @@ def space_tle(*argv):
     if args['get']:
         kwargs = dict(src="celestrak", sat_list=None)
 
-        if not args["--full"]:
-            if args['--file']:
-                kwargs['file'] = args['--file']
-            else:
-                try:
-                    kwargs['sat_list'] = list(Satellite.get_all())
-                except Exception:
-                    # In case of missing file
-                    kwargs['sat_list'] = None
+        if args['--file']:
+            kwargs['file'] = args['--file']
 
         site.fetch(**kwargs)
     elif args['insert']:
