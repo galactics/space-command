@@ -98,13 +98,12 @@ def space_passes(*argv):
     lats, lons = [], []
     azims, elevs = [], []
 
-    header = "Infos    Sat  Time                 Azim    Elev    Dist (km)  Light    "
-    print(header)
-    print("=" * len(header))
-
     light = LightListener()
 
     for sat in sats:
+        header = "Infos     Sat%s  Time                 Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
+        print(header)
+        print("=" * len(header))
         count = 0
         for orb in station.visibility(sat.orb, start=start, stop=stop, step=step, events=events):
 
