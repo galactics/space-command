@@ -10,7 +10,6 @@ from beyond.constants import Earth
 from beyond.dates import Date, timedelta
 from beyond.env.solarsystem import get_body
 
-from space.tle import TleDatabase
 from space.utils import circle
 from space.stations import StationDatabase
 
@@ -221,34 +220,13 @@ def space_map(*argv):
       <sat>   Name of the satellites you want to display
     """
 
-    import sys
     from docopt import docopt
-    from textwrap import dedent, indent
+    from textwrap import dedent
 
-    from space.satellites import Satellite
-
-    sats = []
+    from .passes import get_sats
 
     args = docopt(dedent("    " + space_map.__doc__), argv=argv)
-
-    if len(args['<sat>']) > 0:
-        try:
-            sats = [TleDatabase.get(name=sat) for sat in args['<sat>']]
-        except ValueError:
-            print("Unknwon satellite '{}'".format(args['<sat>']))
-            sys.exit(-1)
-    elif not sys.stdin.isatty():
-        stdin = sys.stdin.read()
-        sats = Satellite.parse(stdin)
-
-        if not sats:
-            print("No orbit provided, data in stdin was:\n")
-            print(indent(stdin, "   "))
-            sys.exit(-1)
-
-    if not sats:
-        print(dedent("    " + space_map.__doc__))
-        sys.exit(-1)
+    sats = get_sats(*args['<sat>'])
 
     sat_anim = SatAnim(sats)
 

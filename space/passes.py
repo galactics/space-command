@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -11,10 +12,33 @@ from pathlib import Path
 from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
-from .tle import TleDatabase
+from .tle import TleDatabase, TleNotFound
 from .utils import circle
 from .stations import StationDatabase
 from .satellites import Satellite
+
+
+def get_sats(*args):
+
+    if len(args) > 0:
+        try:
+            sats = [TleDatabase.get(name=sat) for sat in args]
+        except TleNotFound:
+            print("Unknwon satellite '{}'".format(" ".join(args)))
+            sys.exit(-1)
+    elif not sys.stdin.isatty():
+        stdin = sys.stdin.read()
+        sats = Satellite.parse(stdin)
+
+        if not sats:
+            print("No orbit provided, data in stdin was:\n")
+            print(indent(stdin, "   "))
+            sys.exit(-1)
+    else:
+        print("No satellite defined")
+        sys.exit(-1)
+
+    return sats
 
 
 def space_passes(*argv):
@@ -48,11 +72,6 @@ def space_passes(*argv):
 
     """
 
-    import sys
-
-    ######################
-    # Arguments handling #
-    ######################
     args = docopt(dedent("    " + space_passes.__doc__), argv=argv)
 
     if args['--date'] is None:
@@ -73,33 +92,14 @@ def space_passes(*argv):
         print("Unknwon station '{}'".format(args['<station>']))
         sys.exit(-1)
 
-    if len(args['<satellite>']) > 0:
-        try:
-            sats = (TleDatabase.get(name=sat) for sat in args['<satellite>'])
-        except ValueError:
-            print("Unknwon satellite '{}'".format(args['<satellite>']))
-            sys.exit(-1)
-    elif not sys.stdin.isatty():
-        stdin = sys.stdin.read()
-        sats = Satellite.parse(stdin)
+    sats = get_sats(*args['<satellite>'])
 
-        if not sats:
-            print("No orbit provided, data in stdin was:\n")
-            print(indent(stdin, "   "))
-            sys.exit(-1)
-
-    else:
-        print("No satellite defined")
-        sys.exit(-1)
-
-    ######################
-    # Actual computation #
-    ######################
     lats, lons = [], []
     azims, elevs = [], []
 
     light = LightListener()
 
+    # Computation of the passes
     for sat in sats:
         header = "Infos     Sat%s  Time                 Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
         print(header)
