@@ -1,5 +1,5 @@
 
-from numpy import cos, sin, arccos, arcsin, pi, ones, linspace
+from numpy import cos, sin, arccos, arcsin, pi, ones, linspace, copysign
 
 from beyond.constants import Earth
 
@@ -55,9 +55,10 @@ def circle(alt, lon, lat, mask=0):
 
 
 def deg2dmstuple(deg):
-    mnt, sec = divmod(deg * 3600, 60)
+    sign = copysign(1, deg)
+    mnt, sec = divmod(abs(deg) * 3600, 60)
     deg, mnt = divmod(mnt, 60)
-    return int(deg), int(mnt), sec
+    return int(sign * deg), int(mnt), sec
 
 
 def deg2dms(deg, heading=None, sec_prec=3):
@@ -73,8 +74,12 @@ def deg2dms(deg, heading=None, sec_prec=3):
     Example:
         >>> print(deg2dms(43.56984611, 'latitude'))
         N43°34'11.446"
+        >>> print(deg2dms(-43.56984611, 'latitude'))
+        S43°34'11.446"
         >>> print(deg2dms(3.77059194, 'longitude'))
         E3°46'14.131"
+        >>> print(deg2dms(-3.77059194, 'longitude'))
+        W3°46'14.131"
     """
 
     d, m, s = deg2dmstuple(deg)
@@ -87,7 +92,7 @@ def deg2dms(deg, heading=None, sec_prec=3):
 
         txt = "{}{}°{}'{:0.{}f}\"".format(head, abs(d), m, s, sec_prec)
     else:
-        txt = "{}°{}'{}\"".format(d, m, s)
+        txt = "{}°{}'{:0.{}f}\"".format(d, m, s, sec_prec)
 
     return txt
 
@@ -117,8 +122,12 @@ def dms2deg(dms):
     Example:
         >>> print("{:0.8f}".format(dms2deg("N43°34'11.446\\"")))
         43.56984611
+        >>> print("{:0.8f}".format(dms2deg("S43°34'11.446\\"")))
+        -43.56984611
         >>> print("{:0.8f}".format(dms2deg("E3°46'14.131\\"")))
         3.77059194
+        >>> print("{:0.8f}".format(dms2deg("W3°46'14.131\\"")))
+        -3.77059194
     """
     d, m, s, sign = dms_split(dms)
 
