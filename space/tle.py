@@ -184,7 +184,7 @@ class TleDatabase:
             mode, selector = kwargs.popitem()
             raise TleNotFound(mode, selector) from e
 
-    def _get_history(self, **kwargs):
+    def history(self, **kwargs):
         """Retrieve all the TLE of a given object
 
         Keyword Arguments:
@@ -309,6 +309,7 @@ def space_tle(*argv):
       space-tle insert <file>
       space-tle find <text> ...
       space-tle get [--file <file>]
+      space-tle history <mode> <selector> ...
       space-tle <mode> <selector> ...
 
     Options:
@@ -318,6 +319,7 @@ def space_tle(*argv):
       <selector>     Depending on <mode>, this field should be the NORAD-ID,
                      COSPAR-ID, or name of the desired object.
       find           Search for a string in the database of TLE (case insensitive)
+      history        Display all the recorded TLEs for a given object
       get            Retrieve data from Celestrak website
       --file <file>  Only retrieve one file from Celestrak
       insert         Insert a file into the database
@@ -382,9 +384,14 @@ def space_tle(*argv):
         kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
 
         try:
-            sat = site.get(**kwargs)
+            if args['history']:
+                tles = site.history(**kwargs)
+
+                for tle in tles:
+                    print("%s\n%s\n" % (tle.name, tle))
+            else:
+                sat = site.get(**kwargs)
+                print("%s\n%s" % (sat.name, sat.tle))
         except TleNotFound as e:
             print(str(e))
             sys.exit(-1)
-
-        print("%s\n%s" % (sat.name, sat.tle))
