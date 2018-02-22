@@ -1,7 +1,7 @@
 import sys
 import asyncio
 import aiohttp
-import signal
+import async_timeout
 import requests
 from peewee import (
     Model, IntegerField, CharField, TextField, DateField, SqliteDatabase
@@ -70,7 +70,8 @@ class TleDatabase:
         if src == 'spacetrack':
             self.fetch_spacetrack(sat_list)
         else:
-            self.fetch_celestrak(sat_list, file)
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.fetch_celestrak(sat_list, file))
 
     def fetch_spacetrack(self, sat_list=None):
         auth = config['spacetrack']
@@ -88,7 +89,7 @@ class TleDatabase:
 
         When the page is totally retrieved, the function will call insert
         """
-        with aiohttp.Timeout(30):
+        with async_timeout.timeout(30):
             async with session.get(self.CELESTRAK_URL + filename) as response:
                 text = await response.text()
 
@@ -103,7 +104,7 @@ class TleDatabase:
                 i, total = self.insert(text, "celestrak, %s" % filename)
                 print("{:<20} : {:>3}/{}".format(filename, i, total))
 
-    def fetch_celestrak(self, sat_list=None, file=None):
+    async def fetch_celestrak(self, sat_list=None, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
         """
 
@@ -120,28 +121,12 @@ class TleDatabase:
         else:
             filelist = self.CELESTRAK_PAGES
 
-        loop = asyncio.get_event_loop()
-
-        with aiohttp.ClientSession(loop=loop) as session:
-
-            def signal_handler(signal, frame):
-                """Interruption handling
-                """
-                loop.stop()
-                session.close()
-                sys.exit(0)
-
-            signal.signal(signal.SIGINT, signal_handler)
+        async with aiohttp.ClientSession() as session:
 
             # Task list initialisation
-            tasks = []
-            for p in filelist:
-                tasks.append(asyncio.ensure_future(self.fetch_file(session, p)))
+            tasks = [self.fetch_file(session, f) for f in filelist]
 
-            # Triggering of tasks (asyncio.wait())
-            loop.run_until_complete(asyncio.wait(tasks))
-            loop.stop()
-            session.close()
+            await asyncio.gather(*tasks)
 
     @classmethod
     def get(cls, **kwargs):
@@ -300,6 +285,13 @@ class TleModel(Model):
 
     class Meta:
         database = TleDatabase.db
+
+
+TleModel.add_index(
+    TleModel.norad_id.desc(),
+    TleModel.epoch.desc(),
+    unique=True
+)
 
 
 def space_tle(*argv):
