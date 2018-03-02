@@ -74,7 +74,7 @@ class TleDatabase:
             loop.run_until_complete(self.fetch_celestrak(sat_list, file))
 
     def fetch_spacetrack(self, sat_list=None):
-        auth = config['spacetrack']
+        auth = space_cfg['spacetrack']
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
         full = requests.get(self.SPACETRACK_URL, cookies=init.cookies)
 
@@ -198,7 +198,7 @@ class TleDatabase:
         with open(filepath) as fh:
             i, total = self.insert(fh.read(), "user input, %s" % filepath)
 
-        print("{} : {}/{}".format(filepath, i, total))
+        return i, total
 
     def insert(self, text, src):
         """
@@ -298,7 +298,7 @@ def space_tle(*argv):
     """Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
-      space-tle insert <file>
+      space-tle insert [<file>]
       space-tle find <text> ...
       space-tle get [--file <file>]
       space-tle history <mode> <selector> ...
@@ -350,13 +350,22 @@ def space_tle(*argv):
 
         site.fetch(**kwargs)
     elif args['insert']:
-        if "*" in args['<file>']:
-            files = glob(args['<file>'])
-        else:
-            files = [args['<file>']]
 
-        for file in files:
-            site.load(file)
+        if args['<file>']:
+            if "*" in args['<file>']:
+                files = glob(args['<file>'])
+            else:
+                files = [args['<file>']]
+
+            for file in files:
+                i, total = site.load(file)
+                print("{} : {}/{}".format(file, i, total))
+
+        elif not sys.stdin.isatty():
+            stdin = sys.stdin.read()
+            i, total = site.insert(stdin, "stdin")
+            print("stdin : {}/{}".format(i, total))
+
     elif args['find']:
         txt = " ".join(args['<text>'])
         try:
