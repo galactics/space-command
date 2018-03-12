@@ -9,9 +9,8 @@ from peewee import (
 from datetime import datetime
 
 from beyond.orbits.tle import Tle
-from beyond.config import config
 
-from .config import config as space_cfg
+from .config import config
 from .satellites import Satellite
 
 
@@ -55,7 +54,7 @@ class TleDatabase:
 
         self._cache = {}
         self.model = TleModel
-        self.db.init(str(config['env']['folder'] / "space.db"))
+        self.db.init(str(config.folder / "space.db"))
         self.model.create_table(fail_silently=True)
 
     def purge(self):
@@ -74,11 +73,11 @@ class TleDatabase:
             loop.run_until_complete(self.fetch_celestrak(sat_list, file))
 
     def fetch_spacetrack(self, sat_list=None):
-        auth = space_cfg['spacetrack']
+        auth = config['spacetrack']
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
         full = requests.get(self.SPACETRACK_URL, cookies=init.cookies)
 
-        with open(config['env']['folder'] / "tmp" / "spacetrack.txt", "w") as fp:
+        with open(config.folder / "tmp" / "spacetrack.txt", "w") as fp:
             fp.write(full.text)
 
         i = self.insert(full.text, "spacetrack")
@@ -93,7 +92,7 @@ class TleDatabase:
             async with session.get(self.CELESTRAK_URL + filename) as response:
                 text = await response.text()
 
-                filepath = config['env']['folder'] / "tmp" / "celestrak" / filename
+                filepath = config.folder / "tmp" / "celestrak" / filename
 
                 if not filepath.parent.exists():
                     filepath.parent.mkdir(parents=True)
@@ -153,7 +152,7 @@ class TleDatabase:
     def _transform_kwargs(self, **kwargs):
 
         if 'name' in kwargs and kwargs['name'] in config['aliases']:
-            kwargs = {"norad_id": space_cfg['aliases'][kwargs['name']]}
+            kwargs = {"norad_id": config['aliases'][kwargs['name']]}
 
         return kwargs
 
@@ -348,6 +347,7 @@ def space_tle(*argv):
     from glob import glob
 
     args = docopt(dedent("    " + space_tle.__doc__), argv=argv)
+
     site = TleDatabase()
 
     if args['get']:

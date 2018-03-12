@@ -7,7 +7,7 @@ import sys
 from pkg_resources import iter_entry_points
 
 from . import __version__
-from space.config import config
+from space.config import load_config
 
 
 def exception(type, value, tb):
@@ -54,9 +54,6 @@ def main():
         print("Beyond         {}".format(beyond.__version__))
         sys.exit(0)
 
-    # load configuration and create missing folders
-    config.load()
-
     # List of available subcommands
     commands = get_commands()
 
@@ -94,6 +91,9 @@ def main():
     _, command, *args = sys.argv
     # get the function associated with the subcommand
     func = commands[command].load()
+
+    if command != "config":
+        load_config()
 
     # Call the function associated with the subcommand
     func(*args)

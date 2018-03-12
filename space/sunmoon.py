@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from beyond.dates import Date, timedelta
 from beyond.env.solarsystem import get_body
 
-from space.stations import StationDatabase
+from .stations import StationDatabase
 
 
 def compute_phase(orb):
@@ -123,6 +123,7 @@ def space_sun(*argv):
     """
 
     args = docopt(dedent("    " + space_sun.__doc__), argv=argv)
+
     date = parse_date(args['<date>'])
 
     sun = get_body('Sun')
