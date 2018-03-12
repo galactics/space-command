@@ -150,6 +150,13 @@ class TleDatabase:
         )
         return sat
 
+    def _transform_kwargs(self, **kwargs):
+
+        if 'name' in kwargs and kwargs['name'] in config['aliases']:
+            kwargs = {"norad_id": space_cfg['aliases'][kwargs['name']]}
+
+        return kwargs
+
     def _get_last_raw(self, **kwargs):
         """
         Keyword Arguments:
@@ -160,8 +167,7 @@ class TleDatabase:
             TleModel:
         """
 
-        if 'name' in kwargs and kwargs['name'] in space_cfg['aliases']:
-            kwargs = {"norad_id": space_cfg['aliases'][kwargs['name']]}
+        kwargs = self._transform_kwargs(**kwargs)
 
         try:
             return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
@@ -169,7 +175,7 @@ class TleDatabase:
             mode, selector = kwargs.popitem()
             raise TleNotFound(mode, selector) from e
 
-    def history(self, **kwargs):
+    def history(self, number=None, **kwargs):
         """Retrieve all the TLE of a given object
 
         Keyword Arguments:
@@ -180,8 +186,7 @@ class TleDatabase:
             TleModel:
         """
 
-        if 'name' in kwargs and kwargs['name'] in space_cfg['aliases']:
-            kwargs = {"norad_id": space_cfg['aliases'][kwargs['name']]}
+        kwargs = self._transform_kwargs(**kwargs)
 
         try:
             query = self.model.select().filter(**kwargs).order_by(self.model.epoch)
@@ -189,7 +194,9 @@ class TleDatabase:
             mode, selector = kwargs.popitem()
             raise TleNotFound(mode, selector) from e
 
-        for el in query:
+        number = 0 if number is None else number
+
+        for el in query[-number:]:
             yield Tle("%s\n%s" % (el.name, el.data), src=el.src)
 
     def load(self, filepath):
@@ -299,32 +306,33 @@ def space_tle(*argv):
 
     Usage:
       space-tle insert [<file>]
+      space-tle get [<file>]
       space-tle find <text> ...
-      space-tle get [--file <file>]
-      space-tle history <mode> <selector> ...
+      space-tle history [--last <nb>] <mode> <selector> ...
       space-tle <mode> <selector> ...
 
     Options:
+      get            Retrieve TLEs from Celestrak website
+      find           Search for a string in the database of TLE (case insensitive)
+      insert         Insert TLEs into the database (file or stdin)
+      history        Display all the recorded TLEs for a given object
       <mode>         Display the last TLE of an object. <mode> is the criterion
                      on which the research will be done. Available modes are
                      'norad', 'cospar' and 'name' (case sensitive)
       <selector>     Depending on <mode>, this field should be the NORAD-ID,
                      COSPAR-ID, or name of the desired object.
-      find           Search for a string in the database of TLE (case insensitive)
-      history        Display all the recorded TLEs for a given object
-      get            Retrieve data from Celestrak website
-      --file <file>  Only retrieve one file from Celestrak
-      insert         Insert a file into the database
       <file>         File to insert in the database
+      -l, --last <nb>  Get the last <nb> TLE
 
     Examples:
-      space tle get         # Retrieve only the TLE of the satellites in the DB
-      space tle get --file visual.txt  # Retrieve only that file from celestrak
-      space tle norad 25544       # Display the TLE of the ISS
-      space tle cospar 1998-067A  # Display the TLE of the ISS, too
-      space tle insert file.txt  # Insert all the TLE found in the file to the DB
+      space tle get                  # Retrieve all the TLEs from celestrak
+      space tle get visual.txt       # Retrieve only that file from celestrak
+      space tle norad 25544          # Display the TLE of the ISS
+      space tle cospar 1998-067A     # Display the TLE of the ISS, too
+      space tle insert file.txt      # Insert all TLEs from the file
+      echo "..." | space tle insert  # Insert TLEs from stdin
 
-      It's also possible to define aliases in the config dict to simplify name
+      It is also possible to define aliases in the config dict to simplify name
       lookup:
         $ space tle name "ISS (ZARYA)"
       becomes
@@ -345,8 +353,8 @@ def space_tle(*argv):
     if args['get']:
         kwargs = dict(src="celestrak", sat_list=None)
 
-        if args['--file']:
-            kwargs['file'] = args['--file']
+        if args['<file>']:
+            kwargs['file'] = args['<file>']
 
         site.fetch(**kwargs)
     elif args['insert']:
@@ -386,7 +394,8 @@ def space_tle(*argv):
 
         try:
             if args['history']:
-                tles = site.history(**kwargs)
+                number = int(args['--last']) if args['--last'] is not None else None
+                tles = site.history(number=number, **kwargs)
 
                 for tle in tles:
                     print("%s\n%s\n" % (tle.name, tle))
