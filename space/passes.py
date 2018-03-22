@@ -18,7 +18,7 @@ from .stations import StationDatabase
 from .satellites import Satellite
 
 
-def get_sats(*args):
+def get_sats(*args, stdin=False):
 
     if len(args) > 0:
         try:
@@ -26,7 +26,7 @@ def get_sats(*args):
         except TleNotFound:
             print("Unknwon satellite '{}'".format(" ".join(args)))
             sys.exit(-1)
-    elif not sys.stdin.isatty():
+    elif stdin and not sys.stdin.isatty():
         stdin = sys.stdin.read()
         sats = Satellite.parse(stdin)
 
@@ -35,7 +35,7 @@ def get_sats(*args):
             print(indent(stdin, "   "))
             sys.exit(-1)
     else:
-        print("No satellite defined")
+        print("No satellite provided")
         sys.exit(-1)
 
     return sats
@@ -45,15 +45,16 @@ def space_passes(*argv):
     """Compute and plot passes geometry
 
     Usage:
-      space-passes <station> [<satellite>...] [options]
+      space-passes <station> (- | <satellite>...) [options]
 
     Option:
       -h --help          Show this help
       <station>          Location from which the satellite is tracked
-      <satellite>        Satellite to track. If absent the orbit of the satellite(s)
-                         should be provided as stdin in TLE format (see example)
+      <satellite>        Satellite to track.
+      -                  If used the orbit should be provided as stdin in TLE
+                         or CCSDS format (see example)
       -d, --date <date>  Starting date of the simulation. Default is now
-                         format: "%Y-%m-%dT%H:%M:%S")
+                         (format: "%Y-%m-%dT%H:%M:%S")
       -n, --no-events    Don't compute AOS, MAX and LOS
       -e, --events-only  Only show AOS, MAX and LOS
       -s, --step <sec>   Step-size (in seconds) [default: 30]
@@ -92,7 +93,7 @@ def space_passes(*argv):
         print("Unknwon station '{}'".format(args['<station>']))
         sys.exit(-1)
 
-    sats = get_sats(*args['<satellite>'])
+    sats = get_sats(*args['<satellite>'], stdin=args["-"])
 
     lats, lons = [], []
     azims, elevs = [], []

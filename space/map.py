@@ -214,10 +214,12 @@ def space_map(*argv):
     """Animated map of earth with ground track of satellites
 
     Usage:
-      space-map [<sat>...]
+      space-map (- | <satellite>...)
 
     Option:
-      <sat>   Name of the satellites you want to display
+      <satellite>   Name of the satellites you want to display.
+      -             If used, the orbit should be provided as stdin in TLE or
+                    CCSDS format
     """
 
     from docopt import docopt
@@ -226,7 +228,7 @@ def space_map(*argv):
     from .passes import get_sats
 
     args = docopt(dedent("    " + space_map.__doc__), argv=argv)
-    sats = get_sats(*args['<sat>'])
+    sats = get_sats(*args['<satellite>'], stdin=args['-'])
 
     sat_anim = SatAnim(sats)
 
