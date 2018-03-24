@@ -100,7 +100,6 @@ def space_stations(*argv):
             abbr: {
                 "name": name,
                 "latlonalt": (latitude, longitude, altitude),
-                "orientation": "N",
                 "parent_frame": "WGS84"
             }
         })
@@ -112,13 +111,4 @@ def space_stations(*argv):
             lat, lon = degrees([lat, lon])
             print("abbr:     {}".format(station.abbr))
             print("altitude: {} m\nposition: {}, {}".format(alt, deg2dms(lat, "lat"), deg2dms(lon, "lon")))
-
-            choices = {
-                0.: "South",
-                pi: "North"
-            }
-
-            orient = choices.get(station.orientation, 180 - degrees(station.orientation))
-
-            print("orient:  ", orient)
             print()
