@@ -1,13 +1,12 @@
 import numpy as np
 
 from pathlib import Path
-from docopt import docopt
-from textwrap import dedent
 import matplotlib.pyplot as plt
 
 from beyond.dates import Date, timedelta
 from beyond.env.solarsystem import get_body
 
+from .utils import docopt
 from .stations import StationDatabase
 
 
@@ -122,7 +121,7 @@ def space_sun(*argv):
                    (YYYY-MM-DD)
     """
 
-    args = docopt(dedent("    " + space_sun.__doc__), argv=argv)
+    args = docopt(space_sun.__doc__)
 
     date = parse_date(args['<date>'])
 
@@ -144,7 +143,7 @@ def space_moon(*argv):
         -f, --file <file>  Save the drawing in a file
     """
 
-    args = docopt(dedent("    " + space_moon.__doc__), argv=argv)
+    args = docopt(space_moon.__doc__)
 
     date = parse_date(args['<date>'])
     station = StationDatabase.get(name=args['<station>'])

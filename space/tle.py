@@ -341,12 +341,11 @@ def space_tle(*argv):
             ISS: 25544
     """
 
-    from docopt import docopt
-    from textwrap import dedent
+    from .utils import docopt
 
     from glob import glob
 
-    args = docopt(dedent("    " + space_tle.__doc__), argv=argv)
+    args = docopt(space_tle.__doc__)
 
     site = TleDatabase()
 

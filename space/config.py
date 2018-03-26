@@ -147,11 +147,10 @@ def space_config(*argv):
     """
 
     import os
-    from docopt import docopt
-    from textwrap import dedent
+    from .utils import docopt
     from subprocess import run
 
-    args = docopt(dedent("    " + space_config.__doc__), argv=argv)
+    args = docopt(space_config.__doc__)
 
     if args['init']:
         try:

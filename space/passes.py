@@ -5,15 +5,14 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from docopt import docopt
-from textwrap import dedent, indent
+from textwrap import indent
 from pathlib import Path
 
 from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
 from .tle import TleDatabase, TleNotFound
-from .utils import circle
+from .utils import circle, docopt
 from .stations import StationDatabase
 from .satellites import Satellite
 
@@ -73,7 +72,7 @@ def space_passes(*argv):
 
     """
 
-    args = docopt(dedent("    " + space_passes.__doc__), argv=argv)
+    args = docopt(space_passes.__doc__)
 
     if args['--date'] is None:
         now = Date.now()

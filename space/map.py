@@ -222,12 +222,10 @@ def space_map(*argv):
                     CCSDS format
     """
 
-    from docopt import docopt
-    from textwrap import dedent
-
+    from .utils import docopt
     from .passes import get_sats
 
-    args = docopt(dedent("    " + space_map.__doc__), argv=argv)
+    args = docopt(space_map.__doc__)
     sats = get_sats(*args['<satellite>'], stdin=args['-'])
 
     sat_anim = SatAnim(sats)

@@ -70,10 +70,9 @@ def space_stations(*argv):
     If no option is provided, list all stations available
     """
 
-    from textwrap import dedent
-    from docopt import docopt
+    from .utils import docopt
 
-    args = docopt(dedent("    " + space_stations.__doc__), argv=argv)
+    args = docopt(space_stations.__doc__)
 
     station = StationDatabase()
 

@@ -1,10 +1,17 @@
-
+import sys
+from textwrap import dedent
+from docopt import docopt as true_docopt
 from numpy import cos, sin, arccos, arcsin, pi, ones, linspace, copysign
 
 from beyond.constants import Earth
 
 
-__all__ = ['circle']
+__all__ = ['circle', 'docopt']
+
+
+def docopt(doc, argv=None):
+    argv = argv if argv else sys.argv[2:]
+    return true_docopt(dedent("    " + doc), argv=argv)
 
 
 def circle(alt, lon, lat, mask=0):
