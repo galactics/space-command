@@ -81,7 +81,7 @@ def space_passes(*argv):
         start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
 
     step = timedelta(seconds=float(args['--step']))
-    stop = timedelta(days=1)
+    stop = timedelta(days=100)
 
     pass_nb = int(args['--passes'])
     events = True if not args['--no-events'] else False
