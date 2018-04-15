@@ -59,6 +59,9 @@ def space_passes(*argv):
       -s, --step <sec>   Step-size (in seconds) [default: 30]
       -p, --passes <nb>  Number of passes to display [default: 1]
       -g, --graphs       Display graphics with matplotlib
+      -z, --zenital      Reverse direction of azimut angle on the polar plot
+                         to show as the passes as seen from the station
+                         looking to the sky
 
     Examples:
       Simple computation of the ISS, TLS is the name of my station
@@ -142,10 +145,17 @@ def space_passes(*argv):
         plt.figure()
         ax = plt.subplot(111, projection='polar')
         ax.set_theta_zero_location('N')
+
+        if not args['--zenital']:
+            ax.set_theta_direction(-1)
+
         plt.plot(np.radians(azims), elevs, '.')
         ax.set_yticks(range(0, 90, 20))
         ax.set_yticklabels(map(str, range(90, 0, -20)))
+        ax.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
         ax.set_rmax(90)
+        plt.text(np.radians(azims[0]), elevs[0], "AOS", color="r")
+        plt.text(np.radians(azims[-1]), elevs[-1], "LOS", color="r")
 
         # Ground-track of the passes
         plt.figure(figsize=(15.2, 8.2))
