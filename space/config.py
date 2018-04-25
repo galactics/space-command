@@ -8,7 +8,7 @@ from beyond.config import config as beyond_config, Config as LegacyConfig
 
 class SpaceConfig(LegacyConfig):
 
-    filepath = Path.home() / '.space/config.yml'
+    filepath = Path.home() / '.space/space.yml'
 
     def __new__(cls, *args, **kwargs):
 
@@ -81,7 +81,7 @@ def load_config(path=None, walkback=True):
         cwd = Path.cwd()
         for folder in [cwd] + list(cwd.parents):
 
-            fpath = folder.joinpath('config.yml')
+            fpath = folder.joinpath(SpaceConfig.filepath.name)
 
             if fpath.exists():
                 path = fpath
@@ -156,7 +156,7 @@ def space_config(*argv):
         try:
             config.init(args['<folder>'])
         except FileExistsError:
-            print("the config file already exists at '%s'" % config.filepath)
+            print("Config file already existing at '%s'" % config.filepath)
         else:
             print("config creation at", config.filepath)
     else:
