@@ -1,5 +1,5 @@
 
-from numpy import degrees, pi
+from numpy import degrees, pi, radians
 
 from beyond.frames import get_frame, create_station
 
@@ -29,6 +29,13 @@ class StationDatabase:
 
                 caract['parent_frame'] = get_frame(caract['parent_frame'])
                 full_name = caract.pop('name')
+
+                mask = caract.get('mask')
+                if mask:
+                    # reverse direction of the mask to put it in counterclockwise
+                    # to comply with the mathematical definition
+                    caract['mask'] = (2 * pi - radians(mask['azims'][::-1])), radians(mask['elevs'][::-1])
+
                 self._stations[abbr] = create_station(abbr, **caract)
                 self._stations[abbr].abbr = abbr
                 self._stations[abbr].full_name = full_name

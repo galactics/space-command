@@ -87,13 +87,14 @@ def space_passes(*argv):
     stop = timedelta(days=100)
 
     pass_nb = int(args['--passes'])
-    events = True if not args['--no-events'] else False
 
     try:
         station = StationDatabase.get(args["<station>"])
     except ValueError:
         print("Unknwon station '{}'".format(args['<station>']))
         sys.exit(-1)
+
+    events = not args['--no-events']
 
     sats = get_sats(*args['<satellite>'], stdin=args["-"])
 
@@ -104,7 +105,7 @@ def space_passes(*argv):
 
     # Computation of the passes
     for sat in sats:
-        header = "Infos     Sat%s  Time                 Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
+        header = "Infos        Sat%s  Time                 Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
         print(header)
         print("=" * len(header))
         count = 0
@@ -113,13 +114,17 @@ def space_passes(*argv):
             if args['--events-only'] and (orb.event is None or orb.event.info not in ('AOS', 'MAX', 'LOS')):
                 continue
 
-            azim = -np.degrees(orb.theta) % 360
+            azim = np.degrees(orb.theta) % 360
             elev = np.degrees(orb.phi)
             azims.append(azim)
             elevs.append(90 - elev)
             r = orb.r / 1000.
 
-            print("{event:9} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+            if orb.event:
+                azims_e.append(azim)
+                elevs_e.append(90 - elev)
+
+            print("{event:12} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
                 orb=orb, r=r, azim=azim, elev=elev, light=light.info(orb),
                 sat=sat, event=orb.event if orb.event is not None else ""
             ))
@@ -129,7 +134,7 @@ def space_passes(*argv):
             lats.append(lat)
             lons.append(lon)
 
-            if orb.event is not None and orb.event.info == "LOS":
+            if orb.event is not None and orb.event.info == "LOS" and orb.event.elev == 0:
                 print()
                 count += 1
                 if count == pass_nb:
@@ -146,13 +151,19 @@ def space_passes(*argv):
         ax = plt.subplot(111, projection='polar')
         ax.set_theta_zero_location('N')
 
-        if not args['--zenital']:
+        if args['--zenital']:
             ax.set_theta_direction(-1)
 
         plt.plot(np.radians(azims), elevs, '.')
+        if station.mask is not None:
+
+            m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
+            m_elevs = [90 - np.degrees(station.get_mask(azim)) for azim in m_azims]
+
+            plt.plot(m_azims, m_elevs)
         ax.set_yticks(range(0, 90, 20))
         ax.set_yticklabels(map(str, range(90, 0, -20)))
-        ax.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
+        ax.set_xticklabels(['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE'])
         ax.set_rmax(90)
         plt.text(np.radians(azims[0]), elevs[0], "AOS", color="r")
         plt.text(np.radians(azims[-1]), elevs[-1], "LOS", color="r")
@@ -160,17 +171,29 @@ def space_passes(*argv):
         # Ground-track of the passes
         plt.figure(figsize=(15.2, 8.2))
         plt.imshow(im, extent=[-180, 180, -90, 90])
-        plt.plot(lons, lats, 'r.')
+        plt.plot(lons, lats, 'b.')
 
         color = "#202020"
 
         # Ground Station
-        lat, lon = np.degrees(station.latlonalt[:-1])
-        plt.plot([lon], [lat], 'o', color=color)
-        plt.text(lon + 1, lat + 1, station.abbr, color=color)
-        lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(lon), np.radians(lat)))))
+        sta_lat, sta_lon = np.degrees(station.latlonalt[:-1])
+        plt.plot([sta_lon], [sta_lat], 'o', color=color)
+        plt.text(sta_lon + 1, sta_lat + 1, station.abbr, color=color)
+
+        # Visibility circle
+        lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat)))))
         lon = ((lon + 180) % 360) - 180
         plt.plot(lon, lat, '.', color=color, ms=2)
+
+        # Mask
+        if station.mask is not None:
+            m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
+            m_elevs = [station.get_mask(azim) for azim in m_azims]
+            mask = [m_azims, m_elevs]
+
+            lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat), mask=mask))))
+            lon = ((lon + 180) % 360) - 180
+            plt.plot(lon, lat, color='c', ms=2)
 
         plt.xlim([-180, 180])
         plt.ylim([-90, 90])
