@@ -79,7 +79,7 @@ def space_passes(*argv):
 
     if args['--date'] is None:
         now = Date.now()
-        start = Date(now.d, round(now.s))
+        start = Date(now.d, now.s - (now.s % 1440))
     else:
         start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
 
@@ -99,7 +99,9 @@ def space_passes(*argv):
     sats = get_sats(*args['<satellite>'], stdin=args["-"])
 
     lats, lons = [], []
+    lats_e, lons_e = [], []
     azims, elevs = [], []
+    azims_e, elevs_e = [], []
 
     light = LightListener()
 
@@ -134,6 +136,10 @@ def space_passes(*argv):
             lats.append(lat)
             lons.append(lon)
 
+            if orb.event:
+                lats_e.append(lat)
+                lons_e.append(lon)
+
             if orb.event is not None and orb.event.info == "LOS" and orb.event.elev == 0:
                 print()
                 count += 1
@@ -155,12 +161,15 @@ def space_passes(*argv):
             ax.set_theta_direction(-1)
 
         plt.plot(np.radians(azims), elevs, '.')
+        plt.plot(np.radians(azims_e), elevs_e, 'ro')
+
         if station.mask is not None:
 
             m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
             m_elevs = [90 - np.degrees(station.get_mask(azim)) for azim in m_azims]
 
             plt.plot(m_azims, m_elevs)
+
         ax.set_yticks(range(0, 90, 20))
         ax.set_yticklabels(map(str, range(90, 0, -20)))
         ax.set_xticklabels(['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE'])
@@ -172,6 +181,8 @@ def space_passes(*argv):
         plt.figure(figsize=(15.2, 8.2))
         plt.imshow(im, extent=[-180, 180, -90, 90])
         plt.plot(lons, lats, 'b.')
+
+        plt.plot(lons_e, lats_e, 'r.')
 
         color = "#202020"
 
