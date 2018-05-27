@@ -101,7 +101,7 @@ class TleDatabase:
                     fp.write(text)
 
                 i, total = self.insert(text, "celestrak, %s" % filename)
-                print("{:<20} : {:>3}/{}".format(filename, i, total))
+                print("{:<20}   {:>3}/{}".format(filename, i, total))
 
     async def fetch_celestrak(self, sat_list=None, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
