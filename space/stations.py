@@ -36,6 +36,8 @@ class StationDatabase:
                     # to comply with the mathematical definition
                     caract['mask'] = (2 * pi - radians(mask['azims'][::-1])), radians(mask['elevs'][::-1])
 
+                caract.setdefault('delay', True)
+
                 self._stations[abbr] = create_station(abbr, **caract)
                 self._stations[abbr].abbr = abbr
                 self._stations[abbr].full_name = full_name

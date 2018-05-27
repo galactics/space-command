@@ -127,7 +127,7 @@ def space_passes(*argv):
                 azims_e.append(azim)
                 elevs_e.append(90 - elev)
 
-            print("{event:12} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+            print("{event:12} {sat.name}  {orb.delayed_date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
                 orb=orb, r=r, azim=azim, elev=elev, light=light.info(orb),
                 sat=sat, event=orb.event if orb.event is not None else ""
             ))
