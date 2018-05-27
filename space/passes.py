@@ -98,16 +98,17 @@ def space_passes(*argv):
 
     sats = get_sats(*args['<satellite>'], stdin=args["-"])
 
-    lats, lons = [], []
-    lats_e, lons_e = [], []
-    azims, elevs = [], []
-    azims_e, elevs_e = [], []
-
     light = LightListener()
 
     # Computation of the passes
     for sat in sats:
-        header = "Infos        Sat%s  Time                 Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
+
+        lats, lons = [], []
+        lats_e, lons_e = [], []
+        azims, elevs = [], []
+        azims_e, elevs_e = [], []
+
+        header = "Infos        Sat%s  Time                       Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
         print(header)
         print("=" * len(header))
         count = 0
@@ -146,71 +147,75 @@ def space_passes(*argv):
                 if count == pass_nb:
                     break
 
-    # Plotting
-    if args['--graphs']:
-        path = Path(__file__).parent
+        # Plotting
+        if args['--graphs']:
+            path = Path(__file__).parent
 
-        im = plt.imread("%s/static/earth.png" % path)
+            im = plt.imread("%s/static/earth.png" % path)
 
-        # Polar plot of the passes
-        plt.figure()
-        ax = plt.subplot(111, projection='polar')
-        ax.set_theta_zero_location('N')
+            # Polar plot of the passes
+            plt.figure(figsize=(15.2, 8.2))
 
-        if args['--zenital']:
-            ax.set_theta_direction(-1)
+            plt.suptitle(sat.name)
 
-        plt.plot(np.radians(azims), elevs, '.')
-        plt.plot(np.radians(azims_e), elevs_e, 'ro')
+            ax = plt.subplot(121, projection='polar')
+            ax.set_theta_zero_location('N')
 
-        if station.mask is not None:
+            if args['--zenital']:
+                ax.set_theta_direction(-1)
 
-            m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
-            m_elevs = [90 - np.degrees(station.get_mask(azim)) for azim in m_azims]
+            plt.plot(np.radians(azims), elevs, '.')
+            plt.plot(np.radians(azims_e), elevs_e, 'ro')
 
-            plt.plot(m_azims, m_elevs)
+            if station.mask is not None:
 
-        ax.set_yticks(range(0, 90, 20))
-        ax.set_yticklabels(map(str, range(90, 0, -20)))
-        ax.set_xticklabels(['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE'])
-        ax.set_rmax(90)
-        plt.text(np.radians(azims[0]), elevs[0], "AOS", color="r")
-        plt.text(np.radians(azims[-1]), elevs[-1], "LOS", color="r")
+                m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
+                m_elevs = [90 - np.degrees(station.get_mask(azim)) for azim in m_azims]
 
-        # Ground-track of the passes
-        plt.figure(figsize=(15.2, 8.2))
-        plt.imshow(im, extent=[-180, 180, -90, 90])
-        plt.plot(lons, lats, 'b.')
+                plt.plot(m_azims, m_elevs)
 
-        plt.plot(lons_e, lats_e, 'r.')
+            ax.set_yticks(range(0, 90, 20))
+            ax.set_yticklabels(map(str, range(90, 0, -20)))
+            ax.set_xticklabels(['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE'])
+            ax.set_rmax(90)
+            plt.text(np.radians(azims[0]), elevs[0], "AOS", color="r")
+            plt.text(np.radians(azims[-1]), elevs[-1], "LOS", color="r")
 
-        color = "#202020"
+            plt.subplot(122)
+            # Ground-track of the passes
+            plt.imshow(im, extent=[-180, 180, -90, 90])
+            plt.plot(lons, lats, 'b.')
 
-        # Ground Station
-        sta_lat, sta_lon = np.degrees(station.latlonalt[:-1])
-        plt.plot([sta_lon], [sta_lat], 'o', color=color)
-        plt.text(sta_lon + 1, sta_lat + 1, station.abbr, color=color)
+            plt.plot(lons_e, lats_e, 'r.')
 
-        # Visibility circle
-        lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat)))))
-        lon = ((lon + 180) % 360) - 180
-        plt.plot(lon, lat, '.', color=color, ms=2)
+            color = "#202020"
 
-        # Mask
-        if station.mask is not None:
-            m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
-            m_elevs = [station.get_mask(azim) for azim in m_azims]
-            mask = [m_azims, m_elevs]
+            # Ground Station
+            sta_lat, sta_lon = np.degrees(station.latlonalt[:-1])
+            plt.plot([sta_lon], [sta_lat], 'o', color=color)
+            plt.text(sta_lon + 1, sta_lat + 1, station.abbr, color=color)
 
-            lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat), mask=mask))))
+            # Visibility circle
+            lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat)))))
             lon = ((lon + 180) % 360) - 180
-            plt.plot(lon, lat, color='c', ms=2)
+            plt.plot(lon, lat, '.', color=color, ms=2)
 
-        plt.xlim([-180, 180])
-        plt.ylim([-90, 90])
-        plt.grid(linestyle=':')
-        plt.xticks(range(-180, 181, 30))
-        plt.yticks(range(-90, 91, 30))
-        plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
+            # Mask
+            if station.mask is not None:
+                m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
+                m_elevs = [station.get_mask(azim) for azim in m_azims]
+                mask = [m_azims, m_elevs]
 
+                lon, lat = np.degrees(list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat), mask=mask))))
+                lon = ((lon + 180) % 360) - 180
+                plt.plot(lon, lat, color='c', ms=2)
+
+            plt.xlim([-180, 180])
+            plt.ylim([-90, 90])
+            plt.grid(linestyle=':')
+            plt.xticks(range(-180, 181, 30))
+            plt.yticks(range(-90, 91, 30))
+            plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
+
+    if args['--graphs']:
         plt.show()
