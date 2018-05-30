@@ -88,12 +88,14 @@ def print_visi(body, date, args):
         if not orb.event:
             continue
 
-        if orb.event.info.startswith("AOS"):
+        if orb.event.info.startswith("AOS") and orb.event.elev == 0:
             info = "%srise" % body.name
-        elif orb.event.info.startswith("LOS"):
+        elif orb.event.info.startswith("LOS") and orb.event.elev == 0:
             info = "%sset" % body.name
-        else:
+        elif orb.event.info == "MAX":
             info = "Max"
+        else:
+            continue
 
         print("{info:8} {orb.date:%Y-%m-%d %H:%M:%S} {azim:6.2f} {elev:6.2f}".format(
             orb=orb, azim=(360 - np.degrees(orb.theta)) % 360, info=info, elev=np.degrees(orb.phi)
