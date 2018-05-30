@@ -117,7 +117,7 @@ def space_passes(*argv):
             if args['--events-only'] and (orb.event is None or orb.event.info not in ('AOS', 'MAX', 'LOS')):
                 continue
 
-            azim = np.degrees(orb.theta) % 360
+            azim = -np.degrees(orb.theta) % 360
             elev = np.degrees(orb.phi)
             azims.append(azim)
             elevs.append(90 - elev)
@@ -161,7 +161,7 @@ def space_passes(*argv):
             ax = plt.subplot(121, projection='polar')
             ax.set_theta_zero_location('N')
 
-            if args['--zenital']:
+            if not args['--zenital']:
                 ax.set_theta_direction(-1)
 
             plt.plot(np.radians(azims), elevs, '.')
@@ -172,11 +172,11 @@ def space_passes(*argv):
                 m_azims = np.arange(0, 2 * np.pi, np.pi / 180.)
                 m_elevs = [90 - np.degrees(station.get_mask(azim)) for azim in m_azims]
 
-                plt.plot(m_azims, m_elevs)
+                plt.plot(-m_azims, m_elevs)
 
             ax.set_yticks(range(0, 90, 20))
             ax.set_yticklabels(map(str, range(90, 0, -20)))
-            ax.set_xticklabels(['N', 'NW', 'W', 'SW', 'S', 'SE', 'E', 'NE'])
+            ax.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
             ax.set_rmax(90)
             plt.text(np.radians(azims[0]), elevs[0], "AOS", color="r")
             plt.text(np.radians(azims[-1]), elevs[-1], "LOS", color="r")
