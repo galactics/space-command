@@ -1,5 +1,6 @@
 import sys
 import yaml
+import logging.config
 from pathlib import Path
 from textwrap import indent
 
@@ -66,6 +67,11 @@ class SpaceConfig(LegacyConfig):
         self.update(data)
 
         beyond_config.update(self['beyond'])
+
+        if 'logging' in self.keys():
+            logging.config.dictConfig(self['logging'])
+        else:
+            logging.basicConfig(level="INFO", format="%(message)s")
 
     def save(self):
         yaml.dump(dict(self), self.filepath.open('w'), indent=4)

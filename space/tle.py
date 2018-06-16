@@ -3,6 +3,7 @@ import asyncio
 import aiohttp
 import async_timeout
 import requests
+import logging
 from peewee import (
     Model, IntegerField, CharField, TextField, DateField, SqliteDatabase
 )
@@ -12,6 +13,9 @@ from beyond.orbits.tle import Tle
 
 from .config import config
 from .satellites import Satellite
+
+
+log = logging.getLogger(__name__)
 
 
 class TleNotFound(Exception):
@@ -81,7 +85,7 @@ class TleDatabase:
             fp.write(full.text)
 
         i = self.insert(full.text, "spacetrack")
-        print("spacetrack", i)
+        log.info("spacetrack", i)
 
     async def fetch_file(self, session, filename):
         """Coroutine to retrieve the specified page
@@ -101,7 +105,7 @@ class TleDatabase:
                     fp.write(text)
 
                 i, total = self.insert(text, "celestrak, %s" % filename)
-                print("{:<20}   {:>3}/{}".format(filename, i, total))
+                log.info("{:<20}   {:>3}/{}".format(filename, i, total))
 
     async def fetch_celestrak(self, sat_list=None, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
@@ -350,6 +354,7 @@ def space_tle(*argv):
     site = TleDatabase()
 
     if args['get']:
+        log.info("Retrieving TLEs from spacetrack")
         kwargs = dict(src="celestrak", sat_list=None)
 
         if args['<file>']:
@@ -366,25 +371,25 @@ def space_tle(*argv):
 
             for file in files:
                 i, total = site.load(file)
-                print("{} : {}/{}".format(file, i, total))
+                log.info("{} : {}/{}".format(file, i, total))
 
         elif not sys.stdin.isatty():
             stdin = sys.stdin.read()
             i, total = site.insert(stdin, "stdin")
-            print("stdin : {}/{}".format(i, total))
+            log.info("stdin : {}/{}".format(i, total))
 
     elif args['find']:
         txt = " ".join(args['<text>'])
         try:
             result = site.find(txt)
         except TleNotFound as e:
-            print(str(e))
+            log.error(str(e))
             sys.exit(-1)
 
         for sat in result:
-            print("%s\n%s\n" % (sat.name, sat.tle))
+            log.info("%s\n%s\n" % (sat.name, sat.tle))
 
-        print("==> {} entries found".format(len(result)))
+        log.info("==> {} entries found".format(len(result)))
     else:
 
         # Simply show a TLE
@@ -397,10 +402,10 @@ def space_tle(*argv):
                 tles = site.history(number=number, **kwargs)
 
                 for tle in tles:
-                    print("%s\n%s\n" % (tle.name, tle))
+                    log.info("%s\n%s\n" % (tle.name, tle))
             else:
                 sat = site.get(**kwargs)
-                print("%s\n%s" % (sat.name, sat.tle))
+                log.info("%s\n%s" % (sat.name, sat.tle))
         except TleNotFound as e:
-            print(str(e))
+            log.error(str(e))
             sys.exit(-1)
