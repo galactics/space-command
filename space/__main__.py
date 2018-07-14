@@ -19,24 +19,8 @@ def exception(type, value, tb):
     pdb.pm()
 
 
-def get_commands():
-    """Retrieve available commands
-    """
-
-    commands = {}
-
-    for entry in iter_entry_points('subspace'):
-        commands[entry.name] = entry
-
-    return commands
-
-
 def get_doc(func):
     return func.__doc__.splitlines()[0] if func.__doc__ is not None else ""
-
-
-def complete(commands):
-    print(" ".join(commands.keys()), "--pdb --version")
 
 
 def main():
@@ -55,11 +39,7 @@ def main():
         sys.exit(0)
 
     # List of available subcommands
-    commands = get_commands()
-
-    if "--complete" in sys.argv:
-        complete(commands)
-        sys.exit(0)
+    commands = {entry.name: entry for entry in iter_entry_points('subspace')}
 
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
         # No or wrong subcommand
@@ -83,7 +63,6 @@ def main():
         print("Options :")
         print(" --pdb       Launch the python debugger when an exception is raised")
         print(" --version   Show the version of the space-command utility")
-        print(" --complete  Generate autocomplete")
         print()
         sys.exit(-1)
 
