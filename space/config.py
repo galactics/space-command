@@ -183,14 +183,14 @@ def space_config(*argv):
                 config.save()
         else:
 
-            print("config :", config.filepath)
-
             subdict = config
 
             if args['<keys>']:
                 for k in args['<keys>'].split("."):
                     subdict = subdict[k]
 
+            if hasattr(subdict, 'filepath'):
+                print("config :", config.filepath)
             if isinstance(subdict, dict):
                 # print a part of the dict
                 print(get_dict(subdict))
