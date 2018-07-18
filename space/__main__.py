@@ -39,7 +39,7 @@ def main():
         sys.exit(0)
 
     # List of available subcommands
-    commands = {entry.name: entry for entry in iter_entry_points('subspace')}
+    commands = {entry.name: entry for entry in iter_entry_points('space.commands')}
 
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
         # No or wrong subcommand
