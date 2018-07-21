@@ -3,6 +3,7 @@ import yaml
 import logging.config
 from pathlib import Path
 from textwrap import indent
+from datetime import datetime, timedelta
 
 from beyond.config import config as beyond_config, Config as LegacyConfig
 
@@ -128,6 +129,38 @@ def set_dict(d, keys, value):
     subdict[last] = value
 
 
+class Lock:
+
+    fmt = "%Y-%m-%dT%H:%M:%S"
+
+    def __init__(self, path):
+        self.path = path
+
+    @property
+    def duration(self):
+        return timedelta(minutes=5)
+
+    def unlock(self):
+        with self.path.open('w') as fp:
+            fp.write(datetime.now().strftime(self.fmt))
+
+    def lock(self):
+        if not self.locked(verbose=False):
+            self.path.unlink()
+
+    def locked(self, verbose=True):
+        if self.path.exists():
+            txt = self.path.open().read().strip()
+            date = datetime.strptime(txt, self.fmt)
+            td = datetime.now() - date
+            if td < self.duration:
+                return False
+
+        if verbose:
+            print("Config file locked. Please use 'space config unlock' first")
+        return True
+
+
 def space_config(*argv):
     """Configuration handling
 
@@ -135,12 +168,16 @@ def space_config(*argv):
       space-config edit
       space-config set <keys> <value>
       space-config init [<folder>]
+      space-config unlock
+      space-config lock
       space-config [get] [<keys>]
 
     Options:
-      edit      Open the text editor defined via $EDITOR env variable
+      unlock    Enable command-line config alterations for the next 5 minutes
+      lock      Disable command-line config alterations
       get       Print the value of the selected fields
-      set       Set the value of the selected field
+      set       Set the value of the selected field (needs unlock)
+      edit      Open the text editor defined via $EDITOR env variable (needs unlock)
       init      Create config file and directory
       <keys>    Field selector, in the form of key1.key2.key3...
       <value>   Value to set the field to
@@ -153,8 +190,10 @@ def space_config(*argv):
     """
 
     import os
-    from .utils import docopt
+    import shutil
     from subprocess import run
+
+    from .utils import docopt
 
     args = docopt(space_config.__doc__)
 
@@ -168,26 +207,51 @@ def space_config(*argv):
     else:
         load_config()
 
+        lock = Lock(config.filepath.with_name(".config_unlock"))
+
         if args['edit']:
-            run([os.environ['EDITOR'], str(config.filepath)])
+            if not lock.locked():
+                run([os.environ['EDITOR'], str(config.filepath)])
         elif args['set']:
-            try:
-                set_dict(config, args['<keys>'].split('.'), args['<value>'])
-            except TypeError as e:
-                # For some reason we don't have the right to set this
-                # value
-                print(e)
-                sys.exit(-1)
-            else:
-                # If everything went fine, we save the file in its new state
-                config.save()
+            if not lock.locked():
+                try:
+                    set_dict(config, args['<keys>'].split('.'), args['<value>'])
+                except TypeError as e:
+                    # For some reason we don't have the right to set this
+                    # value
+                    print(e)
+                    sys.exit(-1)
+                else:
+                    # If everything went fine, we save the file in its new state
+                    config.save()
+
+        elif args['unlock']:
+            print("Are you sure you want to unlock the config file ?")
+            ans = input(" yes/[no] ")
+
+            if ans.lower() == "yes":
+                lock.unlock()
+
+                backup = config.filepath.with_suffix(config.filepath.suffix + '.backup')
+                shutil.copy2(config.filepath, backup)
+
+                print()
+                print("A backup of the current config file has been created at")
+                print(backup)
+                print()
+        elif args["lock"]:
+            lock.lock()
         else:
 
             subdict = config
 
-            if args['<keys>']:
-                for k in args['<keys>'].split("."):
-                    subdict = subdict[k]
+            try:
+                if args['<keys>']:
+                    for k in args['<keys>'].split("."):
+                        subdict = subdict[k]
+            except KeyError as e:
+                print("Unknown field", e)
+                sys.exit(-1)
 
             if hasattr(subdict, 'filepath'):
                 print("config :", config.filepath)
