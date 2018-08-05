@@ -1,6 +1,38 @@
 
+import sys
+from textwrap import indent
+
 from beyond.orbits import Tle, Ephem, Orbit
 from beyond.utils.ccsds import loads
+
+
+def get_sats(*args, stdin=False):
+    from .tle import TleDatabase, TleNotFound
+
+    if len(args) > 0:
+        try:
+            sats = [TleDatabase.get(name=sat) for sat in args]
+        except TleNotFound:
+            print("Unknwon satellite '{}'".format(" ".join(args)), file=sys.stderr)
+            sys.exit(-1)
+    elif stdin and not sys.stdin.isatty():
+        stdin = sys.stdin.read()
+
+        try:
+            sats = Satellite.parse(stdin)
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            sys.exit(-1)
+
+        if not sats:
+            print("No orbit provided, data in stdin was:\n", file=sys.stderr)
+            print(indent(stdin, "   "), file=sys.stderr)
+            sys.exit(-1)
+    else:
+        print("No orbit provided", file=sys.stderr)
+        sys.exit(-1)
+
+    return sats
 
 
 class Satellite:
@@ -36,12 +68,14 @@ class Satellite:
 
     @classmethod
     def parse(cls, txt):
+
         sats = [cls.from_tle(tle) for tle in Tle.from_string(txt)]
+
         if not sats:
             try:
                 ccsds = loads(txt)
             except ValueError:
-                raise ValueError("No TLE nor CCSDS")
+                raise ValueError("No valid TLE nor CCSDS")
             else:
                 if isinstance(ccsds, (Ephem, Orbit)):
                     sats = [cls.from_ccsds(ccsds)]

@@ -121,6 +121,8 @@ def set_dict(d, keys, value):
     *keys, last = keys
 
     for k in keys:
+        if k not in subdict:
+            subdict[k] = {}
         subdict = subdict[k]
 
     if last in subdict and isinstance(subdict[last], dict):
@@ -201,9 +203,9 @@ def space_config(*argv):
         try:
             config.init(args['<folder>'])
         except FileExistsError:
-            print("Config file already existing at '%s'" % config.filepath)
+            print("Config file already existing at '%s'" % config.filepath, file=sys.stderr)
         else:
-            print("config creation at", config.filepath)
+            print("config creation at", config.filepath, file=sys.stderr)
     else:
         load_config()
 
@@ -219,7 +221,7 @@ def space_config(*argv):
                 except TypeError as e:
                     # For some reason we don't have the right to set this
                     # value
-                    print(e)
+                    print(e, file=sys.stderr)
                     sys.exit(-1)
                 else:
                     # If everything went fine, we save the file in its new state
@@ -250,7 +252,7 @@ def space_config(*argv):
                     for k in args['<keys>'].split("."):
                         subdict = subdict[k]
             except KeyError as e:
-                print("Unknown field", e)
+                print("Unknown field", e, file=sys.stderr)
                 sys.exit(-1)
 
             if hasattr(subdict, 'filepath'):

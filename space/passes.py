@@ -5,39 +5,14 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from textwrap import indent
 from pathlib import Path
 
 from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
-from .tle import TleDatabase, TleNotFound
 from .utils import circle, docopt
 from .stations import StationDatabase
-from .satellites import Satellite
-
-
-def get_sats(*args, stdin=False):
-
-    if len(args) > 0:
-        try:
-            sats = [TleDatabase.get(name=sat) for sat in args]
-        except TleNotFound:
-            print("Unknwon satellite '{}'".format(" ".join(args)))
-            sys.exit(-1)
-    elif stdin and not sys.stdin.isatty():
-        stdin = sys.stdin.read()
-        sats = Satellite.parse(stdin)
-
-        if not sats:
-            print("No orbit provided, data in stdin was:\n")
-            print(indent(stdin, "   "))
-            sys.exit(-1)
-    else:
-        print("No satellite provided")
-        sys.exit(-1)
-
-    return sats
+from .satellites import get_sats
 
 
 def space_passes(*argv):
@@ -81,12 +56,19 @@ def space_passes(*argv):
         now = Date.now()
         start = Date(now.d, now.s - (now.s % 1440))
     else:
-        start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
+        try:
+            start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            sys.exit(-1)
 
-    step = timedelta(seconds=float(args['--step']))
-    stop = timedelta(days=1)
-
-    pass_nb = int(args['--passes'])
+    try:
+        step = timedelta(seconds=float(args['--step']))
+        stop = timedelta(days=1)
+        pass_nb = int(args['--passes'])
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        sys.exit(-1)
 
     try:
         station = StationDatabase.get(args["<station>"])
