@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from beyond.dates import Date, timedelta
+from beyond.dates import Date
 from beyond.env.solarsystem import get_body
 
 from .utils import docopt
@@ -81,57 +81,6 @@ def draw_moon(date, station, phase, illumin, filepath=False):
     plt.close()
 
 
-def print_visi(body, date, args):
-    station = StationDatabase.get(name=args['<station>'])
-
-    for orb in station.visibility(body.propagate(date), start=date, stop=timedelta(days=1.1), step=timedelta(minutes=60), events=True):
-        if not orb.event:
-            continue
-
-        if orb.event.info.startswith("AOS") and orb.event.elev == 0:
-            info = "%srise" % body.name
-        elif orb.event.info.startswith("LOS") and orb.event.elev == 0:
-            info = "%sset" % body.name
-        elif orb.event.info == "MAX":
-            info = "Max"
-        else:
-            continue
-
-        print("{info:8} {orb.date:%Y-%m-%d %H:%M:%S} {azim:6.2f} {elev:6.2f}".format(
-            orb=orb, azim=(360 - np.degrees(orb.theta)) % 360, info=info, elev=np.degrees(orb.phi)
-        ))
-
-
-def parse_date(arg):
-    if arg is None:
-        date = Date.now()
-    else:
-        date = Date.strptime(arg, "%Y-%m-%d")
-
-    return date
-
-
-def space_sun(*argv):
-    """Compute sunrise and sunset dates from a station
-
-    Usage:
-        space-sun <station> [<date>]
-
-    Options:
-        <station>  Name of the station from which to compute
-        <date>     Date for which to compute the sunrise and sunset
-                   (YYYY-MM-DD)
-    """
-
-    args = docopt(space_sun.__doc__)
-
-    date = parse_date(args['<date>'])
-
-    sun = get_body('Sun')
-
-    print_visi(sun, date, args)
-
-
 def space_moon(*argv):
     """Compute the phase of the moon
 
@@ -140,26 +89,34 @@ def space_moon(*argv):
 
     Options:
         <station>          Station from which the moon is observed
-        <date>             Date for which to compute the moon phase (YYYY-MM-DD)
+        <date>             Date for which to compute the moon phase (%Y-%m-%d)
         -g, --graph        Display the moon phase
         -f, --file <file>  Save the drawing in a file
     """
 
+    import sys
+
     args = docopt(space_moon.__doc__)
 
-    date = parse_date(args['<date>'])
-    station = StationDatabase.get(name=args['<station>'])
+    if args['--date'] is None:
+        date = Date(Date.now().d)
+    else:
+        try:
+            date = Date.strptime(args['--date'], "%Y-%m-%d")
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            sys.exit(-1)
+
     moon = get_body('Moon')
+    orb = moon.propagate(date)
 
-    moon_orb = moon.propagate(date)
+    station = StationDatabase.get(name=args['<station>'])
 
-    phase = compute_phase(moon_orb)
+    phase = compute_phase(orb)
     phase_norm = (phase % (2 * np.pi)) / (2 * np.pi)
     illumin = illumination(phase)
 
     print("{:%Y-%m-%d}: {:6.2f}%".format(date, illumin * 100))
-
-    print_visi(moon, date, args)
 
     if args['--graph']:
         draw_moon(date, station, phase_norm, illumin, filepath=args['--file'])
