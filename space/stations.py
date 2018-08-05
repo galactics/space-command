@@ -2,6 +2,7 @@
 from numpy import degrees, pi, radians
 
 from beyond.frames import get_frame, create_station
+from beyond.errors import UnknownFrameError
 
 from .config import config
 from .utils import dms2deg, deg2dms
@@ -49,7 +50,7 @@ class StationDatabase:
 
         try:
             return get_frame(name)
-        except ValueError:
+        except UnknownFrameError:
             if name not in self.list().keys():
                 raise
             return self.list()[name]
