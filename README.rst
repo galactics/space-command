@@ -15,19 +15,71 @@ Installation
 Features
 --------
 
+**Retrieve orbits as TLE from celestrak**
+
 .. code-block:: shell
 
-    # Retrieve orbits as TLE from celestrak
     $ space tle get
+    $ space tle name ISS
+    ISS (ZARYA)
+    1 25544U 98067A   18217.29289738  .00001607  00000-0  31893-4 0  9999
+    2 25544  51.6423 133.9734 0005443  28.3880 115.1824 15.53801660126150
 
-    # Compute passes over a station for a list of satellites
-    $ space passes <station> <sat>
+**Animated map showing position of a satellite (e.g. the ISS)**
 
-    # Animated map showing position of a satellite (e.g. the ISS)
+.. code-block:: shell
+
     $ space map ISS
 
-    # Compute Sun rising and setting times
-    $ space sun <station>
+**Compute and display moon phase**
 
-    # Compute Moon rising and setting times and display moon phase
+.. code-block:: shell
+
     $ space moon <station> --graph
+
+**Retrieve Solar System bodies ephemeris**
+
+.. code-block:: shell
+
+    $ space planets Moon
+    $ space planets Mars Jupiter Saturn
+
+**Predict passes of planets or satellites**
+
+.. code-block:: shell
+
+    $ space planets Mars | space passes <station> -
+    $ space tle find OSCAR 7 | space passes <station> -
+
+Changelog
+---------
+
+[Unreleased]
+^^^^^^^^^^^^
+
+**Added**
+
+- Compute ephemeris of solar system bodies (Moon, Mars, Jupiter, Titan, etc.)
+
+
+[v0.3] - 2018-07-24
+^^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- Possibility to create your own commands with the ``space.command`` `entry point <https://setuptools.readthedocs.io/en/latest/pkg_resources.html#entry-points>`__.
+- Search TLE containing a string
+- Retrieve all chronological TLE of an object
+- ``space map`` displays real-time position of objects
+- Compute moon phase
+- Every command taking object names can also take TLE or CCSDS ephemerides via stdin
+- add mask handling for stations
+- Passes zenital display optional
+
+**Changed**
+
+- MIT licence replace GPLv3
+
+**Removed**
+
+- EOP database disabled by default.
