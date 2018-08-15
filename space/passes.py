@@ -88,7 +88,7 @@ def space_passes(*argv):
         lats, lons = [], []
         lats_e, lons_e = [], []
         azims, elevs = [], []
-        azims_e, elevs_e = [], []
+        azims_e, elevs_e, text_e = [], [], []
 
         header = "Infos        Sat%s  Time                       Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
         print(header)
@@ -109,8 +109,10 @@ def space_passes(*argv):
                 azims_e.append(azim)
                 elevs_e.append(90 - elev)
 
-            print("{event:12} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
-                orb=orb, r=r, azim=azim, elev=elev, light=light.info(orb),
+            light_info = "Umbra" if light(orb) <= 0 else "Light"
+
+            print("{event:15} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+                orb=orb, r=r, azim=azim, elev=elev, light=light_info,
                 sat=sat, event=orb.event if orb.event is not None else ""
             ))
 
@@ -122,6 +124,7 @@ def space_passes(*argv):
             if orb.event:
                 lats_e.append(lat)
                 lons_e.append(lon)
+                text_e.append(orb.event.info)
 
             if orb.event is not None and orb.event.info == "LOS" and orb.event.elev == 0:
                 print()
@@ -131,23 +134,22 @@ def space_passes(*argv):
 
         # Plotting
         if args['--graphs']:
-            path = Path(__file__).parent
-
-            im = plt.imread("%s/static/earth.png" % path)
 
             # Polar plot of the passes
             plt.figure(figsize=(15.2, 8.2))
 
-            plt.suptitle(sat.name)
-
             ax = plt.subplot(121, projection='polar')
             ax.set_theta_zero_location('N')
 
+            plt.title("{} from {}".format(sat.name, station))
             if not args['--zenital']:
                 ax.set_theta_direction(-1)
 
             plt.plot(np.radians(azims), elevs, '.')
-            plt.plot(np.radians(azims_e), elevs_e, 'ro')
+
+            for azim, elev, txt in zip(azims_e, elevs_e, text_e):
+                plt.plot(np.radians(azim), elev, 'ro')
+                plt.text(np.radians(azim), elev, txt, color="r")
 
             if station.mask is not None:
 
@@ -160,11 +162,13 @@ def space_passes(*argv):
             ax.set_yticklabels(map(str, range(90, 0, -20)))
             ax.set_xticklabels(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
             ax.set_rmax(90)
-            plt.text(np.radians(azims[0]), elevs[0], "AOS", color="r")
-            plt.text(np.radians(azims[-1]), elevs[-1], "LOS", color="r")
+
+            plt.tight_layout()
 
             plt.subplot(122)
             # Ground-track of the passes
+            path = Path(__file__).parent
+            im = plt.imread("%s/static/earth.png" % path)
             plt.imshow(im, extent=[-180, 180, -90, 90])
             plt.plot(lons, lats, 'b.')
 
@@ -197,6 +201,7 @@ def space_passes(*argv):
             plt.grid(linestyle=':')
             plt.xticks(range(-180, 181, 30))
             plt.yticks(range(-90, 91, 30))
+            plt.tight_layout()
             plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
 
     if args['--graphs']:
