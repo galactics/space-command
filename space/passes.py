@@ -27,14 +27,16 @@ def space_passes(*argv):
       <satellite>        Satellite to track.
       -                  If used the orbit should be provided as stdin in TLE
                          or CCSDS format (see example)
-      -d, --date <date>  Starting date of the simulation. Default is now
+      -d --date <date>   Starting date of the simulation. Default is now
                          (format: "%Y-%m-%dT%H:%M:%S")
-      -n, --no-events    Don't compute AOS, MAX and LOS
-      -e, --events-only  Only show AOS, MAX and LOS
-      -s, --step <sec>   Step-size (in seconds) [default: 30]
-      -p, --passes <nb>  Number of passes to display [default: 1]
-      -g, --graphs       Display graphics with matplotlib
-      -z, --zenital      Reverse direction of azimut angle on the polar plot
+      -r --range <days>  Range of the computation [default: 1]
+      -n --no-events     Don't compute AOS, MAX and LOS
+      -e --events-only   Only show AOS, MAX and LOS
+      -l --light         Compute day/penumbra/umbra transitions
+      -s --step <sec>    Step-size (in seconds) [default: 30]
+      -p --passes <nb>   Number of passes to display [default: 1]
+      -g --graphs        Display graphics with matplotlib
+      -z --zenital       Reverse direction of azimut angle on the polar plot
                          to show as the passes as seen from the station
                          looking to the sky
 
@@ -64,7 +66,7 @@ def space_passes(*argv):
 
     try:
         step = timedelta(seconds=float(args['--step']))
-        stop = timedelta(days=1)
+        stop = timedelta(days=float(args['--range']))
         pass_nb = int(args['--passes'])
     except ValueError as e:
         print(e, file=sys.stderr)
@@ -82,6 +84,9 @@ def space_passes(*argv):
 
     light = LightListener()
 
+    if args['--light'] and events:
+        events = [light, LightListener(LightListener.PENUMBRA)]
+
     # Computation of the passes
     for sat in sats:
 
@@ -96,7 +101,7 @@ def space_passes(*argv):
         count = 0
         for orb in station.visibility(sat.orb, start=start, stop=stop, step=step, events=events):
 
-            if args['--events-only'] and (orb.event is None or orb.event.info not in ('AOS', 'MAX', 'LOS')):
+            if args['--events-only'] and orb.event is None:
                 continue
 
             azim = -np.degrees(orb.theta) % 360
