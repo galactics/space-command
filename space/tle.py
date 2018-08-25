@@ -1,3 +1,4 @@
+import os
 import sys
 import asyncio
 import aiohttp
@@ -84,8 +85,7 @@ class TleDatabase:
         with open(config.folder / "tmp" / "spacetrack.txt", "w") as fp:
             fp.write(full.text)
 
-        i = self.insert(full.text, "spacetrack")
-        log.info("spacetrack", i)
+        self.insert(full.text, "spacetrack")
 
     async def fetch_file(self, session, filename):
         """Coroutine to retrieve the specified page
@@ -104,8 +104,7 @@ class TleDatabase:
                 with filepath.open("w") as fp:
                     fp.write(text)
 
-                i, total = self.insert(text, "celestrak, %s" % filename)
-                log.info("{:<20}   {:>3}/{}".format(filename, i, total))
+                self.insert(text, filename)
 
     async def fetch_celestrak(self, sat_list=None, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
@@ -206,9 +205,7 @@ class TleDatabase:
         """Insert the TLEs contained in a file in the database
         """
         with open(filepath) as fh:
-            i, total = self.insert(fh.read(), "user input, %s" % filepath)
-
-        return i, total
+            self.insert(fh.read(), os.path.basename(filepath))
 
     def insert(self, text, src):
         """
@@ -246,7 +243,7 @@ class TleDatabase:
             if entities:
                 TleModel.insert_many(entities).execute()
 
-        return len(entities), i + 1
+        log.info("{:<20}   {:>3}/{}".format(src, len(entities), i + 1))
 
     def find(self, txt):
         """Retrieve every TLE containing a string. For each object, only get the
@@ -370,13 +367,10 @@ def space_tle(*argv):
                 files = [args['<file>']]
 
             for file in files:
-                i, total = site.load(file)
-                log.info("{} : {}/{}".format(file, i, total))
+                site.load(file)
 
         elif not sys.stdin.isatty():
-            stdin = sys.stdin.read()
-            i, total = site.insert(stdin, "stdin")
-            log.info("stdin : {}/{}".format(i, total))
+            site.insert(sys.stdin.read(), "stdin")
 
     elif args['find']:
         txt = " ".join(args['<text>'])
@@ -387,9 +381,9 @@ def space_tle(*argv):
             sys.exit(-1)
 
         for sat in result:
-            log.info("%s\n%s\n" % (sat.name, sat.tle))
+            print("%s\n%s\n" % (sat.name, sat.tle))
 
-        log.info("==> {} entries found".format(len(result)))
+        log.info("==> {} entries found for '{}'".format(len(result), txt))
     else:
 
         # Simply show a TLE
@@ -402,10 +396,10 @@ def space_tle(*argv):
                 tles = site.history(number=number, **kwargs)
 
                 for tle in tles:
-                    log.info("%s\n%s\n" % (tle.name, tle))
+                    print("%s\n%s\n" % (tle.name, tle))
             else:
                 sat = site.get(**kwargs)
-                log.info("%s\n%s" % (sat.name, sat.tle))
+                print("%s\n%s" % (sat.name, sat.tle))
         except TleNotFound as e:
             log.error(str(e))
             sys.exit(-1)
