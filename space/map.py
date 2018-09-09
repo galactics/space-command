@@ -43,8 +43,8 @@ class SatAnim:
 
         for station in StationDatabase.list().values():
             lat, lon = np.degrees(station.latlonalt[:-1])
-            plt.plot([lon], [lat], 'b+')
-            plt.text(lon + 1, lat + 1, station.abbr, color='b')
+            plt.plot([lon], [lat], 'k+')
+            plt.text(lon + 1, lat + 1, station.abbr)
 
         # For each satellite, initialisation of graphical representation
         for i, sat in enumerate(self.sats):
