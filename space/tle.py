@@ -351,7 +351,7 @@ def space_tle(*argv):
     site = TleDatabase()
 
     if args['get']:
-        log.info("Retrieving TLEs from spacetrack")
+        log.info("Retrieving TLEs from celestrak")
         kwargs = dict(src="celestrak", sat_list=None)
 
         if args['<file>']:
