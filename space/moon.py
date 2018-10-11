@@ -7,7 +7,7 @@ from beyond.dates import Date
 from beyond.env.solarsystem import get_body
 
 from .utils import docopt
-from .stations import StationDatabase
+from .stations import StationDb
 
 
 def compute_phase(orb):
@@ -110,7 +110,7 @@ def space_moon(*argv):
     moon = get_body('Moon')
     orb = moon.propagate(date)
 
-    station = StationDatabase.get(name=args['<station>'])
+    station = StationDb.get(name=args['<station>'])
 
     phase = compute_phase(orb)
     phase_norm = (phase % (2 * np.pi)) / (2 * np.pi)

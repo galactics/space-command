@@ -11,7 +11,7 @@ from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
 from .utils import circle, docopt
-from .stations import StationDatabase
+from .stations import StationDb
 from .satellites import get_sats
 
 
@@ -73,7 +73,7 @@ def space_passes(*argv):
         sys.exit(-1)
 
     try:
-        station = StationDatabase.get(args["<station>"])
+        station = StationDb.get(args["<station>"])
     except ValueError:
         print("Unknwon station '{}'".format(args['<station>']))
         sys.exit(-1)

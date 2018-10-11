@@ -10,7 +10,7 @@ import beyond.env.solarsystem as solar
 import beyond.utils.ccsds as ccsds
 
 from .utils import docopt
-from .stations import StationDatabase
+from .stations import StationDb
 
 
 def recurse(frame, already, level=""):
@@ -146,7 +146,7 @@ def space_planets(*args):
             jpl_error = False
 
         # Create all frames from stations database
-        StationDatabase.list()
+        StationDb.list()
 
         try:
             frame = get_frame(args['--frame'])

@@ -11,7 +11,7 @@ from beyond.dates import Date, timedelta
 from beyond.env.solarsystem import get_body
 
 from space.utils import circle
-from space.stations import StationDatabase
+from space.stations import StationDb
 
 
 class SatAnim:
@@ -41,7 +41,7 @@ class SatAnim:
         self.night = plt.fill_between([], [], color='k', alpha=0.3, lw=0, animated=True, zorder=1)
         self.date_text = plt.text(-175, 80, "")
 
-        for station in StationDatabase.list().values():
+        for station in StationDb.list().values():
             lat, lon = np.degrees(station.latlonalt[:-1])
             plt.plot([lon], [lat], 'k+')
             plt.text(lon + 1, lat + 1, station.abbr)

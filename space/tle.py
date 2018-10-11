@@ -29,7 +29,7 @@ class TleNotFound(Exception):
         return "Unknown TLE for {obj.mode} = '{obj.selector}'".format(obj=self)
 
 
-class TleDatabase:
+class TleDb:
 
     SPACETRACK_URL_AUTH = "https://www.space-track.org/ajaxauth/login"
     SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/EPOCH/>now-30/orderby/NORAD_CAT_ID/format/3le"
@@ -291,7 +291,7 @@ class TleModel(Model):
     insert_date = DateField()
 
     class Meta:
-        database = TleDatabase.db
+        database = TleDb.db
 
 
 TleModel.add_index(
@@ -348,7 +348,7 @@ def space_tle(*argv):
 
     args = docopt(space_tle.__doc__)
 
-    site = TleDatabase()
+    site = TleDb()
 
     if args['get']:
         log.info("Retrieving TLEs from celestrak")

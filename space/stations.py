@@ -8,7 +8,7 @@ from .config import config
 from .utils import dms2deg, deg2dms
 
 
-class StationDatabase:
+class StationDb:
 
     def __new__(cls):
 
@@ -82,7 +82,7 @@ def space_stations(*argv):
 
     args = docopt(space_stations.__doc__)
 
-    station = StationDatabase()
+    station = StationDb()
 
     if args['create']:
         print("Create a new station")
@@ -103,7 +103,7 @@ def space_stations(*argv):
 
         altitude = float(input("Altitude : "))
 
-        StationDatabase.save({
+        StationDb.save({
             abbr: {
                 "name": name,
                 "latlonalt": (latitude, longitude, altitude),

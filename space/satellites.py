@@ -7,11 +7,11 @@ from beyond.utils.ccsds import loads
 
 
 def get_sats(*args, stdin=False):
-    from .tle import TleDatabase, TleNotFound
+    from .tle import TleDb, TleNotFound
 
     if len(args) > 0:
         try:
-            sats = [TleDatabase.get(name=sat) for sat in args]
+            sats = [TleDb.get(name=sat) for sat in args]
         except TleNotFound:
             print("Unknwon satellite '{}'".format(" ".join(args)), file=sys.stderr)
             sys.exit(-1)
