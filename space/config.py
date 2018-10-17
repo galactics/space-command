@@ -22,6 +22,10 @@ class SpaceConfig(LegacyConfig):
 
         return cls._instance
 
+    def set(self, *args, save=True):
+        super().set(*args)
+        self.save()
+
     @property
     def folder(self):
         return self.filepath.parent
@@ -114,23 +118,6 @@ def get_dict(d):
     return "\n".join(txt)
 
 
-def set_dict(d, keys, value):
-
-    subdict = d
-
-    *keys, last = keys
-
-    for k in keys:
-        if k not in subdict:
-            subdict[k] = {}
-        subdict = subdict[k]
-
-    if last in subdict and isinstance(subdict[last], dict):
-        raise TypeError("Impossible to modify the structure of the file")
-
-    subdict[last] = value
-
-
 class Lock:
 
     fmt = "%Y-%m-%dT%H:%M:%S"
@@ -217,7 +204,7 @@ def space_config(*argv):
         elif args['set']:
             if not lock.locked():
                 try:
-                    set_dict(config, args['<keys>'].split('.'), args['<value>'])
+                    config.set(*args['<keys>'].split('.'), args['<value>'], save=False)
                 except TypeError as e:
                     # For some reason we don't have the right to set this
                     # value
