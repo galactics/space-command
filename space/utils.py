@@ -9,9 +9,9 @@ from beyond.constants import Earth
 __all__ = ['circle', 'docopt']
 
 
-def docopt(doc, argv=None):
+def docopt(doc, argv=None, **kwargs):
     argv = argv if argv else sys.argv[2:]
-    return true_docopt(dedent("    " + doc), argv=argv)
+    return true_docopt(dedent("    " + doc), argv=argv, **kwargs)
 
 
 def circle(alt, lon, lat, mask=0):

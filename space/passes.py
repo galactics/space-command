@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 
-from beyond.dates import Date, timedelta
 from beyond.orbits.listeners import LightListener
 
+from .clock import Date, timedelta
 from .utils import circle, docopt
 from .stations import StationDb
 from .satellites import get_sats

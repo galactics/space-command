@@ -3,9 +3,9 @@ import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
 
-from beyond.dates import Date
 from beyond.env.solarsystem import get_body
 
+from .clock import Date
 from .utils import docopt
 from .stations import StationDb
 

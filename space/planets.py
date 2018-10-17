@@ -1,7 +1,6 @@
 
 import sys
 
-from beyond.dates import Date, timedelta
 from beyond.errors import UnknownBodyError, UnknownFrameError
 from beyond.frames import get_frame
 
@@ -9,6 +8,7 @@ import beyond.env.jpl as jpl
 import beyond.env.solarsystem as solar
 import beyond.utils.ccsds as ccsds
 
+from .clock import Date, timedelta
 from .utils import docopt
 from .stations import StationDb
 

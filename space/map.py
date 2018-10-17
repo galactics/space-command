@@ -7,11 +7,11 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.widgets import Button
 
 from beyond.constants import Earth
-from beyond.dates import Date, timedelta
 from beyond.env.solarsystem import get_body
 
-from space.utils import circle
-from space.stations import StationDb
+from .utils import circle
+from .stations import StationDb
+from .clock import Date, timedelta
 
 
 class SatAnim:
