@@ -44,11 +44,11 @@ def space_planets(*args):
 
     Usage:
         space-planets
-        space-planets get
+        space-planets fetch
         space-planets <planet>... [options]
 
     Options:
-        get                  Retrieve .bsp file
+        fetch                Retrieve .bsp file
         <planet>             Names of the planet to compute the ephemeris of. If
                              absent, list all bodies available
         -f, --frame <frame>  Frame in which to display the ephemeris to
@@ -89,7 +89,7 @@ def space_planets(*args):
 
     args = docopt(space_planets.__doc__)
 
-    if args['get']:
+    if args['fetch']:
 
         url = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/"
 

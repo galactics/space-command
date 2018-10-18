@@ -306,13 +306,13 @@ def space_tle(*argv):
 
     Usage:
       space-tle insert [<file>]
-      space-tle get [<file>]
+      space-tle fetch [<file>]
       space-tle find <text> ...
       space-tle history [--last <nb>] <mode> <selector> ...
       space-tle <mode> <selector> ...
 
     Options:
-      get            Retrieve TLEs from Celestrak website
+      fetch          Retrieve TLEs from Celestrak website
       find           Search for a string in the database of TLE (case insensitive)
       insert         Insert TLEs into the database (file or stdin)
       history        Display all the recorded TLEs for a given object
@@ -325,8 +325,8 @@ def space_tle(*argv):
       -l, --last <nb>  Get the last <nb> TLE
 
     Examples:
-      space tle get                  # Retrieve all the TLEs from celestrak
-      space tle get visual.txt       # Retrieve only that file from celestrak
+      space tle fetch                # Retrieve all the TLEs from celestrak
+      space tle fetch visual.txt     # Retrieve only that file from celestrak
       space tle norad 25544          # Display the TLE of the ISS
       space tle cospar 1998-067A     # Display the TLE of the ISS, too
       space tle insert file.txt      # Insert all TLEs from the file
@@ -350,7 +350,7 @@ def space_tle(*argv):
 
     site = TleDb()
 
-    if args['get']:
+    if args['fetch']:
         log.info("Retrieving TLEs from celestrak")
         kwargs = dict(src="celestrak", sat_list=None)
 
