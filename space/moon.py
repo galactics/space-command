@@ -98,11 +98,11 @@ def space_moon(*argv):
 
     args = docopt(space_moon.__doc__)
 
-    if args['--date'] is None:
+    if args['<date>'] is None:
         date = Date(Date.now().d)
     else:
         try:
-            date = Date.strptime(args['--date'], "%Y-%m-%d")
+            date = Date.strptime(args['<date>'], "%Y-%m-%d")
         except ValueError as e:
             print(e, file=sys.stderr)
             sys.exit(-1)
