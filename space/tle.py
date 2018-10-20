@@ -72,6 +72,16 @@ class TleDb:
             # Vidage de la table
             self.model.delete().execute()
 
+    def dump(self, all=False):
+
+        bd_request = self.model.select().order_by(self.model.insert_date)
+
+        if not all:
+            bd_request = bd_request.group_by(self.model.norad_id)
+
+        for tle in bd_request:
+            yield Tle("%s\n%s" % (tle.name, tle.data), src=tle.src)
+
     def fetch(self, src=None, **kwargs):
 
         if src == 'spacetrack':
@@ -332,8 +342,10 @@ def space_tle(*argv):
       space-tle find <text> ...
       space-tle history [--last <nb>] <mode> <selector> ...
       space-tle <mode> <selector> ...
+      space-tle dump [--all]
 
     Options:
+      dump             Display the last TLE for each object
       fetch          Retrieve TLEs from Celestrak website
       fetch-st       Retrieve a TLE for a given object from the Space-Track website
                      This request needs login informations
@@ -347,6 +359,8 @@ def space_tle(*argv):
                      COSPAR-ID, or name of the desired object.
       <file>         File to insert in the database
       -l, --last <nb>  Get the last <nb> TLE
+      -a, --all        Display the entirety of the database, instead of only
+                       the last TLE of each object
 
     Examples:
       space tle fetch                # Retrieve all the TLEs from celestrak
@@ -428,6 +442,9 @@ def space_tle(*argv):
             print("%s\n%s\n" % (sat.name, sat.tle))
 
         log.info("==> {} entries found for '{}'".format(len(result), txt))
+    elif args['dump']:
+        for tle in db.dump(all=args['--all']):
+            print("{0.name}\n{0}\n".format(tle))
     else:
 
         # Simply show a TLE
