@@ -32,8 +32,10 @@ class TleNotFound(Exception):
 class TleDb:
 
     SPACETRACK_URL_AUTH = "https://www.space-track.org/ajaxauth/login"
-    SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/EPOCH/>now-30/orderby/NORAD_CAT_ID/format/3le"
+    # SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/EPOCH/>now-30/orderby/NORAD_CAT_ID/format/3le"
     # SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/EPOCH/%3Enow-30/orderby/NORAD_CAT_ID/format/3le/favorites/Amateur"
+
+    SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/{mode}/{selector}/orderby/ORDINAL%20asc/limit/1/format/3le/emptyresult/show"
 
     CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
     CELESTRAK_PAGES = [
@@ -70,20 +72,42 @@ class TleDb:
             # Vidage de la table
             self.model.delete().execute()
 
-    def fetch(self, src=None, sat_list=None, file=None):
-        if src == 'spacetrack':
-            self.fetch_spacetrack(sat_list)
-        else:
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(self.fetch_celestrak(sat_list, file))
+    def fetch(self, src=None, **kwargs):
 
-    def fetch_spacetrack(self, sat_list=None):
-        auth = config['spacetrack']
+        if src == 'spacetrack':
+            self.fetch_spacetrack(**kwargs)
+        elif src == 'celestrak':
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(self.fetch_celestrak(**kwargs))
+        else:
+            raise ValueError("Unknown source '{}'".format(src))
+
+    def fetch_spacetrack(self, **kwargs):
+
+        try:
+            auth = config['spacetrack']
+        except KeyError:
+            raise ValueError("No login information available for spacetrack")
+
+        _conv = {
+            'norad_id' : "NORAD_CAT_ID",
+            'cospar_id': "INTLDES",
+            'name': "OBJECT_NAME"
+        }
+
+        key = next(iter(kwargs.keys()))
+        url = self.SPACETRACK_URL.format(
+            mode=_conv[key],
+            selector=kwargs[key]
+        )
+
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
-        full = requests.get(self.SPACETRACK_URL, cookies=init.cookies)
+        full = requests.get(url, cookies=init.cookies)
 
         with open(config.folder / "tmp" / "spacetrack.txt", "w") as fp:
             fp.write(full.text)
+
+        full.raise_for_status()
 
         self.insert(full.text, "spacetrack")
 
@@ -106,16 +130,13 @@ class TleDb:
 
                 self.insert(text, filename)
 
-    async def fetch_celestrak(self, sat_list=None, file=None):
+    async def fetch_celestrak(self, file=None):
         """Retrieve TLE from the celestrak.com website asynchronously
         """
 
-        # if a list of satellites is provided, filter the files which will be
-        # download in order to minimize the number of requests
-        if sat_list is not None:
-            filelist = [sat.celestrak_file for sat in sat_list]
-            filelist = list(set(filelist).intersection(self.CELESTRAK_PAGES))
-        elif file is not None:
+        # filter the files which will be downloaded in order to minimize
+        # the number of requests
+        if file is not None:
             if file not in self.CELESTRAK_PAGES:
                 raise ValueError("Unknown celestrak page '%s'" % file)
 
@@ -307,12 +328,15 @@ def space_tle(*argv):
     Usage:
       space-tle insert [<file>]
       space-tle fetch [<file>]
+      space-tle fetch-st <mode> <selector>
       space-tle find <text> ...
       space-tle history [--last <nb>] <mode> <selector> ...
       space-tle <mode> <selector> ...
 
     Options:
       fetch          Retrieve TLEs from Celestrak website
+      fetch-st       Retrieve a TLE for a given object from the Space-Track website
+                     This request needs login informations
       find           Search for a string in the database of TLE (case insensitive)
       insert         Insert TLEs into the database (file or stdin)
       history        Display all the recorded TLEs for a given object
@@ -332,14 +356,22 @@ def space_tle(*argv):
       space tle insert file.txt      # Insert all TLEs from the file
       echo "..." | space tle insert  # Insert TLEs from stdin
 
+    Configuration:
+      The Space-Track website only allows TLE downloads from logged-in request.
+      To do this, the config file should contain
+          spacetrack:
+              identity: <login>
+              password: <password>
+
       It is also possible to define aliases in the config dict to simplify name
       lookup:
         $ space tle name "ISS (ZARYA)"
       becomes
         $ space tle name ISS
-      if the config.yml contains
-        aliases:
-            ISS: 25544
+      if the config file contains
+          aliases:
+              ISS: 25544
+
     """
 
     from .utils import docopt
@@ -348,16 +380,28 @@ def space_tle(*argv):
 
     args = docopt(space_tle.__doc__)
 
-    site = TleDb()
+    db = TleDb()
 
-    if args['fetch']:
-        log.info("Retrieving TLEs from celestrak")
-        kwargs = dict(src="celestrak", sat_list=None)
+    if args['fetch'] or args['fetch-st']:
 
-        if args['<file>']:
+        kwargs = {}
+        src = "celestrak" if args['fetch'] else "spacetrack"
+
+        if src == 'celestrak' and args['<file>']:
             kwargs['file'] = args['<file>']
+        elif src == "spacetrack":
+            modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
+            kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
 
-        site.fetch(**kwargs)
+        kwargs['src'] = src
+
+        log.info("Retrieving TLEs from {}".format(src))
+
+        try:
+            db.fetch(**kwargs)
+        except Exception as e:
+            print(e)
+            sys.exit(-1)
     elif args['insert']:
 
         if args['<file>']:
@@ -367,15 +411,15 @@ def space_tle(*argv):
                 files = [args['<file>']]
 
             for file in files:
-                site.load(file)
+                db.load(file)
 
         elif not sys.stdin.isatty():
-            site.insert(sys.stdin.read(), "stdin")
+            db.insert(sys.stdin.read(), "stdin")
 
     elif args['find']:
         txt = " ".join(args['<text>'])
         try:
-            result = site.find(txt)
+            result = db.find(txt)
         except TleNotFound as e:
             log.error(str(e))
             sys.exit(-1)
@@ -393,12 +437,12 @@ def space_tle(*argv):
         try:
             if args['history']:
                 number = int(args['--last']) if args['--last'] is not None else None
-                tles = site.history(number=number, **kwargs)
+                tles = db.history(number=number, **kwargs)
 
                 for tle in tles:
                     print("%s\n%s\n" % (tle.name, tle))
             else:
-                sat = site.get(**kwargs)
+                sat = db.get(**kwargs)
                 print("%s\n%s" % (sat.name, sat.tle))
         except TleNotFound as e:
             log.error(str(e))
