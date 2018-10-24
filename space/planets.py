@@ -85,7 +85,7 @@ def space_planets(*args):
     """
 
     import requests
-    from .config import config, set_dict
+    from .config import config
 
     args = docopt(space_planets.__doc__)
 
@@ -115,7 +115,7 @@ def space_planets(*args):
                 filelist.append(folder / file)
 
         # Adding the file to the list and saving the new state of configuration
-        set_dict(config, ("beyond", "env", "jpl"), filelist)
+        config.set("beyond", "env", "jpl", filelist)
         config.save()
 
     elif args['<planet>']:
