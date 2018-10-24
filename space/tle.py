@@ -6,7 +6,8 @@ import async_timeout
 import requests
 import logging
 from peewee import (
-    Model, IntegerField, CharField, TextField, DateField, SqliteDatabase
+    Model, IntegerField, CharField, TextField, DateTimeField, SqliteDatabase,
+    fn
 )
 from datetime import datetime
 
@@ -317,9 +318,9 @@ class TleModel(Model):
     cospar_id = CharField()
     name = CharField()
     data = TextField()
-    epoch = DateField()
+    epoch = DateTimeField()
     src = TextField()
-    insert_date = DateField()
+    insert_date = DateTimeField()
 
     class Meta:
         database = TleDb.db
@@ -336,28 +337,33 @@ def space_tle(*argv):
     """Caching of TLE date from Space-Track and Celestrak websites
 
     Usage:
+      space-tle get <field> <value> ...
       space-tle insert [<file>]
       space-tle fetch [<file>]
-      space-tle fetch-st <mode> <selector>
+      space-tle fetch-st <field> <value>
       space-tle find <text> ...
-      space-tle history [--last <nb>] <mode> <selector> ...
-      space-tle <mode> <selector> ...
+      space-tle history [--last <nb>] <field> <value> ...
       space-tle dump [--all]
+      space-tle stats
 
     Options:
       dump             Display the last TLE for each object
-      fetch          Retrieve TLEs from Celestrak website
-      fetch-st       Retrieve a TLE for a given object from the Space-Track website
-                     This request needs login informations
-      find           Search for a string in the database of TLE (case insensitive)
-      insert         Insert TLEs into the database (file or stdin)
-      history        Display all the recorded TLEs for a given object
-      <mode>         Display the last TLE of an object. <mode> is the criterion
-                     on which the research will be done. Available modes are
-                     'norad', 'cospar' and 'name' (case sensitive)
-      <selector>     Depending on <mode>, this field should be the NORAD-ID,
-                     COSPAR-ID, or name of the desired object.
-      <file>         File to insert in the database
+      fetch            Retrieve TLEs from Celestrak website
+      fetch-st         Retrieve a TLE for a given object from the Space-Track
+                       website. This request needs login informations
+      find             Search for a string in the database of TLE (case insensitive)
+      get              Display the last TLE of a selected object
+      history          Display all the recorded TLEs for a given object
+      insert           Insert TLEs into the database (file or stdin)
+      stats            Display statistics on the database
+
+      <field>          Display the last TLE of an object. <field> is the criterion
+                       on which the research will be done. Available modes are
+                       'norad', 'cospar' and 'name' (case sensitive)
+      <value>          Depending on <field>, this field should be the NORAD-ID,
+                       COSPAR-ID, or name of the desired object.
+      <file>           File to insert in the database
+
       -l, --last <nb>  Get the last <nb> TLE
       -a, --all        Display the entirety of the database, instead of only
                        the last TLE of each object
@@ -405,7 +411,7 @@ def space_tle(*argv):
             kwargs['file'] = args['<file>']
         elif src == "spacetrack":
             modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
-            kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
+            kwargs = {modes[args['<field>']]: " ".join(args['<value>'])}
 
         kwargs['src'] = src
 
@@ -445,11 +451,19 @@ def space_tle(*argv):
     elif args['dump']:
         for tle in db.dump(all=args['--all']):
             print("{0.name}\n{0}\n".format(tle))
+    elif args['stats']:
+        first = db.model.select(fn.MIN(TleModel.insert_date)).scalar()
+        last = db.model.select(fn.MAX(TleModel.insert_date)).scalar()
+
+        print("Objects       {}".format(db.model.select().group_by(TleModel.norad_id).count()))
+        print("TLE           {}".format(db.model.select().count()))
+        print("First fetch   {}".format(first))
+        print("Last fetch    {}".format(last))
     else:
 
         # Simply show a TLE
         modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
-        kwargs = {modes[args['<mode>']]: " ".join(args['<selector>'])}
+        kwargs = {modes[args['<field>']]: " ".join(args['<value>'])}
 
         try:
             if args['history']:
