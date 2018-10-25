@@ -1,7 +1,12 @@
+import sys
+import logging
 
 from beyond.dates import Date as LegacyDate, timedelta
 
 from space.config import config
+
+
+log = logging.getLogger(__name__)
 
 
 class Date(LegacyDate):
@@ -17,6 +22,36 @@ class Date(LegacyDate):
         return cls(super().now(*args, **kwargs) + cls._clock_offset())
 
 
+def sync():
+    """Synchronise the system date and the clock date
+    """
+    config.set(Date.CONFIG_FIELD, 0)
+    log.info("Clock set to system time")
+
+
+def set_date(date, ref):
+    """
+    Args:
+        date (Date)
+        ref (Date)
+    """
+
+    # the timedelta is here to take the UTC-TAI into account
+    # see beyond.dates.date for informations
+    offset = date - ref - timedelta(seconds=date._offset - ref._offset)
+    config.set(Date.CONFIG_FIELD, offset.total_seconds())
+    log.info("Clock date set to {}".format(date))
+
+
+def set_offset(offset):
+    """
+    Args
+        offset (timedelta)
+    """
+    config.set(Date.CONFIG_FIELD, offset.total_seconds())
+    log.info("Clock offset set to {}".format(offset))
+
+
 def space_clock(*argv):
     """Time control
 
@@ -30,37 +65,33 @@ def space_clock(*argv):
         sync        Set the time to be the same as the system
         set-date    Define the date
         set-offset  Define offset
-        <date>      New date to set
-        <ref>       Date at witch the new date is set. If absent, the current
-                    system time is used
-        <offset>    Offset
+        <date>      New date to set (%Y-%m-%dT%H:%M:%S)
+        <ref>       Date at witch the new date is set (same format as <date>).
+                    If absent, the current system time is used
+        <offset>    Offset in seconds
     """
 
     from space.utils import docopt
 
     args = docopt(space_clock.__doc__, options_first=True)
-    # print(args)
 
     if args['sync']:
-        config.set(Date.CONFIG_FIELD, 0)
-        print("Clock set to system time")
+        sync()
+        print(file=sys.stderr)
     elif args['set-date']:
         if args['<ref>'] is None:
-            now = LegacyDate.now()
+            ref = LegacyDate.now()
         else:
-            now = LegacyDate.strptime(args['<ref>'], "%Y-%m-%dT%H:%M:%S")
+            ref = LegacyDate.strptime(args['<ref>'], "%Y-%m-%dT%H:%M:%S")
         date = LegacyDate.strptime(args['<date>'], "%Y-%m-%dT%H:%M:%S")
-        offset = date - now - timedelta(seconds=date._offset - now._offset)
-        config.set(Date.CONFIG_FIELD, offset.total_seconds())
-        print("Clock set to {} (offset {})".format(date, offset))
-        print()
+
+        set_date(date, ref)
+
+        print(file=sys.stderr)
     elif args['set-offset']:
-        offset = float(args['<offset>'])
-        config.set(Date.CONFIG_FIELD, offset)
-
-        print("Clock offset set to {} seconds".format(offset))
-        print()
-
+        offset = timedelta(seconds=float(args['<offset>']))
+        set_offset(offset)
+        print(file=sys.stderr)
 
     now = Date.now()
     print("System Date : {}".format(now - Date._clock_offset()))

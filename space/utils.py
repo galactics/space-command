@@ -142,4 +142,14 @@ def dms2deg(dms):
 
 
 def hms2deg(h, m, s):
+    """Convert from hour, minutes, seconds to degrees
+
+    Args:
+        h (int)
+        m (int)
+        s (float)
+    Return:
+        float
+    """
+
     return h * 360 / 24 + m / 60. + s / 3600.

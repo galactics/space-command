@@ -34,8 +34,8 @@ def main():
     if "--version" in sys.argv:
         import beyond
 
-        print("Space-Command  {}".format(__version__))
-        print("Beyond         {}".format(beyond.__version__))
+        print("space-command  {}".format(__version__))
+        print("beyond         {}".format(beyond.__version__))
         sys.exit(0)
 
     # List of available subcommands

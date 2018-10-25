@@ -7,6 +7,9 @@ from beyond.utils.ccsds import loads
 
 
 def get_sats(*args, stdin=False):
+    """Utility command to convert command line arguments into Satellite objects
+    """
+
     from .tle import TleDb, TleNotFound
 
     if len(args) > 0:

@@ -22,12 +22,15 @@ log = logging.getLogger(__name__)
 
 class TleNotFound(Exception):
 
-    def __init__(self, mode, selector):
-        self.mode = mode
+    def __init__(self, selector, mode=None):
         self.selector = selector
+        self.mode = mode
 
     def __str__(self):
-        return "Unknown TLE for {obj.mode} = '{obj.selector}'".format(obj=self)
+        if self.mode:
+            return "No TLE for {obj.mode} = '{obj.selector}'".format(obj=self)
+        else:
+            return "No TLE containing '{}'".format(self.selector)
 
 
 class TleDb:
@@ -63,15 +66,7 @@ class TleDb:
         self._cache = {}
         self.model = TleModel
         self.db.init(str(config.folder / "space.db"))
-        self.model.create_table(fail_silently=True)
-
-    def purge(self):
-        if not self.dbpath.exists():
-            # Création de la table
-            self.db.create_table(self.model)
-        else:
-            # Vidage de la table
-            self.model.delete().execute()
+        self.model.create_table(safe=True)
 
     def dump(self, all=False):
 
@@ -207,7 +202,7 @@ class TleDb:
             return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
         except TleModel.DoesNotExist as e:
             mode, selector = kwargs.popitem()
-            raise TleNotFound(mode, selector) from e
+            raise TleNotFound(selector, mode=mode) from e
 
     def history(self, number=None, **kwargs):
         """Retrieve all the TLE of a given object
@@ -222,11 +217,11 @@ class TleDb:
 
         kwargs = self._transform_kwargs(**kwargs)
 
-        try:
-            query = self.model.select().filter(**kwargs).order_by(self.model.epoch)
-        except TleModel.DoesNotExist as e:
+        query = self.model.select().filter(**kwargs).order_by(self.model.epoch)
+
+        if not query:
             mode, selector = kwargs.popitem()
-            raise TleNotFound(mode, selector) from e
+            raise TleNotFound(selector, mode=mode)
 
         number = 0 if number is None else number
 
@@ -287,16 +282,13 @@ class TleDb:
             Satellite:
         """
 
-        try:
-            entities = (
-                self.model.select()
-                .where(self.model.data.contains(txt) | self.model.name.contains(txt))
-                .order_by(self.model.epoch.desc())
-                .group_by(self.model.norad_id)
-                .order_by(self.model.norad_id)
-            )
-        except TleModel.DoesNotExist as e:
-            raise TleNotFound("*", txt) from e
+        entities = (
+            self.model.select()
+            .where(self.model.data.contains(txt) | self.model.name.contains(txt))
+            .order_by(self.model.epoch.desc())
+            .group_by(self.model.norad_id)
+            .order_by(self.model.norad_id)
+        )
 
         sats = []
         for entity in entities:
@@ -308,6 +300,9 @@ class TleDb:
                 orb=tle.orbit(),
                 tle=tle
             ))
+
+        if not sats:
+            raise TleNotFound(txt)
 
         return sats
 
@@ -338,7 +333,7 @@ def space_tle(*argv):
 
     Usage:
       space-tle get <field> <value> ...
-      space-tle insert [<file>]
+      space-tle insert [<file>...]
       space-tle fetch [<file>]
       space-tle fetch-st <field> <value>
       space-tle find <text> ...
@@ -424,16 +419,18 @@ def space_tle(*argv):
             sys.exit(-1)
     elif args['insert']:
 
+        # Process the file list provided by the command line
         if args['<file>']:
-            if "*" in args['<file>']:
-                files = glob(args['<file>'])
-            else:
-                files = [args['<file>']]
+            files = []
+            for f in args['<file>']:
+                files.extend(glob(f))
 
+            # Insert each file into the database
             for file in files:
                 db.load(file)
 
         elif not sys.stdin.isatty():
+            # Insert the content of stdin into the database
             db.insert(sys.stdin.read(), "stdin")
 
     elif args['find']:

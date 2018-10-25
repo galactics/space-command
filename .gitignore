@@ -1,4 +1,7 @@
-space/__pycache__/
+*/__pycache__/
 *.egg-info
 dist/
 .cache/
+.tox/
+htmlcov/
+.coverage

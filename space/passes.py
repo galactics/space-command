@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from beyond.orbits.listeners import LightListener
+from beyond.errors import UnknownFrameError
 
 from .clock import Date, timedelta
 from .utils import circle, docopt
@@ -74,8 +75,8 @@ def space_passes(*argv):
 
     try:
         station = StationDb.get(args["<station>"])
-    except ValueError:
-        print("Unknwon station '{}'".format(args['<station>']))
+    except UnknownFrameError:
+        print("Unknwon station '{}'".format(args['<station>']), file=sys.stderr)
         sys.exit(-1)
 
     events = not args['--no-events']
@@ -95,7 +96,7 @@ def space_passes(*argv):
         azims, elevs = [], []
         azims_e, elevs_e, text_e = [], [], []
 
-        header = "Infos        Sat%s  Time                       Azim    Elev    Dist (km)  Light    " % (" " * (len(sat.name) - 3))
+        header = "Infos           %sSat                        Time    Azim    Elev  Dist (km)  Light    " % (" " * (len(sat.name) - 3))
         print(header)
         print("=" * len(header))
         count = 0

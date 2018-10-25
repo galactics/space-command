@@ -174,11 +174,11 @@ def space_planets(*args):
         else:
             print(ccsds.dumps(ephems))
     else:
+        print("List of all available bodies")
         try:
             txt = recurse(jpl.Bsp().top, set())
         except jpl.JplError as e:
             print(" Sun")
             print(" Moon")
         else:
-            print("List of all bodies available")
             print(txt)
