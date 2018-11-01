@@ -134,10 +134,10 @@ class Lock:
             fp.write(datetime.now().strftime(self.fmt))
 
     def lock(self):
-        if not self.locked(verbose=False):
+        if not self.locked():
             self.path.unlink()
 
-    def locked(self, verbose=True):
+    def locked(self):
         if self.path.exists():
             txt = self.path.open().read().strip()
             date = datetime.strptime(txt, self.fmt)
@@ -145,8 +145,6 @@ class Lock:
             if td < self.duration:
                 return False
 
-        if verbose:
-            print("Config file locked. Please use 'space config unlock' first")
         return True
 
 
@@ -155,7 +153,7 @@ def space_config(*argv):
 
     Usage:
       space-config edit
-      space-config set <keys> <value>
+      space-config set [--append] <keys> <value>
       space-config init [<folder>]
       space-config unlock
       space-config lock
@@ -171,6 +169,7 @@ def space_config(*argv):
       <keys>    Field selector, in the form of key1.key2.key3...
       <value>   Value to set the field to
       <folder>  Folder in which to create the config file
+      --append  Append the value to a list
 
     Examples:
       space config set aliases.ISS 25544
@@ -192,7 +191,7 @@ def space_config(*argv):
         except FileExistsError:
             print("Config file already existing at '%s'" % config.filepath, file=sys.stderr)
         else:
-            print("config creation at", config.filepath, file=sys.stderr)
+            print("config creation at", config.filepath.absolute())
     else:
         load_config()
 
@@ -201,10 +200,24 @@ def space_config(*argv):
         if args['edit']:
             if not lock.locked():
                 run([os.environ['EDITOR'], str(config.filepath)])
+            else:
+                print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
+                sys.exit(-1)
         elif args['set']:
             if not lock.locked():
                 try:
-                    config.set(*args['<keys>'].split('.'), args['<value>'], save=False)
+                    keys = args['<keys>'].split(".")
+                    if args['--append']:
+                        prev = config.get(*keys, fallback=[])
+                        if not isinstance(prev, list):
+                            if isinstance(prev, str):
+                                prev = [prev]
+                            else:
+                                prev = list(prev)
+                        prev.append(args['<value>'])
+                        config.set(*keys, prev, save=False)
+                    else:
+                        config.set(*keys, args['<value>'], save=False)
                 except TypeError as e:
                     # For some reason we don't have the right to set this
                     # value
@@ -213,6 +226,9 @@ def space_config(*argv):
                 else:
                     # If everything went fine, we save the file in its new state
                     config.save()
+            else:
+                print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
+                sys.exit(-1)
 
         elif args['unlock']:
             print("Are you sure you want to unlock the config file ?")
@@ -222,12 +238,15 @@ def space_config(*argv):
                 lock.unlock()
 
                 backup = config.filepath.with_suffix(config.filepath.suffix + '.backup')
-                shutil.copy2(config.filepath, backup)
+                shutil.copy2(str(config.filepath), str(backup))
 
                 print()
                 print("A backup of the current config file has been created at")
                 print(backup)
                 print()
+            elif ans.lower() != "no":
+                print("unknown answer '{}'".format(ans), file=sys.stderr)
+                sys.exit(-1)
         elif args["lock"]:
             lock.lock()
         else:
