@@ -54,13 +54,35 @@ Features
 Changelog
 ---------
 
-[Unreleased]
-^^^^^^^^^^^^
+[0.4.1] - 2018-11-01
+^^^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- TLE database dump and statistics
+- Station map
+- Stations' characteristics defined in config file are now set as attributes of the
+  station object
+
+[0.4] - 2018-10-20
+^^^^^^^^^^^^^^^^^^
 
 **Added**
 
 - Compute ephemeris of solar system bodies (Moon, Mars, Jupiter, Titan, etc.)
+- Moon phase computation
+- Centralised date handling, via command ``space clock``
+- Allow TLE retrieval from Space-Track
 
+**Chaged**
+
+- Database classes are now suffixed with *Db*
+- Subcommand retriving data from the web now use the argument **fetch** instead of get.
+
+**Removed**
+
+- Light propagation delay no longer taken into account.
+  The computation was tedious, and has been removed from the beyond library
 
 [v0.3] - 2018-07-24
 ^^^^^^^^^^^^^^^^^^^
