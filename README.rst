@@ -1,6 +1,14 @@
 Space Command
 =============
 
+.. image:: https://img.shields.io/pypi/v/space-command.svg
+    :alt: PyPi version
+    :target: https://pypi.python.org/pypi/space-command
+
+.. image:: https://img.shields.io/pypi/pyversions/space-command.svg
+    :alt: Python versions
+    :target: https://pypi.python.org/pypi/space-command
+
 The space command allows to compute the position of satellites and their passes above our head.
 
 In order to do this, it uses the `beyond <https://github.com/galactics/beyond>`__ library.
