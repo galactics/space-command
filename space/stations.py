@@ -26,20 +26,29 @@ class StationDb:
         if not hasattr(self, '_stations'):
 
             self._stations = {}
-            for abbr, caract in config['stations'].items():
+            for abbr, charact in config['stations'].items():
 
-                caract['parent_frame'] = get_frame(caract['parent_frame'])
-                full_name = caract.pop('name')
-
-                mask = caract.get('mask')
+                charact['parent_frame'] = get_frame(charact['parent_frame'])
+                full_name = charact.pop('name')
+                mask = charact.get('mask')
                 if mask:
                     # reverse direction of the mask to put it in counterclockwise
                     # to comply with the mathematical definition
-                    caract['mask'] = (2 * pi - radians(mask['azims'][::-1])), radians(mask['elevs'][::-1])
+                    charact['mask'] = (2 * pi - radians(mask['azims'][::-1])), radians(mask['elevs'][::-1])
 
-                self._stations[abbr] = create_station(abbr, **caract)
+                # Deletion of all unknown characteristics from the charact dict
+                # and conversion to object attributes (they may be used by addons)
+                extra_charact = {}
+                for key in list(charact.keys()):
+                    if key not in ('parent_frame', 'latlonalt', 'mask'):
+                        extra_charact[key] = charact.pop(key)
+
+                self._stations[abbr] = create_station(abbr, **charact)
                 self._stations[abbr].abbr = abbr
                 self._stations[abbr].full_name = full_name
+
+                for key, value in extra_charact.items():
+                    setattr(self._stations[abbr], key, value)
 
         return self._stations
 
