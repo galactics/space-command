@@ -24,7 +24,8 @@ class SpaceConfig(LegacyConfig):
 
     def set(self, *args, save=True):
         super().set(*args)
-        self.save()
+        if save:
+            self.save()
 
     @property
     def folder(self):
@@ -73,10 +74,51 @@ class SpaceConfig(LegacyConfig):
 
         beyond_config.update(self['beyond'])
 
+
         if 'logging' in self.keys():
-            logging.config.dictConfig(self['logging'])
+            logging_dict = self['logging']
         else:
-            logging.basicConfig(level="INFO", format="%(message)s")
+            default_logging = {
+                "disable_existing_loggers": False,
+                "filters": {
+                    "space_only": {"name": "space"}
+                },
+                "formatters":{
+                    "dated": {"format": '%(asctime)s - %(name)s - %(levelname)s - %(message)s'},
+                    "simple": {"format": '%(message)s'}
+                },
+                "handlers": {
+                    "console":{
+                        "class": "logging.StreamHandler",
+                        "formatter": "simple",
+                        "level": "INFO",
+                    },
+                    "debug_file_handler": {
+                        "backupCount": 20,
+                        "class": "logging.handlers.RotatingFileHandler",
+                        "encoding": "utf8",
+                        "filename": str(self.filepath.parent / "space.log"),
+                        "filters": ["space_only"],
+                        "formatter": "dated",
+                        "level": "DEBUG",
+                        "maxBytes": 10485760,
+                    },
+                },
+                "loggers": {
+                    "space_logger":{
+                        "handlers": ["console", "debug_file_handler"],
+                        "level": "DEBUG",
+                        "propagate": False,
+                    }
+                },
+                "root": {
+                    "handlers": ["console", "debug_file_handler"],
+                    "level": "DEBUG",
+                },
+                "version": 1
+            }
+            logging_dict = default_logging
+        logging.config.dictConfig(logging_dict)
 
     def save(self):
         yaml.dump(dict(self), self.filepath.open('w'), indent=4)
