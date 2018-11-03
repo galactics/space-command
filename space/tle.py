@@ -51,7 +51,8 @@ class TleDb:
         "glo-ops.txt", "galileo.txt", "beidou.txt", "sbas.txt", "nnss.txt",
         "musson.txt", "science.txt", "geodetic.txt", "engineering.txt",
         "education.txt", "military.txt", "radar.txt", "cubesat.txt",
-        "other.txt"
+        "other.txt", "active.txt", "analyst.txt", "planet.txt", 'spire.txt',
+        "ses.txt", "iridium-NEXT.txt",
     ]
 
     db = SqliteDatabase(None)
@@ -136,19 +137,23 @@ class TleDb:
 
                 self.insert(text, filename)
 
-    async def fetch_celestrak(self, file=None):
+    async def fetch_celestrak(self, files=None):
         """Retrieve TLE from the celestrak.com website asynchronously
         """
 
-        # filter the files which will be downloaded in order to minimize
-        # the number of requests
-        if file is not None:
-            if file not in self.CELESTRAK_PAGES:
-                raise ValueError("Unknown celestrak page '%s'" % file)
-
-            filelist = [file]
-        else:
+        if files is None:
             filelist = self.CELESTRAK_PAGES
+        else:
+            # Filter out file not included in the base list
+            files = set(files)
+            filelist = files.intersection(self.CELESTRAK_PAGES)
+            remaining = files.difference(self.CELESTRAK_PAGES)
+
+            for p in remaining:
+                log.warning("Unknown celestrak pages '{}'".format(p))
+
+            if not filelist:
+                raise ValueError("No file to download")
 
         async with aiohttp.ClientSession() as session:
 
@@ -334,7 +339,7 @@ def space_tle(*argv):
     Usage:
       space-tle get <field> <value> ...
       space-tle insert [<file>...]
-      space-tle fetch [<file>]
+      space-tle fetch [<file>...]
       space-tle fetch-st <field> <value>
       space-tle find <text> ...
       space-tle history [--last <nb>] <field> <value> ...
@@ -403,7 +408,7 @@ def space_tle(*argv):
         src = "celestrak" if args['fetch'] else "spacetrack"
 
         if src == 'celestrak' and args['<file>']:
-            kwargs['file'] = args['<file>']
+            kwargs['files'] = args['<file>']
         elif src == "spacetrack":
             modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
             kwargs = {modes[args['<field>']]: " ".join(args['<value>'])}
