@@ -8,6 +8,16 @@ from datetime import datetime, timedelta
 from beyond.config import config as beyond_config, Config as LegacyConfig
 
 
+class SpaceFilter(logging.Filter):
+    """Specific logging filter in order to keep messages from space commands
+    and the beyond library
+    """
+
+    def filter(self, record):
+        pkg, sep, rest = record.name.partition('.')
+        return pkg in ("space", "beyond")
+
+
 class SpaceConfig(LegacyConfig):
 
     filepath = Path.home() / '.space/space.yml'
@@ -81,10 +91,15 @@ class SpaceConfig(LegacyConfig):
             default_logging = {
                 "disable_existing_loggers": False,
                 "filters": {
-                    "space_only": {"name": "space"}
+                    "space_filter": {
+                        "()": SpaceFilter
+                    },
                 },
                 "formatters":{
-                    "dated": {"format": '%(asctime)s - %(name)s - %(levelname)s - %(message)s'},
+                    "dated": {
+                        "format": '%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s',
+                        "datefmt": "%Y-%m-%dT%H:%M:%S",
+                    },
                     "simple": {"format": '%(message)s'}
                 },
                 "handlers": {
@@ -98,7 +113,7 @@ class SpaceConfig(LegacyConfig):
                         "class": "logging.handlers.RotatingFileHandler",
                         "encoding": "utf8",
                         "filename": str(self.filepath.parent / "space.log"),
-                        "filters": ["space_only"],
+                        "filters": ["space_filter"],
                         "formatter": "dated",
                         "level": "DEBUG",
                         "maxBytes": 10485760,
