@@ -250,6 +250,7 @@ class TleDb:
 
         with self.db.atomic():
             entities = []
+            i = None
             for i, tle in enumerate(Tle.from_string(text)):
                 try:
                     # An entry in the table correponding to this TLE has been
@@ -274,6 +275,8 @@ class TleDb:
 
             if entities:
                 TleModel.insert_many(entities).execute()
+            elif i is None:
+                raise ValueError("{} contain no TLE".format(src))
 
         log.info("{:<20}   {:>3}/{}".format(src, len(entities), i + 1))
 
@@ -417,26 +420,32 @@ def space_tle(*argv):
 
         log.info("Retrieving TLEs from {}".format(src))
 
-        try:
-            db.fetch(**kwargs)
-        except Exception as e:
-            print(e)
-            sys.exit(-1)
+        # try:
+        db.fetch(**kwargs)
+        # except Exception as e:
+            # print(e)
+            # sys.exit(-1)
     elif args['insert']:
 
-        # Process the file list provided by the command line
-        if args['<file>']:
-            files = []
-            for f in args['<file>']:
-                files.extend(glob(f))
+            # Process the file list provided by the command line
+            if args['<file>']:
+                files = []
+                for f in args['<file>']:
+                    files.extend(glob(f))
 
-            # Insert each file into the database
-            for file in files:
-                db.load(file)
+                # Insert each file into the database
+                for file in files:
+                    try:
+                        db.load(file)
+                    except Exception as e:
+                        log.error(e)
 
-        elif not sys.stdin.isatty():
-            # Insert the content of stdin into the database
-            db.insert(sys.stdin.read(), "stdin")
+            elif not sys.stdin.isatty():
+                try:
+                    # Insert the content of stdin into the database
+                    db.insert(sys.stdin.read(), "stdin")
+                except Exception as e:
+                    log.error(e)
 
     elif args['find']:
         txt = " ".join(args['<text>'])
