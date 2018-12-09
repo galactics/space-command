@@ -293,9 +293,8 @@ class TleDb:
         entities = (
             self.model.select()
             .where(self.model.data.contains(txt) | self.model.name.contains(txt))
-            .order_by(self.model.epoch.desc())
+            .order_by(self.model.norad_id, self.model.epoch.desc())
             .group_by(self.model.norad_id)
-            .order_by(self.model.norad_id)
         )
 
         sats = []
