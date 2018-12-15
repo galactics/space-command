@@ -73,6 +73,8 @@ def draw_moon(date, station, phase, illumin, filepath=False):
     date_txt = "{:%d/%m %H:%M:%S} - {:.1f}%".format(date, illumin * 100)
     plt.text(x_text, 140, date_txt, color="white")
 
+    plt.title("Moon as seen from {}".format(station.full_name))
+
     if filepath:
         plt.savefig(filepath, bbox_inches='tight')
     else:
