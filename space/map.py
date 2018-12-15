@@ -141,7 +141,9 @@ class SatAnim:
             lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
             # print(lonlat[:, 0])
 
-            if all(-175 < lonlat[:, 0]) and all(lonlat[:, 0] < 175):
+            if all(abs(lonlat[:, 0]) < 175):
+                # This deals with the case when the umbra is between -180 and 180° of
+                # longitude
                 verts.append(lonlat)
             else:
                 pos_lonlat = lonlat.copy()
@@ -150,7 +152,40 @@ class SatAnim:
                 pos_lonlat[pos_lonlat[:, 0] < 0, 0] += 360
                 neg_lonlat[neg_lonlat[:, 0] > 0, 0] -= 360
 
-                verts.extend([pos_lonlat, neg_lonlat])
+                min_lon = min(pos_lonlat[:, 0])
+                max_lon = max(neg_lonlat[:, 0])
+                # print(min_lon, max_lon)
+
+                lonlat = np.concatenate([
+                    neg_lonlat, pos_lonlat
+                ])
+
+                if abs(min_lon - max_lon) > 30:
+                    # This deals with the case when the umbra is spread between
+                    # the east-west edges of the map, but not the north and south
+                    # ones
+                    verts.append(lonlat)
+                else:
+                    # This deals with the case when the umbra is spread between
+                    # east west and also north or south
+
+                    # sort by ascending longitude
+                    lonlat = lonlat[lonlat[:,0].argsort()]
+
+                    west_lat = lonlat[0, 1]
+                    east_lat = lonlat[-1, 1]
+
+                    v = np.concatenate([
+                        [
+                            [-360, season], [-360, west_lat]
+                        ],
+                        lonlat,
+                        [
+                            [360, east_lat], [360, season]
+                        ],
+                    ])
+
+                    verts.append(v)
 
         self.night.set_verts(verts)
         plot_list.insert(0, self.night)
