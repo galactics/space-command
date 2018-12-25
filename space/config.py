@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 from beyond.config import config as beyond_config, Config as LegacyConfig
 
 
+log = logging.getLogger(__name__)
+
+
 class SpaceFilter(logging.Filter):
     """Specific logging filter in order to keep messages from space commands
     and the beyond library
@@ -84,7 +87,6 @@ class SpaceConfig(LegacyConfig):
         self.update(data)
 
         beyond_config.update(self['beyond'])
-
 
         if 'logging' in self.keys():
             logging_dict = self['logging']
@@ -201,8 +203,15 @@ class Lock:
 
         shutil.copy2(str(self.file), str(self.backup))
 
+        log.info("Unlocking {} until {:{}}".format(self.file, until, self.fmt))
+        log.debug("A backup of the current config file has been created at {}".format(self.backup))
+
     def lock(self):
-        self.lock_file.unlink()
+        if self.lock_file.exists():
+            self.lock_file.unlink()
+            log.info("Locking the config file")
+        else:
+            log.info("The config file is already locked")
 
     def locked(self):
         if self.lock_file.exists():
@@ -253,9 +262,10 @@ def space_config(*argv):
         try:
             config.init(args['<folder>'])
         except FileExistsError:
-            print("Config file already existing at '%s'" % config.filepath, file=sys.stderr)
+            log.error("config file already exists at '{}'".format(config.filepath))
         else:
-            print("config creation at", config.filepath.absolute())
+            config.load()  # Load the newly created config file
+            log.info("config creation at {}".format(config.filepath.absolute()))
     else:
         load_config()
 
@@ -264,6 +274,10 @@ def space_config(*argv):
         if args['edit']:
             if not lock.locked():
                 run([os.environ['EDITOR'], str(config.filepath)])
+                if lock.file.read_text() == lock.backup.read_text():
+                    log.info("Unchanged config file")
+                else:
+                    log.info("Config file modified")
             else:
                 print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
                 sys.exit(-1)
@@ -290,6 +304,7 @@ def space_config(*argv):
                 else:
                     # If everything went fine, we save the file in its new state
                     config.save()
+                    log.debug("'{}' now set to '{}'".format(args['<keys>'], args['<value>']))
             else:
                 print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
                 sys.exit(-1)

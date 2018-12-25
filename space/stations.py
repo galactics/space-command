@@ -92,8 +92,11 @@ def space_stations(*argv):
     from pathlib import Path
     import matplotlib.pyplot as plt
 
+    import logging
 
     from .utils import docopt
+
+    log = logging.getLogger(__name__)
 
     args = docopt(space_stations.__doc__)
 
@@ -118,6 +121,8 @@ def space_stations(*argv):
 
         altitude = float(input("Altitude : "))
 
+        log.info("Creation of station '{}' ({})".format(name, abbr))
+        log.debug("{} {}, altitude : {} m".format(deg2dms(latitude, 'lat'), deg2dms(longitude, 'lon'), altitude))
         StationDb.save({
             abbr: {
                 "name": name,

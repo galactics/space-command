@@ -86,6 +86,9 @@ def space_planets(*args):
 
     import requests
     from .config import config
+    from logging import getLogger
+
+    log = getLogger(__name__)
 
     args = docopt(space_planets.__doc__)
 
@@ -104,16 +107,20 @@ def space_planets(*args):
 
             if not (folder / file).exists():
 
-                print(" Downloading", file)
+                log.info("Fetching {}".format(file))
+                log.debug(url + file)
                 r = requests.get(url + file)
 
                 with open(folder / file, "bw") as fp:
                     for chunk in r.iter_content(chunk_size=128):
                         fp.write(chunk)
+            else:
+                log.debug("File {} already present".format(file))
 
             if not (folder / file) in filelist:
                 filelist.append(folder / file)
 
+        log.debug("Adding {} to the list of jpl files".format(file))
         # Adding the file to the list and saving the new state of configuration
         config.set("beyond", "env", "jpl", filelist)
         config.save()

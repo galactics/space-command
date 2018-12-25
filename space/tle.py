@@ -108,15 +108,33 @@ class TleDb:
             selector=kwargs[key]
         )
 
+        log.debug("Authentication to Space-Track website")
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
+
+        try:
+            init.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            log.error("Authentication failed")
+            log.exception(e)
+            raise
+
+        if init.text != "\"\"":
+            log.error("Authentication failed")
+            log.debug("Response from authentication page '{}'".format(init.text))
+            return
+
+        log.debug("Authorized to proceed")
+        log.debug("Request at {}".format(url))
         full = requests.get(url, cookies=init.cookies)
 
-        with open(config.folder / "tmp" / "spacetrack.txt", "w") as fp:
+        cache = config.folder / "tmp" / "spacetrack.txt"
+        log.debug("Caching results into {}".format(cache))
+        with cache.open("w") as fp:
             fp.write(full.text)
 
         full.raise_for_status()
 
-        self.insert(full.text, "spacetrack")
+        self.insert(full.text, "spacetrack.txt")
 
     async def fetch_file(self, session, filename):
         """Coroutine to retrieve the specified page

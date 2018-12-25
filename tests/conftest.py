@@ -14,11 +14,9 @@ def space_tmpdir(tmpdir_factory):
         cwd=str(tmp), stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
 
-    stdout = r.stdout.decode()
-
     assert r.returncode == 0
-    assert stdout.startswith('config creation at')
-    assert not r.stderr
+    assert r.stderr.startswith(b'config creation at')
+    assert not r.stdout
 
     # Insert one TLE in order to have something to work with
     r = subprocess.Popen(

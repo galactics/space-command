@@ -24,11 +24,11 @@ def test_set(run):
     
     # Unlocking the config file
     r = run("space config unlock", stdin="yes")
-    assert not r.stderr
     out = r.stdout.splitlines()
+    err = r.stderr.splitlines()
     assert out[0] == "Are you sure you want to unlock the config file ?"
     assert out[1] == " yes/[no] "
-    assert out[2] == "A backup of the current config file has been created at"
+    assert err[0].startswith("Unlocking")
     assert r.success
 
     # Modifying the value in the config file
@@ -46,7 +46,7 @@ def test_set(run):
     # Locking
     r = run("space config lock")
     assert not r.stdout
-    assert not r.stderr
+    assert r.stderr == "Locking the config file\n"
     assert r.success
 
     # Testing that the lock is well in place

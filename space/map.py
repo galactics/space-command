@@ -139,7 +139,6 @@ class SatAnim:
             phi = -sun.phi
             lonlat = np.degrees(circle(virt_alt, theta, phi))
             lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
-            # print(lonlat[:, 0])
 
             if all(abs(lonlat[:, 0]) < 175):
                 # This deals with the case when the umbra is between -180 and 180° of
@@ -154,7 +153,6 @@ class SatAnim:
 
                 min_lon = min(pos_lonlat[:, 0])
                 max_lon = max(neg_lonlat[:, 0])
-                # print(min_lon, max_lon)
 
                 lonlat = np.concatenate([
                     neg_lonlat, pos_lonlat

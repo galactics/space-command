@@ -4,19 +4,29 @@
 """
 
 import sys
+import logging
 from pkg_resources import iter_entry_points
 
 from . import __version__
 from space.config import load_config
 
+log = logging.getLogger(__name__)
 
-def exception(type, value, tb):
+
+def pm_on_crash(type, value, tb):
     """Exception hook, in order to start pdb when an exception occurs
     """
     import pdb
     import traceback
     traceback.print_exception(type, value, tb)
     pdb.pm()
+
+
+def log_on_crash(type, value, tb):
+    """Uncaught exceptions handler
+    """
+    log.exception(value, exc_info=(type, value, tb))
+    # sys.__excepthook__(type, value, tb)
 
 
 def get_doc(func):
@@ -27,9 +37,13 @@ def main():
     """Direct the user to the right subcommand
     """
 
-    if "--pdb" in sys.argv:
-        sys.excepthook = exception
+    if '--pdb' in sys.argv:
         sys.argv.remove('--pdb')
+        func = pm_on_crash
+    else:
+        func = log_on_crash
+
+    sys.excepthook = func
 
     if "--version" in sys.argv:
         import beyond
