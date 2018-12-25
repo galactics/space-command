@@ -1,5 +1,6 @@
 import sys
 import yaml
+import shutil
 import logging.config
 from pathlib import Path
 from textwrap import indent
@@ -178,29 +179,36 @@ def get_dict(d):
 class Lock:
 
     fmt = "%Y-%m-%dT%H:%M:%S"
+    duration = timedelta(minutes=5)
 
-    def __init__(self, path):
-        self.path = path
+    def __init__(self, file):
+        self.file = Path(file)
 
     @property
-    def duration(self):
-        return timedelta(minutes=5)
+    def lock_file(self):
+        return self.file.with_name(".unlock_" + self.file.stem)
+
+    @property
+    def backup(self):
+        return self.file.with_suffix(self.file.suffix + '.backup')
 
     def unlock(self):
-        with self.path.open('w') as fp:
-            fp.write(datetime.now().strftime(self.fmt))
+
+        until = datetime.now() + self.duration
+
+        with self.lock_file.open('w') as fp:
+            fp.write(until.strftime(self.fmt))
+
+        shutil.copy2(str(self.file), str(self.backup))
 
     def lock(self):
-        if not self.locked():
-            self.path.unlink()
+        self.lock_file.unlink()
 
     def locked(self):
-        if self.path.exists():
-            txt = self.path.open().read().strip()
-            date = datetime.strptime(txt, self.fmt)
-            td = datetime.now() - date
-            if td < self.duration:
-                return False
+        if self.lock_file.exists():
+            txt = self.lock_file.open().read().strip()
+            until = datetime.strptime(txt, self.fmt)
+            return until < datetime.now()
 
         return True
 
@@ -212,7 +220,7 @@ def space_config(*argv):
       space-config edit
       space-config set [--append] <keys> <value>
       space-config init [<folder>]
-      space-config unlock
+      space-config unlock [--yes]
       space-config lock
       space-config [get] [<keys>]
 
@@ -235,7 +243,6 @@ def space_config(*argv):
     """
 
     import os
-    import shutil
     from subprocess import run
 
     from .utils import docopt
@@ -252,7 +259,7 @@ def space_config(*argv):
     else:
         load_config()
 
-        lock = Lock(config.filepath.with_name(".config_unlock"))
+        lock = Lock(config.filepath)
 
         if args['edit']:
             if not lock.locked():
@@ -288,22 +295,17 @@ def space_config(*argv):
                 sys.exit(-1)
 
         elif args['unlock']:
-            print("Are you sure you want to unlock the config file ?")
-            ans = input(" yes/[no] ")
-
-            if ans.lower() == "yes":
+            if args['--yes']:
                 lock.unlock()
+            else:
+                print("Are you sure you want to unlock the config file ?")
+                ans = input(" yes/[no] ")
 
-                backup = config.filepath.with_suffix(config.filepath.suffix + '.backup')
-                shutil.copy2(str(config.filepath), str(backup))
-
-                print()
-                print("A backup of the current config file has been created at")
-                print(backup)
-                print()
-            elif ans.lower() != "no":
-                print("unknown answer '{}'".format(ans), file=sys.stderr)
-                sys.exit(-1)
+                if ans.lower() == "yes":
+                    lock.unlock()
+                elif ans.lower() != "no":
+                    print("unknown answer '{}'".format(ans), file=sys.stderr)
+                    sys.exit(-1)
         elif args["lock"]:
             lock.lock()
         else:
