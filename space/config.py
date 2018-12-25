@@ -98,7 +98,7 @@ class SpaceConfig(LegacyConfig):
                 },
                 "formatters":{
                     "dated": {
-                        "format": '%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s',
+                        "format": '%(asctime)s.%(msecs)03d :: %(name)s :: %(levelname)s :: %(message)s',
                         "datefmt": "%Y-%m-%dT%H:%M:%S",
                     },
                     "simple": {"format": '%(message)s'}
@@ -328,3 +328,47 @@ def space_config(*argv):
             else:
                 # Print a single value
                 print(subdict)
+
+
+def space_log(*argv):
+    """Display the log
+
+    Usage:
+      space-log [options]
+
+    Options:
+      -p, --print        Print instead of shoing the log via less
+      -n, --lines <num>  When printing define the number of lines to print [default: 20]
+      -v, --verbose      Print DEBUG messages as well
+      -f, --follow       Start directly in tail mode
+    """
+    import time
+    import subprocess
+    import select
+
+    from space.utils import docopt
+    from space.config import config
+
+    logfile = config.folder / "space.log"
+
+    args = docopt(space_log.__doc__, argv=argv)
+
+    if args['--print']:
+        nb = int(args['--lines'])
+
+        lines = logfile.read_text().splitlines()
+        filtered_lines = [l for l in lines if args['--verbose'] or ":: DEBUG ::" not in l]
+
+        for line in filtered_lines[-nb:]:
+            print(line)
+    else:
+        try:
+            # Handling the arguments of less
+            # +G is for going directly at the bottom of the file
+            # +F is for tail mode
+            # -K is for "quit on iterrupt"
+            # -S chops long lines
+            opt = "+F" if args['--follow'] else "+G"
+            f = subprocess.call(['less', '-KS', opt, str(logfile)])
+        except KeyboardInterrupt:
+            pass
