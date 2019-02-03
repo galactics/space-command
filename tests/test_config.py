@@ -1,6 +1,30 @@
 
+import sys
+import pytest
 
+@pytest.mark.skipif(sys.version_info < (3,6), reason="before 3.6 dict where unordered")
 def test_get(run):
+
+    # Get full config dict
+    r = run("space config")
+    out = r.stdout.splitlines()
+    assert out[0].startswith("config :")
+    assert "\n".join(out[1:]) == """aliases:
+    ISS: 25544
+beyond:
+    eop:
+        missing_policy: pass
+stations:
+    TLS:
+        latlonalt:
+            43.604482
+            1.443962
+            172.0
+        name: Toulouse
+        orientation: N
+        parent_frame: WGS84"""
+    assert r.stderr == ""
+    assert r.success
     
     r = run("space config get aliases.ISS")
     assert r.stdout == "25544\n"
@@ -12,6 +36,64 @@ def test_get(run):
     assert r.success
     assert r.stdout == "Toulouse\n"
     assert not r.stderr
+
+    r = run("space config stations.TEST.name")
+    assert not r.success
+    assert r.stdout == ""
+    assert r.stderr == "Unknown field 'TEST'\n"
+
+
+def test_reinit(run):
+
+    # Try to init a second time
+    r = run("space config init")
+    out = r.stdout
+    err = r.stderr
+    assert not out
+    assert err.startswith("config file already exists at ")
+    assert r.success
+
+
+def test_unlock(run):
+    # Unlocking the config file
+    r = run("space config unlock --yes")
+    out = r.stdout.splitlines()
+    err = r.stderr
+    assert err.startswith("Unlocking")
+    assert r.success
+
+    # Try to unlock the config file, then cancel
+    r = run("space config unlock", stdin="no")
+    out = r.stdout.splitlines()
+    err = r.stderr
+    assert out[0] == "Are you sure you want to unlock the config file ?"
+    assert out[1] == " yes/[no] "
+    assert not err
+    assert r.success
+
+    # Try to unlock the config file, but hit wrong keys
+    r = run("space config unlock", stdin="dummy")
+    out = r.stdout.splitlines()
+    err = r.stderr
+    assert out[0] == "Are you sure you want to unlock the config file ?"
+    assert out[1] == " yes/[no] "
+    assert err == "unknown answer 'dummy'\n"
+    assert not r.success
+
+    # Lock file
+    r = run("space config lock")
+    out = r.stdout
+    err = r.stderr
+    assert not out
+    assert err == "Locking the config file\n"
+    assert r.success
+
+    r = run("space config lock")
+    out = r.stdout
+    err = r.stderr
+    assert not out
+    assert err == "The config file is already locked\n"
+    assert r.success
 
 
 def test_set(run):
