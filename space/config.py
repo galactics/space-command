@@ -91,7 +91,7 @@ class SpaceConfig(LegacyConfig):
         if 'logging' in self.keys():
             logging_dict = self['logging']
         else:
-            default_logging = {
+            logging_dict = {
                 "disable_existing_loggers": False,
                 "filters": {
                     "space_filter": {
@@ -110,6 +110,7 @@ class SpaceConfig(LegacyConfig):
                         "class": "logging.StreamHandler",
                         "formatter": "simple",
                         "level": "INFO",
+                        "filters": ["space_filter"],
                     },
                     "debug_file_handler": {
                         "backupCount": 20,
@@ -135,7 +136,7 @@ class SpaceConfig(LegacyConfig):
                 },
                 "version": 1
             }
-            logging_dict = default_logging
+
         logging.config.dictConfig(logging_dict)
 
     def save(self):

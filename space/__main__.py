@@ -52,6 +52,16 @@ def main():
         print("beyond         {}".format(beyond.__version__))
         sys.exit(0)
 
+    verbose = False
+    if "-v" in sys.argv or "--verbose" in sys.argv:
+
+        if "-v" in sys.argv:
+            sys.argv.remove('-v')
+        else:
+            sys.argv.remove('--verbose')
+
+        verbose = True
+
     # List of available subcommands
     commands = {entry.name: entry for entry in iter_entry_points('space.commands')}
 
@@ -75,8 +85,9 @@ def main():
             print(addons)
 
         print("Options :")
-        print(" --pdb       Launch the python debugger when an exception is raised")
-        print(" --version   Show the version of the space-command utility")
+        print(" --pdb          Launch the python debugger when an exception is raised")
+        print(" --version      Show the version of the space-command utility")
+        print(" -v, --verbose  Show DEBUG level messages")
         print()
         sys.exit(-1)
 
@@ -87,6 +98,11 @@ def main():
 
     if command != "config":
         load_config()
+
+    if verbose:
+        for log_handler in logging.getLogger().handlers[:]:
+            if isinstance(log_handler, logging.StreamHandler):
+                log_handler.setLevel(logging.DEBUG)
 
     # Call the function associated with the subcommand
     func(*args)
