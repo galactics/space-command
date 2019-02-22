@@ -25,7 +25,7 @@ class Date(LegacyDate):
 def sync():
     """Synchronise the system date and the clock date
     """
-    config.set(Date.CONFIG_FIELD, 0)
+    config.set(Date.CONFIG_FIELD, 0, save=True)
     log.info("Clock set to system time")
 
 
@@ -39,7 +39,7 @@ def set_date(date, ref):
     # the timedelta is here to take the UTC-TAI into account
     # see beyond.dates.date for informations
     offset = date - ref - timedelta(seconds=date._offset - ref._offset)
-    config.set(Date.CONFIG_FIELD, offset.total_seconds())
+    config.set(Date.CONFIG_FIELD, offset.total_seconds(), save=True)
     log.info("Clock date set to {}".format(date))
 
 
@@ -48,7 +48,7 @@ def set_offset(offset):
     Args
         offset (timedelta)
     """
-    config.set(Date.CONFIG_FIELD, offset.total_seconds())
+    config.set(Date.CONFIG_FIELD, offset.total_seconds(), save=True)
     log.info("Clock offset set to {}".format(offset))
 
 

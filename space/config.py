@@ -36,7 +36,7 @@ class SpaceConfig(LegacyConfig):
 
         return cls._instance
 
-    def set(self, *args, save=True):
+    def set(self, *args, save=False):
         super().set(*args)
         if save:
             self.save()
