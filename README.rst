@@ -16,9 +16,13 @@ In order to do this, it uses the `beyond <https://github.com/galactics/beyond>`_
 Installation
 ------------
 
-.. code-block:: shell
+For the stable release:: shell
 
     $ pip install space-command
+
+For the latest dev commit:: shell
+
+    $ pip install git+https://github.com/galactics/space-command
 
 Features
 --------
@@ -27,8 +31,8 @@ Features
 
 .. code-block:: shell
 
-    $ space tle get
-    $ space tle name ISS
+    $ space tle fetch
+    $ space tle get name ISS
     ISS (ZARYA)
     1 25544U 98067A   18217.29289738  .00001607  00000-0  31893-4 0  9999
     2 25544  51.6423 133.9734 0005443  28.3880 115.1824 15.53801660126150
@@ -43,13 +47,14 @@ Features
 
 .. code-block:: shell
 
-    $ space moon <station> --graph
+    $ space phase Moon --graph
 
 **Retrieve Solar System bodies ephemeris**
 
 .. code-block:: shell
 
     $ space planets Moon
+    $ space planets fetch   # Retrieve planetary ephemeris
     $ space planets Mars Jupiter Saturn
 
 **Predict passes of planets or satellites**
@@ -61,6 +66,21 @@ Features
 
 Changelog
 ---------
+
+[0.4.2] - 2019-02-23
+^^^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- Logging
+- Tests
+- ``space events`` subcommand computes all orbital events of a satellite (AOS/LOS, Apogee/Perigee, etc.)
+- ``space phase`` to compute the phase of available planets and moons
+- groundtracks optional on map
+
+**Removed**
+
+- ``space moon`` subcommand. This is now handled by the more generic ``space phase``
 
 [0.4.1] - 2018-11-01
 ^^^^^^^^^^^^^^^^^^^^
@@ -79,13 +99,13 @@ Changelog
 
 - Compute ephemeris of solar system bodies (Moon, Mars, Jupiter, Titan, etc.)
 - Moon phase computation
-- Centralised date handling, via command ``space clock``
+- Centralized date handling, via command ``space clock``
 - Allow TLE retrieval from Space-Track
 
-**Chaged**
+**Changed**
 
 - Database classes are now suffixed with *Db*
-- Subcommand retriving data from the web now use the argument **fetch** instead of get.
+- Subcommand retrieving data from the web now use the argument **fetch** instead of get.
 
 **Removed**
 
@@ -102,13 +122,13 @@ Changelog
 - Retrieve all chronological TLE of an object
 - ``space map`` displays real-time position of objects
 - Compute moon phase
-- Every command taking object names can also take TLE or CCSDS ephemerides via stdin
+- Every command taking object names can also take TLE or CCSDS ephemeris via stdin
 - add mask handling for stations
-- Passes zenital display optional
+- Passes zenithal display optional
 
 **Changed**
 
-- MIT licence replace GPLv3
+- MIT license replace GPLv3
 
 **Removed**
 
