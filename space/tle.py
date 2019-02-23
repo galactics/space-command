@@ -354,7 +354,7 @@ TleModel.add_index(
 
 
 def space_tle(*argv):
-    """Caching of TLE date from Space-Track and Celestrak websites
+    """TLE Database from Space-Track and Celestrak websites
 
     Usage:
       space-tle get <field> <value> ...
@@ -405,9 +405,9 @@ def space_tle(*argv):
 
       It is also possible to define aliases in the config dict to simplify name
       lookup:
-        $ space tle name "ISS (ZARYA)"
+        $ space tle get name "ISS (ZARYA)"
       becomes
-        $ space tle name ISS
+        $ space tle get name ISS
       if the config file contains
           aliases:
               ISS: 25544
