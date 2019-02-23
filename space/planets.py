@@ -94,16 +94,16 @@ def space_planets(*args):
 
     if args['fetch']:
 
-        url = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/"
+        url = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/"
 
         folder = config.folder / "jpl"
 
         if not folder.exists():
             folder.mkdir()
 
-        filelist = config.get("beyond", "env", "jpl", fallback=[])
+        filelist = set(config.get("beyond", "env", "jpl", fallback=[]))
 
-        for file in ['de432s.bsp']:
+        for file in ['de403_2000-2020.bsp']:
 
             if not (folder / file).exists():
 
@@ -111,18 +111,19 @@ def space_planets(*args):
                 log.debug(url + file)
                 r = requests.get(url + file)
 
+                r.raise_for_status()
+
                 with open(folder / file, "bw") as fp:
                     for chunk in r.iter_content(chunk_size=128):
                         fp.write(chunk)
             else:
-                log.debug("File {} already present".format(file))
+                log.info("File {} already downloaded".format(file))
 
-            if not (folder / file) in filelist:
-                filelist.append(folder / file)
+            filelist.add(folder / file)
 
         log.debug("Adding {} to the list of jpl files".format(file))
         # Adding the file to the list and saving the new state of configuration
-        config.set("beyond", "env", "jpl", filelist)
+        config.set("beyond", "env", "jpl", list(filelist), save=True)
         config.save()
 
     elif args['<planet>']:
@@ -169,7 +170,7 @@ def space_planets(*args):
                 if args['--analytical'] or jpl_error:
                     body = solar.get_body(body_name).propagate(date)
                 else:
-                    body = jpl.get_body(body_name, date)
+                    body = jpl.get_orbit(body_name, date)
             except UnknownBodyError as e:
                 print(e, file=sys.stderr)
                 sys.exit(-1)
