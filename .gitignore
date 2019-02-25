@@ -2,6 +2,7 @@
 *.egg-info
 dist/
 .cache/
-.tox/
 htmlcov/
+doc/build/
+.tox/
 .coverage
