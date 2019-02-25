@@ -71,7 +71,7 @@ class TleDb:
 
     def dump(self, all=False):
 
-        bd_request = self.model.select().order_by(self.model.insert_date)
+        bd_request = self.model.select().order_by(self.model.norad_id)
 
         if not all:
             bd_request = bd_request.group_by(self.model.norad_id)
