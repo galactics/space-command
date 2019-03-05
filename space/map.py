@@ -22,7 +22,7 @@ class WindowEphem(Ephem):
         self.span = orb.infos.period * 2
         self.step = orb.infos.period / 100
 
-        orbs = orb.ephemeris(orb.date - self.span / 2, self.span, self.step)
+        orbs = orb.ephemeris(start=orb.date - self.span / 2, stop=self.span, step=self.step)
         super().__init__(orbs)
 
     def propagate(self, date):
@@ -33,17 +33,29 @@ class WindowEphem(Ephem):
             new = (date_i - mid) * self.step
 
             if date_i > mid:
-                orbs = list(self.orb.ephemeris(self.stop + self.step, new, self.step))
+                orbs = list(self.orb.ephemeris(
+                    start=self.stop + self.step,
+                    stop=new,
+                    step=self.step
+            ))
                 for x in orbs:
                     self._orbits.pop(0)
                     self._orbits.append(x)
             elif date_i < mid - 1:
-                orbs = list(self.orb.ephemeris(self.start - self.step, new, -self.step))
+                orbs = list(self.orb.ephemeris(
+                    start=self.start - self.step,
+                    stop=new,
+                    step=-self.step
+            ))
                 for x in orbs:
                     self._orbits.pop()
                     self._orbits.insert(0, x)
         else:
-            self._orbits = list(self.orb.ephemeris(date - self.span / 2, self.span, self.step))
+            self._orbits = list(self.orb.ephemeris(
+                start=date - self.span / 2,
+                stop=self.span,
+                step=self.step
+            ))
 
 
 class SatAnim:
