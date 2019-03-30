@@ -62,7 +62,7 @@ class SatAnim:
 
     COLORS = 'r', 'g', 'b', 'c', 'm', 'y', 'k', 'w'
 
-    def __init__(self, sats, ground_track=False):
+    def __init__(self, sats):
         self.sats = sats
         self.multiplier = None
         self.interval = 200
@@ -98,8 +98,7 @@ class SatAnim:
             sat.point, = plt.plot([], [], 'o', ms=5, color=color, animated=True, zorder=10)
             sat.circle, = plt.plot([], [], '.', ms=2, color=color, animated=True, zorder=10)
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)
-            if ground_track:
-                sat.gt = []
+            sat.gt = []
 
         self.bslow = Button(plt.axes([0.05, 0.02, 0.04, 0.05]), 'Slower')
         self.bslow.on_clicked(self.slower)
@@ -109,6 +108,9 @@ class SatAnim:
         self.bplay.on_clicked(self.reset)
         self.bfast = Button(plt.axes([0.24, 0.02, 0.04, 0.05]), 'Faster')
         self.bfast.on_clicked(self.faster)
+
+        self.ground = Button(plt.axes([0.9, 0.02, 0.08, 0.05]), 'Ground-Track')
+        self.ground.on_clicked(self.toggle_groundtrack)
 
         self.ani = FuncAnimation(self.fig, self, interval=self.interval, blit=True)
 
@@ -338,6 +340,15 @@ class SatAnim:
         else:
             self.multiplier *= 2.
 
+    def toggle_groundtrack(self, *args, **kwargs):
+        status = hasattr(self.sats[0], 'gt')
+
+        for sat in self.sats:
+            if status:
+                del sat.gt
+            else:
+                sat.gt = []
+
 
 def space_map(*argv):
     """Animated map of earth with ground track of satellites
@@ -358,6 +369,6 @@ def space_map(*argv):
     args = docopt(space_map.__doc__)
     sats = get_sats(*args['<satellite>'], stdin=args['-'])
 
-    sat_anim = SatAnim(sats, ground_track=args["--ground"])
+    sat_anim = SatAnim(sats)
 
     plt.show()
