@@ -100,13 +100,15 @@ class SatAnim:
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)
             sat.gt = []
 
-        self.bslow = Button(plt.axes([0.05, 0.02, 0.04, 0.05]), 'Slower')
+        self.breverse = Button(plt.axes([0.02, 0.02, 0.04, 0.05]), 'Reverse')
+        self.breverse.on_clicked(self.reverse)
+        self.bslow = Button(plt.axes([0.07, 0.02, 0.04, 0.05]), 'Slower')
         self.bslow.on_clicked(self.slower)
-        self.breal = Button(plt.axes([0.10, 0.02, 0.08, 0.05]), 'Real Time')
+        self.breal = Button(plt.axes([0.12, 0.02, 0.08, 0.05]), 'Real Time')
         self.breal.on_clicked(self.real)
-        self.bplay = Button(plt.axes([0.19, 0.02, 0.04, 0.05]), 'x1')
+        self.bplay = Button(plt.axes([0.21, 0.02, 0.04, 0.05]), 'x1')
         self.bplay.on_clicked(self.reset)
-        self.bfast = Button(plt.axes([0.24, 0.02, 0.04, 0.05]), 'Faster')
+        self.bfast = Button(plt.axes([0.26, 0.02, 0.04, 0.05]), 'Faster')
         self.bfast.on_clicked(self.faster)
 
         self.ground = Button(plt.axes([0.9, 0.02, 0.08, 0.05]), 'Ground-Track')
@@ -122,14 +124,18 @@ class SatAnim:
 
         if self.multiplier is None:
             text = "real time"
-        elif self.multiplier >= 1:
-            text = "x%d" % (self.multiplier)
-        elif self.multiplier > 0:
-            text = "x 1/%d" % (1 / self.multiplier)
-        elif self.multiplier <= -1:
-            text = "x {}".format(self.multiplier)
         else:
-            text = "x -1/%d" % (-1 / self.multiplier)
+            if abs(self.multiplier) == 1:
+                adj = ""
+                value = abs(self.multiplier)
+            elif abs(self.multiplier) > 1:
+                adj = "faster"
+                value = abs(self.multiplier)
+            else:
+                adj = "slower"
+                value = 1 / abs(self.multiplier)
+            sign = "" if self.multiplier > 0 else "-"
+            text = "{}x{:0.0f} {}".format(sign, value, adj)
 
         self.date_text.set_text("{:%Y-%m-%d %H:%M:%S}\n{}".format(
             date,
@@ -321,24 +327,37 @@ class SatAnim:
         self.multiplier = 1
 
     def faster(self, *args, **kwargs):
-        if self.multiplier is None:
-            self.multiplier = 2.
-        elif -1 / 8 <= self.multiplier < 0:
-            self.multiplier = 1
-        elif self.multiplier > 0:
-            self.multiplier *= 2.
+
+        steps = [2, 2.5, 2]
+
+        if not hasattr(self, '_step'):
+            self._step = 0
         else:
-            self.multiplier /= 2.
+            self._step += 1
+
+        if self.multiplier is None:
+            self.multiplier = 2
+        else:
+            self.multiplier *= steps[self._step % len(steps)]
 
     def slower(self, *args, **kwargs):
-        if self.multiplier is None:
-            self.multiplier = 1 / 2.
-        elif 0 < self.multiplier <= 1 / 8:
-            self.multiplier = -1
-        elif self.multiplier > 0:
-            self.multiplier /= 2.
+        steps = [2, 2.5, 2]
+
+        if not hasattr(self, '_step'):
+            self._step = 0
         else:
-            self.multiplier *= 2.
+            self._step += 1
+
+        if self.multiplier is None:
+            self.multiplier = 1/2
+        else:
+            self.multiplier /= steps[self._step % len(steps)]
+
+    def reverse(self, *args, **kwargs):
+        if self.multiplier is None:
+            self.multiplier = -1
+        else:
+            self.multiplier *= -1
 
     def toggle_groundtrack(self, *args, **kwargs):
         status = hasattr(self.sats[0], 'gt')
