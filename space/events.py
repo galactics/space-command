@@ -13,13 +13,16 @@ def space_events(*argv):
     """Compute events for a given satellite
 
     Usage:
-        space-events (- | <sat>...) [--date <date>] [--events] [--range <range>]
+        space-events (- | <sat>...) [options]
 
     Options:
-        <sat>                Name of the satellite
-        -d, --date <date>    Starting date of the computation
-        -r, --range <range>  Range of the computation, in days [default: 1]
-        -e, --events         Only display events [default: False]
+        <sat>                  Name of the satellite
+        -d, --date <date>      Starting date of the computation
+        -r, --range <range>    Range of the computation, in days [default: 1]
+        -e, --events <events>  Selected events [default: all]
+
+    Available events are: 'station', 'light', 'node', 'apside', 'terminator', and
+    'all'
     """
 
     from .utils import docopt
@@ -43,18 +46,23 @@ def space_events(*argv):
             print("=" * len(sat.name))
             listeners = []
 
-            for sta in StationDb.list().values():
-                listeners.extend(stations_listeners(sta))
+            if 'station' in args['--events'] or args['--events'] == 'all':
+                for sta in StationDb.list().values():
+                    listeners.extend(stations_listeners(sta))
 
-            listeners.append(LightListener())
-            listeners.append(LightListener("penumbra"))
-            listeners.append(NodeListener())
-            listeners.append(ApsideListener())
-            listeners.append(TerminatorListener())
+            if 'light' in args['--events'] or args['--events'] == 'all':
+                listeners.append(LightListener())
+                listeners.append(LightListener("penumbra"))
+            if 'node' in args['--events'] or args['--events'] == 'all':
+                listeners.append(NodeListener())
+            if 'apside' in args['--events'] or args['--events'] == 'all':
+                listeners.append(ApsideListener())
+            if 'terminator' in args['--events'] or args['--events'] == 'all':
+                listeners.append(TerminatorListener())
 
             for orb in sat.orb.iter(start=start, stop=stop, step=step, listeners=listeners):
 
-                if args['--events'] and orb.event is None:
+                if orb.event is None:
                     continue
 
                 if isinstance(orb.event, (MaxEvent, SignalEvent)):
