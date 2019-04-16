@@ -67,7 +67,7 @@ class SpaceConfig(LegacyConfig):
             },
             'stations': {
                 'TLS': {
-                    'latlonalt': (43.604482, 1.443962, 172.0),
+                    'latlonalt': [43.604482, 1.443962, 172.0],
                     'name': 'Toulouse',
                     'orientation': 'N',
                     'parent_frame': 'WGS84'
@@ -83,7 +83,7 @@ class SpaceConfig(LegacyConfig):
         if filepath:
             self.filepath = Path(filepath)
 
-        data = yaml.load(self.filepath.open())
+        data = yaml.safe_load(self.filepath.open())
         self.update(data)
 
         beyond_config.update(self['beyond'])
@@ -140,7 +140,7 @@ class SpaceConfig(LegacyConfig):
         logging.config.dictConfig(logging_dict)
 
     def save(self):
-        yaml.dump(dict(self), self.filepath.open('w'), indent=4)
+        yaml.safe_dump(dict(self), self.filepath.open('w'), indent=4)
 
 
 config = SpaceConfig()
