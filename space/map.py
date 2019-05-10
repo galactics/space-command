@@ -379,7 +379,6 @@ def space_map(*argv):
       <satellite>   Name of the satellites you want to display.
       -             If used, the orbit should be provided as stdin in TLE or
                     CCSDS format
-      -g, --ground  Show ground tracks
     """
 
     from .utils import docopt
