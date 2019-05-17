@@ -2,8 +2,9 @@
 import sys
 from textwrap import indent
 
-from beyond.orbits import Tle, Ephem, Orbit
-from beyond.utils.ccsds import loads
+from beyond.orbits import Ephem, Orbit
+from beyond.io.ccsds import loads
+from beyond.io.tle import Tle
 
 
 def get_sats(*args, stdin=False):

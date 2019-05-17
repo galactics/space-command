@@ -11,7 +11,7 @@ from peewee import (
 )
 from datetime import datetime
 
-from beyond.orbits.tle import Tle
+from beyond.io.tle import Tle
 
 from .config import config
 from .satellites import Satellite
