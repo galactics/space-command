@@ -82,14 +82,14 @@ def draw_phase(date, phase, body="Moon", filepath=False):
 
 
 def space_phase(*argv):
-    """Compute the phase of the moon
+    """Compute the phase of the moon or other solar system bodies
 
     Usage:
         space-phase <body> [<date>] [--graph] [--frame <frame>] [-a] [--file <file>]
 
     Options:
         <body>               Body
-        <date>               Date for which to compute the moon phase (%Y-%m-%dT%H:%M:%S)
+        <date>               Date to compute the moon phase at (%Y-%m-%dT%H:%M:%S)
         -g, --graph          Display the moon phase
         -a, --analytical     Use analytical model instead of JPL files
         --file <file>        File
