@@ -47,7 +47,7 @@ def test_set_date(run):
 
 def test_set_offset(run):
 
-    r = run("space clock set-offset 500")
+    r = run("space clock set-offset 500s")
 
     assert r.stderr == "Clock offset set to 0:08:20\n\n"
 
@@ -59,7 +59,7 @@ def test_set_offset(run):
     assert r.success
 
     # Negative offset
-    r = run("space clock set-offset -500")
+    r = run("space clock set-offset -500s")
 
     assert r.stderr.startswith("Clock offset set to -1 day, 23:51:40\n\n")
 

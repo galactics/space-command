@@ -62,7 +62,7 @@ def test_date(run_date):
 
 def test_step(run_date):
     
-    r = run_date("space passes TLS ISS --step 10")
+    r = run_date("space passes TLS ISS --step 10s")
 
     lines = r.stdout.strip().splitlines()
 
@@ -75,7 +75,7 @@ def test_step(run_date):
     
     r = run_date("space passes TLS ISS -s hello")
     assert not r.success
-    assert r.stderr == "could not convert string to float: 'hello'\n"
+    assert r.stderr == "No timedelta found in 'hello'\n"
     assert not r.stdout
 
 

@@ -3,7 +3,8 @@ import logging
 
 from beyond.dates import Date as LegacyDate, timedelta
 
-from space.config import config
+from .config import config
+from .utils import parse_timedelta
 
 
 log = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ def space_clock(*argv):
 
         print(file=sys.stderr)
     elif args['set-offset']:
-        offset = timedelta(seconds=float(args['<offset>']))
+        offset = parse_timedelta(args['<offset>'], negative=True)
         set_offset(offset)
         print(file=sys.stderr)
 

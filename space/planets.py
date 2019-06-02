@@ -8,9 +8,9 @@ import beyond.env.jpl as jpl
 import beyond.env.solarsystem as solar
 import beyond.io.ccsds as ccsds
 
-from .clock import Date, timedelta
 from .utils import docopt
 from .stations import StationDb
+from .utils import parse_date, parse_timedelta
 
 
 def recurse(frame, already, level=""):
@@ -53,10 +53,9 @@ def space_planets(*args):
                              absent, list all bodies available
         -f, --frame <frame>  Frame in which to display the ephemeris to
                              [default: EME2000]
-        -d, --date <date>    Start date of the ephem (%Y-%m-%d) today at midnight
-                             if absent
-        -r, --range <days>   Duration of extrapolation in days [default: 3]
-        -s, --step <step>    Step size of the ephemeris in min. [default: 60]
+        -d, --date <date>    Start date of the ephem (%Y-%m-%d) [default: midnight]
+        -r, --range <days>   Duration of extrapolation [default: 3d]
+        -s, --step <step>    Step size of the ephemeris. [default: 60m]
         -a, --analytical     Force analytical model instead of .bsp files
 
     Example:
@@ -128,19 +127,10 @@ def space_planets(*args):
 
     elif args['<planet>']:
 
-        # Args conversion to proper objects
-        if args["--date"]:
-            try:
-                date = Date.strptime(args['--date'], "%Y-%m-%d")
-            except ValueError as e:
-                print(e, file=sys.stderr)
-                sys.exit(-1)
-        else:
-            date = Date(Date.now().d)
-
         try:
-            stop = timedelta(float(args['--range']))
-            step = timedelta(minutes=float(args['--step']))
+            date = parse_date(args['--date'], fmt='date')
+            stop = parse_timedelta(args['--range'])
+            step = parse_timedelta(args['--step'])
         except ValueError as e:
             print(e, file=sys.stderr)
             sys.exit(-1)

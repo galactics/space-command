@@ -1,3 +1,4 @@
+import re
 import sys
 from textwrap import dedent
 from docopt import docopt as true_docopt
@@ -7,6 +8,99 @@ from beyond.constants import Earth
 
 
 __all__ = ['circle', 'docopt']
+
+
+def parse_date(txt, fmt="full"):
+    """
+
+    Args:
+        txt (str):  Text to convert to a date
+        fmt (str):  Format in which the date is expressed
+    Return:
+        beyond.dates.date.Date:
+    Raise:
+        ValueError
+
+    Examples:
+        >>> print(parse_date("2018-12-25T00:23:56"))
+        2018-12-25T00:23:56 UTC
+        >>> print(".", parse_date("now"))  # The dot is here to trigger the ellipsis
+        . ... UTC
+        >>> print(".", parse_date("midnight"))  # The dot is here to trigger the ellipsis
+        . ...T00:00:00 UTC
+        >>> print(parse_date("naw"))
+        Traceback (most recent call last):
+          ...
+        ValueError: time data 'naw' does not match format '%Y-%m-%dT%H:%M:%S'
+    """
+
+    from .clock import Date
+
+    fmts = {
+        'full': "%Y-%m-%dT%H:%M:%S",
+        'date': "%Y-%m-%d"
+    }
+
+    if txt == "now":
+        date = Date.now()
+    elif txt == "midnight":
+        date = Date(Date.now().d)
+    elif txt == "tomorrow":
+        date = Date(Date.now().d + 1)
+    else:
+        date = Date.strptime(txt, fmts.get(fmt, fmt))
+
+    return date
+
+
+def parse_timedelta(txt, negative=False):
+    """Convert a timedelta input string into a timedelta object
+
+    Args:
+        txt (str): 
+        negative (bool): Allow for negative value
+    Return:
+        timedelta:
+    Raise:
+        ValueError: nothing can be parsed from the string
+
+    Examples:
+        >>> print(parse_timedelta('1w3d6h25.52s'))
+        10 days, 6:00:25.520000
+        >>> print(parse_timedelta('2d12m30s'))
+        2 days, 0:12:30
+        >>> print(parse_timedelta('20s'))
+        0:00:20
+        >>> print(parse_timedelta(''))
+        Traceback (most recent call last):
+          ...
+        ValueError: No timedelta found in ''
+        >>> print(parse_timedelta('20'))
+        Traceback (most recent call last):
+          ...
+        ValueError: No timedelta found in '20'
+    """
+
+    from .clock import timedelta
+
+    m = re.search(r'(?P<sign>-)?((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>[\d.]+)h)?((?P<minutes>[\d.]+)m)?((?P<seconds>[\d.]+)s)?', txt)
+
+    sign = 1
+    if negative and m.group('sign') is not None:
+        sign = -1
+    weeks   = float(m.group('weeks')) if m.group('weeks') is not None else 0
+    days    = float(m.group('days')) if m.group('days') is not None else 0
+    hours   = float(m.group('hours')) if m.group('hours') is not None else 0
+    minutes = float(m.group('minutes')) if m.group('minutes') is not None else 0
+    seconds = float(m.group('seconds')) if m.group('seconds') is not None else 0
+
+    days += 7 * weeks
+    seconds += minutes * 60 + hours * 3600
+
+    if days == seconds == 0:
+        raise ValueError("No timedelta found in '{}'".format(txt))
+
+    return sign * timedelta(days, seconds)
 
 
 def docopt(doc, argv=None, **kwargs):

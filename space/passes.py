@@ -10,8 +10,7 @@ from pathlib import Path
 from beyond.orbits.listeners import LightListener
 from beyond.errors import UnknownFrameError
 
-from .clock import Date, timedelta
-from .utils import circle, docopt
+from .utils import circle, docopt, parse_date, parse_timedelta
 from .stations import StationDb
 from .satellites import get_sats
 
@@ -28,13 +27,13 @@ def space_passes(*argv):
       <satellite>        Satellite to track.
       -                  If used the orbit should be provided as stdin in TLE
                          or CCSDS format (see example)
-      -d --date <date>   Starting date of the simulation. Default is now
+      -d --date <date>   Starting date of the simulation [default: now]
                          (format: "%Y-%m-%dT%H:%M:%S")
-      -r --range <days>  Range of the computation [default: 1]
+      -r --range <days>  Range of the computation [default: 1d]
       -n --no-events     Don't compute AOS, MAX and LOS
       -e --events-only   Only show AOS, MAX and LOS
       -l --light         Compute day/penumbra/umbra transitions
-      -s --step <sec>    Step-size (in seconds) [default: 30]
+      -s --step <step>   Step-size [default: 30s]
       -p --passes <nb>   Number of passes to display [default: 1]
       -g --graphs        Display graphics with matplotlib
       -z --zenital       Reverse direction of azimut angle on the polar plot
@@ -55,19 +54,10 @@ def space_passes(*argv):
 
     args = docopt(space_passes.__doc__)
 
-    if args['--date'] is None:
-        now = Date.now()
-        start = Date(now.d, now.s - (now.s % 1440))
-    else:
-        try:
-            start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
-        except ValueError as e:
-            print(e, file=sys.stderr)
-            sys.exit(-1)
-
     try:
-        step = timedelta(seconds=float(args['--step']))
-        stop = timedelta(days=float(args['--range']))
+        start = parse_date(args['--date'])
+        step = parse_timedelta(args['--step'])
+        stop = parse_timedelta(args['--range'])
         pass_nb = int(args['--passes'])
     except ValueError as e:
         print(e, file=sys.stderr)

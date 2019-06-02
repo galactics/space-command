@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from beyond.orbits.listeners import (
     NodeListener, ApsideListener, LightListener, stations_listeners,
@@ -7,6 +8,7 @@ from beyond.orbits.listeners import (
 from .clock import Date, timedelta
 from .stations import StationDb
 from .passes import get_sats
+from .utils import parse_date, parse_timedelta
 
 
 def space_events(*argv):
@@ -17,8 +19,9 @@ def space_events(*argv):
 
     Options:
         <sat>                  Name of the satellite
-        -d, --date <date>      Starting date of the computation
-        -r, --range <range>    Range of the computation, in days [default: 1]
+        -d, --date <date>      Starting date of the computation [default: now]
+        -r, --range <range>    Range of the computation [default: 1d]
+        -s, --step <step>      Step of the conmputation [default: 3m] 
         -e, --events <events>  Selected events [default: all]
 
     Available events are: 'station', 'light', 'node', 'apside', 'terminator', and
@@ -31,14 +34,13 @@ def space_events(*argv):
 
     satlist = get_sats(*args['<sat>'], stdin=args['-'])
 
-    if not args['--date']:
-        now = Date.now()
-        start = Date(now.d, now.s // 3600 * 3600)
-    else:
-        start = Date.strptime(args['--date'], "%Y-%m-%dT%H:%M:%S")
-
-    stop = timedelta(days=float(args['--range']))
-    step = timedelta(minutes=3)
+    try:
+        start = parse_date(args['--date'])
+        stop = parse_timedelta(args['--range'])
+        step = parse_timedelta(args['--step'])
+    except ValueError as e:
+        print(e, file=sys.stdout)
+        sys.exit(-1)
 
     try:
         for sat in satlist:
