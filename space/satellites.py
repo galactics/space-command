@@ -335,6 +335,23 @@ def sync_tle():
     log.info("{} satellites registered".format(len(sats)))
 
 
+def wshook(mode, *args, **kwargs):
+    if mode in ('init', 'full-init'):
+
+        Sat.create_table(safe=True)
+        Alias.create_table(safe=True)
+
+        if Sat.select().exists():
+            log.warning("SatDb already initialized")
+        else:
+            log.debug("Populating SatDb with TLE")
+            sync_tle()
+
+        if not Alias.select().where(Alias.name=='ISS').exists():
+            Alias(name="ISS", selector="norad_id=25544").save()
+            log.info("Creating ISS alias")
+
+
 def space_sat(*args):
     """Get sat infos
 

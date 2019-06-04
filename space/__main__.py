@@ -3,12 +3,14 @@
 """Space Command, a command for space application
 """
 
+import os
 import sys
 import logging
 from pkg_resources import iter_entry_points
 
 from . import __version__
-from space.config import load_config
+from .utils import docopt
+from .config import config
 
 log = logging.getLogger(__name__)
 
@@ -62,6 +64,16 @@ def main():
 
         verbose = True
 
+    if "-w" in sys.argv or '--workspace' in sys.argv:
+        idx = sys.argv.index('-w') if "-w" in sys.argv else sys.argv.index('--workspace')
+        sys.argv.pop(idx)
+        workspace = sys.argv.pop(idx)
+        config.workspace = workspace
+    elif 'SPACE_WORKSPACE' in os.environ:
+        config.workspace = os.environ['SPACE_WORKSPACE']
+
+    log.debug("workspace = {}".format(config.workspace))
+
     # List of available subcommands
     commands = {entry.name: entry for entry in iter_entry_points('space.commands')}
 
@@ -85,19 +97,25 @@ def main():
             print(addons)
 
         print("Options :")
-        print(" --pdb          Launch the python debugger when an exception is raised")
-        print(" --version      Show the version of the space-command utility")
-        print(" -v, --verbose  Show DEBUG level messages")
+        print(" --pdb                   Launch the python debugger when an exception is raised")
+        print(" --version               Show the version of the space-command utility")
+        print(" -v, --verbose           Show DEBUG level messages")
+        print(" -w, --workspace <name>  Select the workspace to use")
         print()
         sys.exit(-1)
 
     # retrieve the subcommand and its arguments
     _, command, *args = sys.argv
+    
+    try:
+        config.load()
+    except FileNotFoundError:
+        log.error("It seems you are running 'space' for the first time")
+        log.error("To initialize the workspace, please use the command 'wspace'".format(config.workspace))
+        sys.exit(-1)
+
     # get the function associated with the subcommand
     func = commands[command].load()
-
-    if command != "config":
-        load_config()
 
     if verbose:
         for log_handler in logging.getLogger().handlers[:]:

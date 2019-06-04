@@ -325,6 +325,18 @@ TleModel.add_index(
 )
 
 
+def wshook(mode, *args, **kwargs):
+
+    if mode == "full-init":
+        try:
+            TleDb.get(norad_id=25544)
+        except TleNotFound:
+            TleDb().fetch(src='celestrak')
+            log.info("TLE database initialized")
+        else:
+            log.info("TLE database already exists")
+
+
 def space_tle(*argv):
     """TLE Database from Space-Track and Celestrak websites
 

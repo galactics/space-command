@@ -1,4 +1,5 @@
 
+import logging
 from numpy import degrees, pi, radians
 
 from beyond.frames import get_frame, create_station
@@ -6,6 +7,8 @@ from beyond.errors import UnknownFrameError
 
 from .config import config
 from .utils import dms2deg, deg2dms
+
+log = logging.getLogger(__name__)
 
 
 class StationDb:
@@ -75,6 +78,28 @@ class StationDb:
             del self._stations
 
 
+def wshook(mode, *args, **kwargs):
+    
+    if mode in ("init", "full-init"):
+        name = 'TLS'
+
+        config.setdefault('stations', {})
+
+        try:
+            StationDb.get(name)
+        except UnknownFrameError:
+            StationDb.save({
+                name: {
+                    'latlonalt': [43.604482, 1.443962, 172.0],
+                    'name': 'Toulouse',
+                    'parent_frame': 'WGS84'
+                }
+            })
+            log.info("Station {} created".format(name))
+        else:
+            log.warning("Station {} already exists".format(name))
+
+
 def space_stations(*argv):
     """List available stations
 
@@ -92,11 +117,7 @@ def space_stations(*argv):
     from pathlib import Path
     import matplotlib.pyplot as plt
 
-    import logging
-
     from .utils import docopt
-
-    log = logging.getLogger(__name__)
 
     args = docopt(space_stations.__doc__)
 

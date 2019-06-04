@@ -6,7 +6,7 @@ from pathlib import Path
 from textwrap import indent
 from datetime import datetime, timedelta
 
-from beyond.config import config as beyond_config, Config as LegacyConfig
+from beyond.config import config as beyond_config, Config as BeyondConfig
 
 
 log = logging.getLogger(__name__)
@@ -22,13 +22,14 @@ class SpaceFilter(logging.Filter):
         return pkg in ("space", "beyond")
 
 
-class SpaceConfig(LegacyConfig):
+class SpaceConfig(BeyondConfig):
 
-    filepath = Path.home() / '.space/space.yml'
+    WORKSPACES = Path.home() / '.space/'
+    DEFAULT = "main"
 
     def __new__(cls, *args, **kwargs):
 
-        if isinstance(cls._instance, LegacyConfig):
+        if isinstance(cls._instance, BeyondConfig):
             cls._instance = None
 
         if cls._instance is None:
@@ -42,19 +43,34 @@ class SpaceConfig(LegacyConfig):
             self.save()
 
     @property
+    def workspace(self):
+        return self._workspace if hasattr(self, '_workspace') else self.DEFAULT
+    
+    @workspace.setter
+    def workspace(self, workspace):
+        self._workspace = workspace
+
+    @workspace.deleter
+    def workspace(self):
+        del self._workspace
+
+    @property
     def folder(self):
-        return self.filepath.parent
+        return self.WORKSPACES / self.workspace
 
-    def init(self, folder=None):
+    @property
+    def filepath(self):
+        return self.folder / "config.yml"
 
-        if folder:
-            self.filepath = Path(folder) / self.filepath.name
+    def init(self):
+        """Initialize a given workspace folder and config file
+        """
 
         if self.filepath.exists():
             raise FileExistsError(self.filepath)
 
         if not self.folder.exists():
-            self.folder.mkdir()
+            self.folder.mkdir(parents=True)
 
         self.update({
             'beyond': {
@@ -62,23 +78,12 @@ class SpaceConfig(LegacyConfig):
                     'missing_policy': "pass",
                 }
             },
-            'stations': {
-                'TLS': {
-                    'latlonalt': [43.604482, 1.443962, 172.0],
-                    'name': 'Toulouse',
-                    'orientation': 'N',
-                    'parent_frame': 'WGS84'
-                }
-            }
         })
         self.save()
 
-    def load(self, filepath=None):
+    def load(self):
         """Load the config file and create missing directories
         """
-
-        if filepath:
-            self.filepath = Path(filepath)
 
         data = yaml.safe_load(self.filepath.open())
         self.update(data)
@@ -143,27 +148,6 @@ class SpaceConfig(LegacyConfig):
 config = SpaceConfig()
 
 
-def load_config(path=None, walkback=True):
-
-    if not path and walkback:
-        # Search a config.yml file in the current folder and its parents
-        cwd = Path.cwd()
-        for folder in [cwd] + list(cwd.parents):
-
-            fpath = folder.joinpath(SpaceConfig.filepath.name)
-
-            if fpath.exists():
-                path = fpath
-                break
-
-    try:
-        config.load(path)
-    except FileNotFoundError as e:
-        print("The config file '%s' does not exist." % e.filename)
-        print("Please create it with the 'space config init' command")
-        sys.exit(-1)
-
-
 def get_dict(d):
     txt = []
     for k, v in d.items():
@@ -220,13 +204,25 @@ class Lock:
         return True
 
 
+def wshook(mode):
+
+    if mode in ("init", "full-init"):
+        try:
+            config.init()
+        except FileExistsError as e:
+            log.warning("config file already exists at '{}'".format(Path(str(e)).absolute()))
+        else:
+            log.info("config creation at {}".format(config.filepath.absolute()))
+        finally:
+            config.load()  # Load the newly created config file
+
+
 def space_config(*argv):
     """Configuration handling
 
     Usage:
       space-config edit
       space-config set [--append] <keys> <value>
-      space-config init [<folder>]
       space-config unlock [--yes]
       space-config lock
       space-config [get] [<keys>]
@@ -237,7 +233,6 @@ def space_config(*argv):
       get       Print the value of the selected fields
       set       Set the value of the selected field (needs unlock)
       edit      Open the text editor defined via $EDITOR env variable (needs unlock)
-      init      Create config file and directory
       <keys>    Field selector, in the form of key1.key2.key3...
       <value>   Value to set the field to
       <folder>  Folder in which to create the config file
@@ -256,91 +251,80 @@ def space_config(*argv):
 
     args = docopt(space_config.__doc__)
 
-    if args['init']:
-        try:
-            config.init(args['<folder>'])
-        except FileExistsError:
-            log.error("config file already exists at '{}'".format(config.filepath))
+    lock = Lock(config.filepath)
+
+    if args['edit']:
+        if not lock.locked():
+            run([os.environ['EDITOR'], str(config.filepath)])
+            if lock.file.read_text() == lock.backup.read_text():
+                log.info("Unchanged config file")
+            else:
+                log.info("Config file modified")
         else:
-            config.load()  # Load the newly created config file
-            log.info("config creation at {}".format(config.filepath.absolute()))
-    else:
-        load_config()
-
-        lock = Lock(config.filepath)
-
-        if args['edit']:
-            if not lock.locked():
-                run([os.environ['EDITOR'], str(config.filepath)])
-                if lock.file.read_text() == lock.backup.read_text():
-                    log.info("Unchanged config file")
-                else:
-                    log.info("Config file modified")
-            else:
-                print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
-                sys.exit(-1)
-        elif args['set']:
-            if not lock.locked():
-                try:
-                    keys = args['<keys>'].split(".")
-                    if args['--append']:
-                        prev = config.get(*keys, fallback=[])
-                        if not isinstance(prev, list):
-                            if isinstance(prev, str):
-                                prev = [prev]
-                            else:
-                                prev = list(prev)
-                        prev.append(args['<value>'])
-                        config.set(*keys, prev, save=False)
-                    else:
-                        config.set(*keys, args['<value>'], save=False)
-                except TypeError as e:
-                    # For some reason we don't have the right to set this
-                    # value
-                    print(e, file=sys.stderr)
-                    sys.exit(-1)
-                else:
-                    # If everything went fine, we save the file in its new state
-                    config.save()
-                    log.debug("'{}' now set to '{}'".format(args['<keys>'], args['<value>']))
-            else:
-                print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
-                sys.exit(-1)
-
-        elif args['unlock']:
-            if args['--yes']:
-                lock.unlock()
-            else:
-                print("Are you sure you want to unlock the config file ?")
-                ans = input(" yes/[no] ")
-
-                if ans.lower() == "yes":
-                    lock.unlock()
-                elif ans.lower() != "no":
-                    print("unknown answer '{}'".format(ans), file=sys.stderr)
-                    sys.exit(-1)
-        elif args["lock"]:
-            lock.lock()
-        else:
-
-            subdict = config
-
+            print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
+            sys.exit(-1)
+    elif args['set']:
+        if not lock.locked():
             try:
-                if args['<keys>']:
-                    for k in args['<keys>'].split("."):
-                        subdict = subdict[k]
-            except KeyError as e:
-                print("Unknown field", e, file=sys.stderr)
+                keys = args['<keys>'].split(".")
+                if args['--append']:
+                    prev = config.get(*keys, fallback=[])
+                    if not isinstance(prev, list):
+                        if isinstance(prev, str):
+                            prev = [prev]
+                        else:
+                            prev = list(prev)
+                    prev.append(args['<value>'])
+                    config.set(*keys, prev, save=False)
+                else:
+                    config.set(*keys, args['<value>'], save=False)
+            except TypeError as e:
+                # For some reason we don't have the right to set this
+                # value
+                print(e, file=sys.stderr)
                 sys.exit(-1)
-
-            if hasattr(subdict, 'filepath'):
-                print("config :", config.filepath)
-            if isinstance(subdict, dict):
-                # print a part of the dict
-                print(get_dict(subdict))
             else:
-                # Print a single value
-                print(subdict)
+                # If everything went fine, we save the file in its new state
+                config.save()
+                log.debug("'{}' now set to '{}'".format(args['<keys>'], args['<value>']))
+        else:
+            print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
+            sys.exit(-1)
+
+    elif args['unlock']:
+        if args['--yes']:
+            lock.unlock()
+        else:
+            print("Are you sure you want to unlock the config file ?")
+            ans = input(" yes/[no] ")
+
+            if ans.lower() == "yes":
+                lock.unlock()
+            elif ans.lower() != "no":
+                print("unknown answer '{}'".format(ans), file=sys.stderr)
+                sys.exit(-1)
+    elif args["lock"]:
+        lock.lock()
+    else:
+
+        subdict = config
+
+        try:
+            if args['<keys>']:
+                for k in args['<keys>'].split("."):
+                    subdict = subdict[k]
+        except KeyError as e:
+            print("Unknown field", e, file=sys.stderr)
+            sys.exit(-1)
+
+        if hasattr(subdict, 'filepath'):
+            print("config :", config.filepath)
+        if isinstance(subdict, dict):
+            # print a part of the dict
+            print(get_dict(subdict))
+        else:
+            # Print a single value
+            print(subdict)
 
 
 def space_log(*argv):
