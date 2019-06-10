@@ -15,7 +15,7 @@ def jpl(run):
 
 def test_list_analytical(run):
 
-    r = run("space planets")
+    r = run("space planet")
     assert r.stdout == "List of all available bodies\n Sun\n Moon\n"
     assert not r.stderr
     assert r.success
@@ -24,7 +24,7 @@ def test_list_analytical(run):
 @mark.skipif(sys.version_info < (3,6), reason="Unpredictible order before 3.6")
 def test_list_jpl(jpl, run):
 
-    r = run("space planets")
+    r = run("space planet")
     assert r.stdout == """List of all available bodies
   EarthBarycenter
   ├─ SolarSystemBarycenter
@@ -50,14 +50,14 @@ def test_list_jpl(jpl, run):
 
 def test_ephem_analytical(run):
 
-    r = run("space planets Sun")
+    r = run("space planet Sun")
     lines = r.stdout.splitlines()
     assert len(lines) == 89
     assert lines[0] == "CCSDS_OEM_VERS = 2.0"
     assert not r.stderr
     assert r.success
 
-    r = run("space planets Mars")
+    r = run("space planet Mars")
     assert not r.stdout
     assert r.stderr == "Unknown body 'mars'\n"
     assert not r.success
@@ -65,7 +65,7 @@ def test_ephem_analytical(run):
 
 def test_ephem_jpl(jpl, run):
 
-    r = run("space planets Mars")
+    r = run("space planet Mars")
     lines = r.stdout.splitlines()
     assert len(lines) == 89
     assert lines[0] == "CCSDS_OEM_VERS = 2.0"

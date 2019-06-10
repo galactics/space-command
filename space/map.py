@@ -12,7 +12,7 @@ from beyond.env.solarsystem import get_body
 from beyond.orbits import Orbit, Ephem
 
 from .utils import circle
-from .stations import StationDb
+from .station import StationDb
 from .clock import Date, timedelta
 
 

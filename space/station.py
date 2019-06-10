@@ -100,18 +100,18 @@ def wshook(mode, *args, **kwargs):
             log.warning("Station {} already exists".format(name))
 
 
-def space_stations(*argv):
-    """List available stations
+def space_station(*argv):
+    """Stations management
 
     Usage:
-      space-stations [--map]
-      space-stations create
+      space-station [--map]
+      space-station create
 
     Options
       create     Interactively create a station
-      -m, --map  Display the stations on a map
+      -m, --map  Display the station on a map
 
-    If no option is provided, list all stations available
+    If no option is provided, list all station available
     """
 
     from pathlib import Path
@@ -119,7 +119,7 @@ def space_stations(*argv):
 
     from .utils import docopt
 
-    args = docopt(space_stations.__doc__)
+    args = docopt(space_station.__doc__)
 
     station = StationDb()
 

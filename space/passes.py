@@ -11,8 +11,8 @@ from beyond.orbits.listeners import LightListener
 from beyond.errors import UnknownFrameError
 
 from .utils import circle, docopt, parse_date, parse_timedelta
-from .stations import StationDb
-from .satellites import parse_sats
+from .station import StationDb
+from .sat import parse_sats
 
 
 def space_passes(*argv):

@@ -14,7 +14,7 @@ from peewee import (
 from beyond.io.tle import Tle
 
 from .config import config
-from .satellites import parse_sats, sync_tle
+from .sat import parse_sats, sync_tle
 
 log = logging.getLogger(__name__)
 

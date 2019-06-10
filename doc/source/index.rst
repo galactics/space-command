@@ -46,8 +46,8 @@ declare a new station of observation.
 
 .. code-block:: shell
 
-    space stations create                # Interactively create a station
-    space stations --map                 # Check if your station is well where you want it to be
+    space station create                # Interactively create a station
+    space station --map                 # Check if your station is well where you want it to be
     space passes <abbrev> "ISS (ZARYA)"  # Compute the next pass of the ISS from your location
 
 When a satellite name is needed in a command, it's the full name of the satellite is expected,
@@ -86,9 +86,9 @@ For full details on a command, use ``-h`` or ``--help`` arguments
 
 ``space phase`` : Compute and display the phase of the Moon and other solar system bodies
 
-``space planets`` : Compute the position of planets
+``space planet`` : Compute the position of planets
 
-``space stations`` : Create and display ground stations
+``space station`` : Create and display ground stations
 
 ``space tle`` : Retrieve TLEs from Celestrak or Space-Track, store them and consult them
 
@@ -118,7 +118,7 @@ command.
 .. code-block:: shell
 
     # Compute the pass of Mars above a station
-    space planets Mars | space passes TLS - -s 600 -g
+    space planet Mars | space passes TLS - -s 600 -g
 
     # Search for TLEs and display them on a map
     space tle find tintin | space map -

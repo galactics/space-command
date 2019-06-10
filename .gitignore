@@ -1,8 +1,8 @@
 */__pycache__/
 *.egg-info
 dist/
-.cache/
 htmlcov/
 doc/build/
 .tox/
+.pytest_cache/
 .coverage

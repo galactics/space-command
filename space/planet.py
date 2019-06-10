@@ -9,7 +9,7 @@ import beyond.env.solarsystem as solar
 import beyond.io.ccsds as ccsds
 
 from .utils import docopt
-from .stations import StationDb
+from .station import StationDb
 from .utils import parse_date, parse_timedelta
 
 
@@ -39,13 +39,13 @@ def recurse(frame, already, level=""):
     return txt
 
 
-def space_planets(*args):
+def space_planet(*args):
     """Compute position of a planet of the solar system and its major moons
 
     Usage:
-        space-planets
-        space-planets fetch
-        space-planets <planet>... [options]
+        space-planet
+        space-planet fetch
+        space-planet <planet>... [options]
 
     Options:
         fetch                Retrieve .bsp file
@@ -59,8 +59,8 @@ def space_planets(*args):
         -a, --analytical     Force analytical model instead of .bsp files
 
     Example:
-        space-planets Mars  # Position of Mars in EME2000
-        space-planets Moon -f Phobos  # Position of the moon as seen from Phobos
+        space-planet Mars  # Position of Mars in EME2000
+        space-planet Moon -f Phobos  # Position of the moon as seen from Phobos
 
     This command relies on .bsp files, parsed by the incredible jplephem lib.
     Bsp file can be retrived at
@@ -89,7 +89,7 @@ def space_planets(*args):
 
     log = getLogger(__name__)
 
-    args = docopt(space_planets.__doc__)
+    args = docopt(space_planet.__doc__)
 
     if args['fetch']:
 

@@ -97,7 +97,7 @@ def space_phase(*argv):
     import sys
     from .clock import Date
     from .utils import docopt
-    from .stations import StationDb
+    from .station import StationDb
 
     args = docopt(space_phase.__doc__)
 
