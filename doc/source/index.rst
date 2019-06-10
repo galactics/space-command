@@ -37,9 +37,8 @@ Quick start
 
 .. code-block:: shell
 
-    space config init  # Create the basic environment to work
-    space tle fetch  # Retrieve orbital data for major satellites
-    space planets fetch  # Retrieve planets ephemeris
+    wspace init        # Create the empty workspace structure
+    space tle fetch    # Retrieve orbital data for major satellites
 
 Stations are accessed by their abbreviation, and by default there is only
 one declared: TLS. As it is not likely you live in this area, you need to
@@ -47,23 +46,36 @@ declare a new station of observation.
 
 .. code-block:: shell
 
-    space stations create  # Interactively create a station
-    space stations --map  # Check if your station is well where you want it to be
+    space stations create                # Interactively create a station
+    space stations --map                 # Check if your station is well where you want it to be
+    space passes <abbrev> "ISS (ZARYA)"  # Compute the next pass of the ISS from your location
 
-    space passes <abbrev> ISS  # Compute the next pass of the ISS from your location
+When a satellite name is needed in a command, it's the full name of the satellite is expected,
+as defined on the TLE. Alternatively you can access satellites by their identifiers
+(NORAD ID or COSPAR ID). All following commands are equivalent
 
-When a satellite name is needed in a command, it's the full name of the satellite,
-as defined on the TLE, which is expected. Sometimes the full name is rather
-complex (e.g. "ISS (ZARYA)"), so you can define aliases in the config file.
+.. code-block :: shell
+
+    space passes <station> norad=25544
+    space passes <station> cospar=1998-067A
+    space passes <station> "name=ISS (ZARYA)"
+    space passes <station> "ISS (ZARYA)"
+
+Sometimes the full name is rather complex (e.g. "ISS (ZARYA)"), so you can define
+aliases as follow
+
+.. code-block:: shell
+
+    space sat alias ISS norad=25544
+
 The alias 'ISS' is already defined.
 
 To avoid creating thousand of abbreviations, you can just chain commands as
-demonstrated below.
+demonstrated in :ref:`pipping`.
 
 Available commands
 ------------------
 
-def space_stations(*argv):
 For full details on a command, use ``-h`` or ``--help`` arguments
 
 ``space events`` : Compute events encountered by the satellite : day/night transitions, AOS/LOS from stations, Node crossing, Apoapsis and Periapsis, etc.
@@ -79,6 +91,25 @@ For full details on a command, use ``-h`` or ``--help`` arguments
 ``space stations`` : Create and display ground stations
 
 ``space tle`` : Retrieve TLEs from Celestrak or Space-Track, store them and consult them
+
+Command Argmuents
+^^^^^^^^^^^^^^^^^
+
+**Dates**
+
+**Time range**
+
+**Satellite Name**
+
+Workspaces
+^^^^^^^^^^
+
+Workspaces allow the user to work on non-colluding databases. They 
+
+.. _pipping:
+
+Pipping commands
+^^^^^^^^^^^^^^^^
 
 It is possible to chain commands in order to feed a result from one to another.
 In this case, the name of the satellite should be replaced by ``-`` in the second
@@ -100,6 +131,9 @@ It is possible to create your own scripts and extensions to this framework.
 To do that you have to create a ``space.commands`` `entry point <https://amir.rachum.com/blog/2017/07/28/python-entry-points/>`__.
 This will declare the extension to space-command, and make it available as an
 additional subcommand.
+
+If you need to extend the initialisation process (``wspace init``), the entry point
+is ``space.wshook``.
 
 Indices and tables
 ==================
