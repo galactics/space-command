@@ -5,17 +5,16 @@ import aiohttp
 import async_timeout
 import requests
 import logging
+from datetime import datetime
 from peewee import (
     Model, IntegerField, CharField, TextField, DateTimeField, SqliteDatabase,
     fn
 )
-from datetime import datetime
 
 from beyond.io.tle import Tle
 
 from .config import config
-from .satellites import Satellite
-
+from .satellites import parse_sats, sync_tle
 
 log = logging.getLogger(__name__)
 
@@ -189,25 +188,10 @@ class TleDb:
             cospar_id (str)
             name (str)
         Return:
-            Satellite:
+            Tle:
         """
         entity = cls()._get_last_raw(**kwargs)
-        tle = Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
-        sat = Satellite(
-            name=tle.name,
-            cospar_id=tle.cospar_id,
-            norad_id=tle.norad_id,
-            orb=tle.orbit(),
-            tle=tle
-        )
-        return sat
-
-    def _transform_kwargs(self, **kwargs):
-
-        if 'name' in kwargs and kwargs['name'] in config['aliases']:
-            kwargs = {"norad_id": config['aliases'][kwargs['name']]}
-
-        return kwargs
+        return Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
 
     def _get_last_raw(self, **kwargs):
         """
@@ -218,8 +202,6 @@ class TleDb:
         Return:
             TleModel:
         """
-
-        kwargs = self._transform_kwargs(**kwargs)
 
         try:
             return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
@@ -237,8 +219,6 @@ class TleDb:
         Yield:
             TleModel:
         """
-
-        kwargs = self._transform_kwargs(**kwargs)
 
         query = self.model.select().filter(**kwargs).order_by(self.model.epoch)
 
@@ -294,7 +274,7 @@ class TleDb:
             if entities:
                 TleModel.insert_many(entities).execute()
             elif i is None:
-                raise ValueError("{} contain no TLE".format(src))
+                raise ValueError("{} contains no TLE".format(src))
 
         log.info("{:<20}   {:>3}/{}".format(src, len(entities), i + 1))
 
@@ -305,7 +285,7 @@ class TleDb:
         Args:
             txt (str)
         Return:
-            Satellite:
+            Tle:
         """
 
         entities = (
@@ -317,15 +297,7 @@ class TleDb:
 
         sats = []
         for entity in entities:
-            tle = Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
-            sats.append(Satellite(
-                name=tle.name,
-                cospar_id=tle.cospar_id,
-                norad_id=tle.norad_id,
-                orb=tle.orbit(),
-                tle=tle
-            ))
-
+            sats.append(Tle("%s\n%s" % (entity.name, entity.data), src=entity.src))
         if not sats:
             raise TleNotFound(txt)
 
@@ -357,33 +329,27 @@ def space_tle(*argv):
     """TLE Database from Space-Track and Celestrak websites
 
     Usage:
-      space-tle get <field> <value> ...
-      space-tle insert [<file>...]
+      space-tle get <selector>...
+      space-tle insert (-|<file>...)
       space-tle fetch [<file>...]
-      space-tle fetch-st <field> <value>
+      space-tle fetch-st <selector>...
       space-tle find <text> ...
-      space-tle history [--last <nb>] <field> <value> ...
+      space-tle history [--last <nb>] <selector>...
       space-tle dump [--all]
       space-tle stats
 
     Options:
       dump             Display the last TLE for each object
       fetch            Retrieve TLEs from Celestrak website
-      fetch-st         Retrieve a TLE for a given object from the Space-Track
-                       website. This request needs login informations
+      fetch-st         Retrieve a single TLE for a given object from the Space-Track
+                       website. This request needs login informations (see below)
       find             Search for a string in the database of TLE (case insensitive)
       get              Display the last TLE of a selected object
       history          Display all the recorded TLEs for a given object
       insert           Insert TLEs into the database (file or stdin)
       stats            Display statistics on the database
-
-      <field>          Display the last TLE of an object. <field> is the criterion
-                       on which the research will be done. Available modes are
-                       'norad', 'cospar' and 'name' (case sensitive)
-      <value>          Depending on <field>, this field should be the NORAD-ID,
-                       COSPAR-ID, or name of the desired object.
+      <selector>       Selector of the object, see `space sat`
       <file>           File to insert in the database
-
       -l, --last <nb>  Get the last <nb> TLE
       -a, --all        Display the entirety of the database, instead of only
                        the last TLE of each object
@@ -391,27 +357,22 @@ def space_tle(*argv):
     Examples:
       space tle fetch                # Retrieve all the TLEs from celestrak
       space tle fetch visual.txt     # Retrieve only that file from celestrak
-      space tle norad 25544          # Display the TLE of the ISS
-      space tle cospar 1998-067A     # Display the TLE of the ISS, too
+      space tle norad=25544          # Display the TLE of the ISS
+      space tle cospar=1998-067A     # Display the TLE of the ISS, too
       space tle insert file.txt      # Insert all TLEs from the file
       echo "..." | space tle insert  # Insert TLEs from stdin
 
     Configuration:
-      The Space-Track website only allows TLE downloads from logged-in request.
+      The Space-Track website only allows TLE downloads from logged-in requests.
       To do this, the config file should contain
           spacetrack:
               identity: <login>
               password: <password>
-
-      It is also possible to define aliases in the config dict to simplify name
-      lookup:
-        $ space tle get name "ISS (ZARYA)"
-      becomes
-        $ space tle get name ISS
-      if the config file contains
-          aliases:
-              ISS: 25544
-
+      
+      Every time you retrieve or insert TLE in the database, the satellite database
+      is updated. To disable this behaviour add the following to the config file
+          satellites:
+              auto-sync-tle: False
     """
 
     from .utils import docopt
@@ -423,46 +384,60 @@ def space_tle(*argv):
     db = TleDb()
 
     if args['fetch'] or args['fetch-st']:
-
         kwargs = {}
         src = "celestrak" if args['fetch'] else "spacetrack"
 
         if src == 'celestrak' and args['<file>']:
             kwargs['files'] = args['<file>']
         elif src == "spacetrack":
-            modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
-            kwargs = {modes[args['<field>']]: " ".join(args['<value>'])}
+            try:
+                sat = parse_sats.get_sat(" ".join(args['<selector>']))
+            except ValueError:
+                desc = parse_sats.get_desc(" ".join(args['<selector>']))
+                kwargs[desc.selector] = desc.value
+            else:
+                kwargs['norad_id'] = sat.norad_id
 
         kwargs['src'] = src
 
         log.info("Retrieving TLEs from {}".format(src))
 
-        # try:
-        db.fetch(**kwargs)
-        # except Exception as e:
-            # print(e)
-            # sys.exit(-1)
+        try:
+            db.fetch(**kwargs)
+        except ValueError as e:
+            log.error(e)
+        finally:
+            if config.get('satellites', 'auto-sync-tle', fallback=True):
+                # Update the Satellite DB
+                sync_tle()
+
     elif args['insert']:
+        # Process the file list provided by the command line
+        if args['<file>']:
+            files = []
+            for f in args['<file>']:
+                files.extend(glob(f))
 
-            # Process the file list provided by the command line
-            if args['<file>']:
-                files = []
-                for f in args['<file>']:
-                    files.extend(glob(f))
-
-                # Insert each file into the database
-                for file in files:
-                    try:
-                        db.load(file)
-                    except Exception as e:
-                        log.error(e)
-
-            elif not sys.stdin.isatty():
+            # Insert each file into the database
+            for file in files:
                 try:
-                    # Insert the content of stdin into the database
-                    db.insert(sys.stdin.read(), "stdin")
+                    db.load(file)
                 except Exception as e:
                     log.error(e)
+
+        elif args['-'] and not sys.stdin.isatty():
+            try:
+                # Insert the content of stdin into the database
+                db.insert(sys.stdin.read(), "stdin")
+            except Exception as e:
+                log.error(e)
+        else:
+            log.error("No TLE provided")
+            sys.exit(-1)
+
+        if config.get('satellites', 'auto-sync-tle', fallback=True):
+            # Update the Satellite DB
+            sync_tle()
 
     elif args['find']:
         txt = " ".join(args['<text>'])
@@ -472,8 +447,8 @@ def space_tle(*argv):
             log.error(str(e))
             sys.exit(-1)
 
-        for sat in result:
-            print("%s\n%s\n" % (sat.name, sat.tle))
+        for tle in result:
+            print("{0.name}\n{0}\n".format(tle))
 
         log.info("==> {} entries found for '{}'".format(len(result), txt))
     elif args['dump']:
@@ -488,21 +463,22 @@ def space_tle(*argv):
         print("First fetch   {}".format(first))
         print("Last fetch    {}".format(last))
     else:
-
-        # Simply show a TLE
-        modes = {'norad': 'norad_id', 'cospar': 'cospar_id', 'name': 'name'}
-        kwargs = {modes[args['<field>']]: " ".join(args['<value>'])}
+        try:
+            sat = parse_sats.get_sat(" ".join(args['<selector>']))
+        except ValueError as e:
+            log.error(str(e))
+            sys.exit(-1)
 
         try:
             if args['history']:
                 number = int(args['--last']) if args['--last'] is not None else None
-                tles = db.history(number=number, **kwargs)
+                tles = db.history(number=number, cospar_id=sat.cospar_id)
 
                 for tle in tles:
-                    print("%s\n%s\n" % (tle.name, tle))
+                    print("{0.name}\n{0}\n".format(tle))
             else:
-                sat = db.get(**kwargs)
-                print("%s\n%s" % (sat.name, sat.tle))
+                tle = db.get(cospar_id=sat.cospar_id)
+                print("{0.name}\n{0}\n".format(tle))
         except TleNotFound as e:
             log.error(str(e))
             sys.exit(-1)

@@ -62,9 +62,6 @@ class SpaceConfig(LegacyConfig):
                     'missing_policy': "pass",
                 }
             },
-            'aliases': {
-                'ISS': 25544
-            },
             'stations': {
                 'TLS': {
                     'latlonalt': [43.604482, 1.443962, 172.0],

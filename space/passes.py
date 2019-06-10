@@ -12,7 +12,7 @@ from beyond.errors import UnknownFrameError
 
 from .utils import circle, docopt, parse_date, parse_timedelta
 from .stations import StationDb
-from .satellites import get_sats
+from .satellites import parse_sats
 
 
 def space_passes(*argv):
@@ -59,6 +59,7 @@ def space_passes(*argv):
         step = parse_timedelta(args['--step'])
         stop = parse_timedelta(args['--range'])
         pass_nb = int(args['--passes'])
+        sats = parse_sats(*args['<satellite>'], text=sys.stdin.read() if args["-"] else "")
     except ValueError as e:
         print(e, file=sys.stderr)
         sys.exit(-1)
@@ -70,8 +71,6 @@ def space_passes(*argv):
         sys.exit(-1)
 
     events = not args['--no-events']
-
-    sats = get_sats(*args['<satellite>'], stdin=args["-"])
 
     light = LightListener()
 

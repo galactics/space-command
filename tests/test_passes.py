@@ -36,7 +36,7 @@ def test_simple(run_date):
 
     r = run_date("space passes TLS UNKNOWN")
     lines = r.stdout.strip().splitlines()
-    assert r.stderr == "Unknwon satellite 'UNKNOWN'\n"
+    assert r.stderr == "No satellite corresponding to name=UNKNOWN\n"
     assert not r.stdout
     assert not r.success
 

@@ -9,9 +9,7 @@ def test_get(run):
     r = run("space config")
     out = r.stdout.splitlines()
     assert out[0].startswith("config :")
-    assert "\n".join(out[1:]) == """aliases:
-    ISS: 25544
-beyond:
+    assert "\n".join(out[1:-1]) == """beyond:
     eop:
         missing_policy: pass
 stations:
@@ -26,8 +24,8 @@ stations:
     assert r.stderr == ""
     assert r.success
     
-    r = run("space config get aliases.ISS")
-    assert r.stdout == "25544\n"
+    r = run("space config get beyond.eop.missing_policy")
+    assert r.stdout == "pass\n"
     assert not r.stderr
     assert r.success
 

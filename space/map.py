@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from pathlib import Path
 
@@ -382,10 +383,10 @@ def space_map(*argv):
     """
 
     from .utils import docopt
-    from .passes import get_sats
+    from .passes import parse_sats
 
     args = docopt(space_map.__doc__)
-    sats = get_sats(*args['<satellite>'], stdin=args['-'])
+    sats = list(parse_sats(*args['<satellite>'], text=sys.stdin.read() if args['-'] else ""))
 
     sat_anim = SatAnim(sats)
 
