@@ -7,7 +7,7 @@ from beyond.orbits.listeners import (
 
 from .clock import Date, timedelta
 from .station import StationDb
-from .passes import parse_sats
+from .sat import parse_sats
 from .utils import parse_date, parse_timedelta
 
 

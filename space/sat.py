@@ -4,7 +4,6 @@ import logging
 from textwrap import indent
 from peewee import Model, IntegerField, CharField, SqliteDatabase, IntegrityError
 
-from beyond.dates import Date, timedelta
 from beyond.orbits import Ephem, Orbit
 import beyond.io.ccsds as ccsds
 from beyond.io.tle import Tle
@@ -12,6 +11,8 @@ from beyond.propagators import get_propagator
 from beyond.env.solarsystem import get_body
 
 from .config import config
+from .clock import Date, timedelta
+from .utils import parse_date, parse_timedelta
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class parse_sats:
     def get_desc(cls, txt, alias=True):
         # Parsing the string
 
-        delimiters = r"[@~$\?]"
+        delimiters = r"[@~\^\?\$]"
         selector = re.split(delimiters, txt)[0]
 
         if alias:
@@ -115,7 +116,6 @@ class parse_sats:
                 if m:
                     last = int(m.group(1))
 
-        src = None
         m = re.search(r"@(oem|tle)", txt, flags=re.I)
         if m:
             src = m.group(1).lower()
@@ -127,7 +127,10 @@ class parse_sats:
         m = re.search(r"(\^|\?)([0-9-T:.]+)", txt)
         if m:
             limit = "after" if m.group(1) == "^" else "before"
-            date = Date.strptime(m.group(2), "%Y-%m-%d")
+            try:
+                date = parse_date(m.group(2), fmt='date')
+            except ValueError:
+                date = parse_date(m.group(2))
 
         return OrbDesc(selector, value, src, last, limit, date)
 
@@ -159,8 +162,12 @@ class parse_sats:
 
                 sat.orb = tles[0].orbit()
             else:
-                # TODO Implement date handling
-                pass
+                try:
+                    tle = TleDb.get_dated(limit=orbdesc.limit, date=orbdesc.date.datetime, **{orbdesc.selector: orbdesc.value})
+                except TleNotFound:
+                    raise NoDataError(orbdesc)
+                else:
+                    sat.orb = tle.orbit()
         else:
             pattern = "*.{}".format(orbdesc.src)
             if sat.folder.exists():
@@ -171,23 +178,11 @@ class parse_sats:
                     if len(files) <= orbdesc.last:
                         raise NoDataError(orbdesc)
                     sat.orb = ccsds.load(files[-(1+orbdesc.last)].open())
-
-                    # if isinstance(sat.orb, Orbit):
-                    #     propagator_cls = get_propagator(config.get('satellites', 'opm', 'default_propagator', 'name', fallback='Kepler'))
-                    #     step = timedelta(seconds=config.get('satellites', 'opm', 'default_propagator', 'step', fallback=10))
-                    #     bodies = get_body(config.get('satellites', 'opm', 'default_propagator', 'bodies', fallback='Earth'))
-                    #     sat.orb.propagator = propagator_cls(step, bodies)
                 else:
                     # TODO Implement date handling
                     pass
             else:
                 raise NoDataError(orbdesc)
-
-        # print("selector ", selector)
-        # print("last     ", last)
-        # print("src      ", src)
-        # print("limit    ", limit)
-        # print("date     ", date)
 
         return sat
 
@@ -203,7 +198,7 @@ class parse_sats:
     @classmethod
     def get_orb(cls, txt, **kwargs):
         desc = cls.get_desc(txt, **kwargs)
-        return cls._get_orb_from_desc(descs, **kwargs)
+        return cls._get_orb_from_desc(desc, **kwargs)
 
 
 def db():
@@ -250,7 +245,14 @@ class SatOrb:
 
     @classmethod
     def from_orb(cls, orb):
-        sat = Sat.select().where(Sat.cospar_id == orb.cospar_id).get()
+        try:
+            sat = Sat.select().where(Sat.cospar_id == orb.cospar_id).get()
+        except Sat.DoesNotExist:
+            sat = Sat(
+                norad_id=getattr(orb, 'norad_id', None),
+                cospar_id=getattr(orb, 'cospar_id', None),
+                name=getattr(orb, 'name', None)
+            )
 
         if isinstance(orb, Tle):
             orb = orb.orbit()
@@ -366,6 +368,7 @@ def space_sat(*args):
     Options:
       insert        Add TLEs from file or stdin
       alias         Create an alias for quick access
+      orb           Display the orbit corresponding to the selector
       list-aliases  List existing aliases
       list-orbs     List available orbit files (TLE or OEM)
       sync-tle      Update satellite database with existing TLEs
@@ -401,6 +404,7 @@ def space_sat(*args):
                 sat.save(args['--force'])
             except FileExistsError as e:
                 log.error("{} already exists".format(e))
+                sys.exit(-1)
 
     elif args['alias']:
         selector = args['<selector>']
@@ -434,8 +438,17 @@ def space_sat(*args):
         sync_tle()
 
     elif args['orb']:
-        satorb = parse_sats.get_orb(args['<selector>'])
-        print(repr(satorb.orb))
+        sat = parse_sats.get_orb(args['<selector>'])
+        if isinstance(sat.orb, Ephem):
+            print(ccsds.dumps(sat.orb))
+        else:
+            tle = Tle.from_orbit(
+                sat.orb,
+                norad_id=sat.norad_id,
+                cospar_id=sat.cospar_id,
+                name=sat.name
+            )
+            print("{0.name}\n{0}".format(tle))
 
     else:
         try:

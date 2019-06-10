@@ -383,7 +383,7 @@ def space_map(*argv):
     """
 
     from .utils import docopt
-    from .passes import parse_sats
+    from .sat import parse_sats
 
     args = docopt(space_map.__doc__)
     sats = list(parse_sats(*args['<satellite>'], text=sys.stdin.read() if args['-'] else ""))

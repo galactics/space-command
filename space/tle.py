@@ -209,6 +209,24 @@ class TleDb:
             mode, selector = kwargs.popitem()
             raise TleNotFound(selector, mode=mode) from e
 
+    @classmethod
+    def get_dated(cls, limit=None, date=None, **kwargs):
+
+        self = cls()
+
+        if limit == "after":
+            r = self.model.select().where(self.model.epoch >= date).order_by(self.model.epoch.asc())
+        else:
+            r = self.model.select().where(self.model.epoch <= date)
+
+        try:
+            entity = r.filter(**kwargs).get()
+        except self.model.DoesNotExist:
+            mode, selector = kwargs.popitem()
+            raise TleNotFound(selector, mode=mode) from e
+        else:
+            return Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
+
     def history(self, number=None, **kwargs):
         """Retrieve all the TLE of a given object
 

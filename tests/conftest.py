@@ -4,6 +4,8 @@ from io import StringIO
 from pytest import yield_fixture, fixture
 from unittest.mock import patch
 
+from space.config import config
+
 
 @yield_fixture()
 def space_tmpdir(tmpdir_factory):
@@ -49,6 +51,10 @@ def space_tmpdir(tmpdir_factory):
         'wspace init {}'.format(tmp_ws).split(),
         stdout=subprocess.PIPE, stderr=subprocess.PIPE
     )
+
+    config.clear()
+    config.workspace = tmp_ws
+    config.load()
 
     try:
         yield
