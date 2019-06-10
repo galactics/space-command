@@ -39,7 +39,7 @@ Features
 * Retrieve orbits as TLE from celestrak or space-track
 * Compute visibility from a given point of observation
 * Compute phases of the Moon and other solar system bodies
-* Animated map of the orbit of satellites
+* Animated map of satellites' orbit
 * Compute events for a given satellite (day/night, node, AOS/LOS, etc.)
 * Retrieve Solar System bodies ephemeris
 
@@ -48,6 +48,25 @@ list of all the features.
 
 Changelog
 ---------
+
+[0.5] - 2019-07-30
+^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- ``space map`` shows groundtrack
+- ``space events`` can selectively display one type of event
+- ``space sat`` subcommand to handle the satellite database
+- ``space ephem`` subcommand to handle ephemerides
+- ``wspace`` for workspace management
+- ``space passes`` now has a csv output format
+- ``space planet`` is able to fetch any bsp file defined in the config file
+
+**Modified**
+
+- Time span inputs normalized for all commands (20s, 3d12h5m, etc.)
+- Satellites can now be accessed by other identifiers than name (norad=25544 and cospar=1998-067A are equivalent to "ISS (ZARYA)"). See ``space sat``
+- Logging is now with a timed rotating file
 
 [0.4.2] - 2019-02-23
 ^^^^^^^^^^^^^^^^^^^^

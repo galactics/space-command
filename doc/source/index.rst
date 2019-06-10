@@ -67,6 +67,8 @@ For full details on a command, use ``-h`` or ``--help`` arguments
 
 ``space station`` : Create and display ground stations
 
+``space sat`` : Satellite database management
+
 ``space tle`` : Retrieve TLEs from Celestrak or Space-Track, store them and consult them
 
 ``space ephem`` : Compute Ephemeris and manage Ephemeris database
