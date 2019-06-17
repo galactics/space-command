@@ -10,9 +10,9 @@ from beyond.io.tle import Tle
 from beyond.propagators import get_propagator
 from beyond.env.solarsystem import get_body
 
-from .config import config
 from .clock import Date, timedelta
 from .utils import parse_date, parse_timedelta
+from .wspace import ws
 
 log = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ class parse_sats:
         if m:
             src = m.group(1).lower()
         else:
-            src = config.get('satellites', 'default_selector', fallback='tle')
+            src = ws.config.get('satellites', 'default_selector', fallback='tle')
 
         limit = "any"
         date = "any"
@@ -201,15 +201,12 @@ class parse_sats:
         return cls._get_orb_from_desc(desc, **kwargs)
 
 
-def db():
-    if not hasattr(db, '_instance'):
-        db._instance = SqliteDatabase(None)
-        db._instance.init(str(config.folder / "space.db"))
-
-    return db._instance
+class MyModel(Model):
+    class Meta:
+        database = ws.db
 
 
-class Sat(Model):
+class Sat(MyModel):
     norad_id = IntegerField(unique=True)
     cospar_id = CharField()
     name = CharField()
@@ -222,16 +219,10 @@ class Sat(Model):
             cospar_id=tle.cospar_id,
         )
 
-    class Meta:
-        database = db()
 
-
-class Alias(Model):
+class Alias(MyModel):
     name = CharField(unique=True)
     selector = CharField()
-
-    class Meta:
-        database = db()
 
 
 class SatOrb:
@@ -274,7 +265,7 @@ class SatOrb:
     @property
     def folder(self):
         year, idx = self.cospar_id.split('-')
-        return config.folder / "satdb" / year / idx
+        return ws.folder / "satdb" / year / idx
 
     def list(self, src='tle'):
         if src == 'tle':
@@ -327,7 +318,7 @@ def sync_tle():
     from .tle import TleDb
     sats = [Sat.from_tle(tle) for tle in TleDb().dump()]
 
-    with db().atomic():
+    with ws.db.atomic():
         for sat in sats:
             try:
                 sat.save()
@@ -337,8 +328,9 @@ def sync_tle():
     log.info("{} satellites registered".format(len(sats)))
 
 
-def wshook(mode, *args, **kwargs):
-    if mode in ('init', 'full-init'):
+def wshook(cmd, *args, **kwargs):
+
+    if cmd in ('init', 'full-init'):
 
         Sat.create_table(safe=True)
         Alias.create_table(safe=True)

@@ -1,75 +1,27 @@
 import os
-import subprocess
+import random
 from io import StringIO
 from pytest import yield_fixture, fixture
-from unittest.mock import patch
 
-from space.config import config
+from space.wspace import switch_workspace
+from space.tle import TleDb
+from space.sat import sync_tle
 
 
-@yield_fixture()
-def space_tmpdir(tmpdir_factory):
+@fixture
+def space_tmpdir():
 
-    tmp_ws = "tmp-pytest"
+    name = 'tmp-pytest'
 
-    r = subprocess.Popen(
-        'wspace delete {}'.format(tmp_ws).split(),
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
+    with switch_workspace(name, init=True, delete=True) as ws:
 
-    stdout, stderr = r.communicate(input=tmp_ws.encode())
-
-    # Initialise config
-    r = subprocess.run(
-        'wspace init {}'.format(tmp_ws).split(),
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-
-    assert r.returncode == 0
-    # assert r.stderr
-    # assert not r.stdout
-
-    # Insert one TLE in order to have something to work with
-    r = subprocess.Popen(
-        'space tle insert - -w {}'.format(tmp_ws).split(),
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        stdin=subprocess.PIPE
-    )
-
-    stdout, stderr = r.communicate(input=b"""ISS (ZARYA)
+        TleDb().insert("""ISS (ZARYA)
 1 25544U 98067A   18297.55162980  .00001655  00000-0  32532-4 0  9999
-2 25544  51.6407  94.0557 0003791 332.0725 138.3982 15.53858634138630""")
+2 25544  51.6407  94.0557 0003791 332.0725 138.3982 15.53858634138630""", src='stdin')
 
-    stderr = stderr.decode()
-
-    assert r.returncode == 0
-    # assert stderr.startswith('stdin')
-    # assert not stdout
-
-    # Initialize config to take satellite into account
-    r = subprocess.run(
-        'wspace init {}'.format(tmp_ws).split(),
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE
-    )
-
-    config.clear()
-    config.workspace = tmp_ws
-    config.load()
-
-    try:
-        yield
-    finally:
-
-        r = subprocess.Popen(
-            'wspace delete {}'.format(tmp_ws).split(),
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-        )
-
-        stdout, stderr = r.communicate(input=tmp_ws.encode())
-
-        assert r.returncode == 0
-    # assert stdout.decode().strip().endswith("deleted")
-    # assert not stderr
+        # Synchronize the Satellite database with the TleDatabase
+        sync_tle()
+        yield ws
 
 
 @fixture

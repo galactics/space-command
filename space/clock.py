@@ -3,7 +3,7 @@ import logging
 
 from beyond.dates import Date as LegacyDate, timedelta
 
-from .config import config
+from .wspace import ws
 from .utils import parse_timedelta
 
 
@@ -16,7 +16,7 @@ class Date(LegacyDate):
 
     @classmethod
     def _clock_offset(cls):
-        return timedelta(seconds=config.get(cls.CONFIG_FIELD, fallback=0))
+        return timedelta(seconds=ws.config.get(cls.CONFIG_FIELD, fallback=0))
 
     @classmethod
     def now(cls, *args, **kwargs):
@@ -26,7 +26,7 @@ class Date(LegacyDate):
 def sync():
     """Synchronise the system date and the clock date
     """
-    config.set(Date.CONFIG_FIELD, 0, save=True)
+    ws.config.set(Date.CONFIG_FIELD, 0, save=True)
     log.info("Clock set to system time")
 
 
@@ -40,7 +40,7 @@ def set_date(date, ref):
     # the timedelta is here to take the UTC-TAI into account
     # see beyond.dates.date for informations
     offset = date - ref - timedelta(seconds=date._offset - ref._offset)
-    config.set(Date.CONFIG_FIELD, offset.total_seconds(), save=True)
+    ws.config.set(Date.CONFIG_FIELD, offset.total_seconds(), save=True)
     log.info("Clock date set to {}".format(date))
 
 
@@ -49,7 +49,7 @@ def set_offset(offset):
     Args
         offset (timedelta)
     """
-    config.set(Date.CONFIG_FIELD, offset.total_seconds(), save=True)
+    ws.config.set(Date.CONFIG_FIELD, offset.total_seconds(), save=True)
     log.info("Clock offset set to {}".format(offset))
 
 

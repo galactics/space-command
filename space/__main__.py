@@ -10,9 +10,9 @@ from pkg_resources import iter_entry_points
 
 from . import __version__
 from .utils import docopt
-from .config import config
+from .wspace import ws
 
-log = logging.getLogger(__name__)
+log = logging.getLogger(__package__)
 
 
 def pm_on_crash(type, value, tb):
@@ -54,7 +54,9 @@ def main():
         print("beyond         {}".format(beyond.__version__))
         sys.exit(0)
 
-    verbose = False
+    # Set logging verbosity level.
+    # This setting will be overridden when loading the workspace (see `ws.init()` below)
+    # but it allow to have a crude logging of all the initialization process.
     if "-v" in sys.argv or "--verbose" in sys.argv:
 
         if "-v" in sys.argv:
@@ -63,16 +65,22 @@ def main():
             sys.argv.remove('--verbose')
 
         verbose = True
+        logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+        log.debug("Verbose mode activated")
+    else:
+        verbose = False
+        logging.basicConfig(level=logging.INFO, format='%(message)s')
 
+    # Retrieve the workspace if defined both as a command argument or as a
+    # environment variable. The command line argument takes precedence
     if "-w" in sys.argv or '--workspace' in sys.argv:
         idx = sys.argv.index('-w') if "-w" in sys.argv else sys.argv.index('--workspace')
         sys.argv.pop(idx)
-        workspace = sys.argv.pop(idx)
-        config.workspace = workspace
+        ws.name = sys.argv.pop(idx)
     elif 'SPACE_WORKSPACE' in os.environ:
-        config.workspace = os.environ['SPACE_WORKSPACE']
+        ws.name = os.environ['SPACE_WORKSPACE']
 
-    log.debug("workspace = {}".format(config.workspace))
+    log.debug("workspace '{}'".format(ws.name))
 
     # List of available subcommands
     commands = {entry.name: entry for entry in iter_entry_points('space.commands')}
@@ -106,21 +114,22 @@ def main():
 
     # retrieve the subcommand and its arguments
     _, command, *args = sys.argv
-    
+
+    ws.config.verbose = verbose
+
+    # Before loading the workspace, no file logging is initialized, so any logging will
+    # only be reported on console thanks to the `logging.basicConfig()` above
     try:
-        config.load()
+        ws.load()
     except FileNotFoundError:
         log.error("It seems you are running 'space' for the first time")
-        log.error("To initialize the workspace, please use the command 'wspace'".format(config.workspace))
+        log.error("To initialize the workspace '{}', please use the command 'wspace'".format(ws.name))
         sys.exit(-1)
+
+    log.debug("=== starting subcommand '{}' ===".format(command))
 
     # get the function associated with the subcommand
     func = commands[command].load()
-
-    if verbose:
-        for log_handler in logging.getLogger().handlers[:]:
-            if isinstance(log_handler, logging.StreamHandler):
-                log_handler.setLevel(logging.DEBUG)
 
     # Call the function associated with the subcommand
     func(*args)

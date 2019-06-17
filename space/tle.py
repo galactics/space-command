@@ -13,7 +13,7 @@ from peewee import (
 
 from beyond.io.tle import Tle
 
-from .config import config
+from .wspace import ws
 from .sat import parse_sats, sync_tle
 
 log = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ class TleDb:
 
         self._cache = {}
         self.model = TleModel
-        self.db.init(str(config.folder / "space.db"))
+        self.db.init(str(ws.folder / "space.db"))
         self.model.create_table(safe=True)
 
     def dump(self, all=False):
@@ -91,7 +91,7 @@ class TleDb:
     def fetch_spacetrack(self, **kwargs):
 
         try:
-            auth = config['spacetrack']
+            auth = ws.config['spacetrack']
         except KeyError:
             raise ValueError("No login information available for spacetrack")
 
@@ -126,7 +126,7 @@ class TleDb:
         log.debug("Request at {}".format(url))
         full = requests.get(url, cookies=init.cookies)
 
-        cache = config.folder / "tmp" / "spacetrack.txt"
+        cache = ws.folder / "tmp" / "spacetrack.txt"
         log.debug("Caching results into {}".format(cache))
         with cache.open("w") as fp:
             fp.write(full.text)
@@ -144,7 +144,7 @@ class TleDb:
             async with session.get(self.CELESTRAK_URL + filename) as response:
                 text = await response.text()
 
-                filepath = config.folder / "tmp" / "celestrak" / filename
+                filepath = ws.folder / "tmp" / "celestrak" / filename
 
                 if not filepath.parent.exists():
                     filepath.parent.mkdir(parents=True)
@@ -343,9 +343,9 @@ TleModel.add_index(
 )
 
 
-def wshook(mode, *args, **kwargs):
+def wshook(cmd, *args, **kwargs):
 
-    if mode == "full-init":
+    if cmd == "full-init":
         try:
             TleDb.get(norad_id=25544)
         except TleNotFound:
@@ -437,7 +437,7 @@ def space_tle(*argv):
         except ValueError as e:
             log.error(e)
         finally:
-            if config.get('satellites', 'auto-sync-tle', fallback=True):
+            if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
                 # Update the Satellite DB
                 sync_tle()
 
@@ -465,7 +465,7 @@ def space_tle(*argv):
             log.error("No TLE provided")
             sys.exit(-1)
 
-        if config.get('satellites', 'auto-sync-tle', fallback=True):
+        if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
             # Update the Satellite DB
             sync_tle()
 

@@ -2,31 +2,154 @@ import os
 import sys
 import shutil
 import logging
-import subprocess
+import tarfile
 from pathlib import Path
+from datetime import datetime
+from contextlib import contextmanager
 from pkg_resources import iter_entry_points
+from peewee import SqliteDatabase
 
 from .utils import docopt
-from .config import config
+from .config import SpaceConfig
 
 log = logging.getLogger(__name__)
 
 
-def trigger_hooks(cmd):
-    if cmd == "status":
-        print("Workspace '{}'".format(config.workspace))
-    elif cmd == "init":
-        print("Initializing workspace '{}'".format(config.workspace))
-    # elif cmd == "full-init":
-    #     log.info("Full initialization of workspace '{}'".format(config.workspace))
-    else:
-        log.error("Unknown command '{}'".format(cmd))
-        # sys.exit(-1)
-        raise
+def pm_on_crash(type, value, tb):
+    """Exception hook, in order to start pdb when an exception occurs
+    """
+    import pdb
+    import traceback
+    traceback.print_exception(type, value, tb)
+    pdb.pm()
 
-    # Each command is responsible of its own initialization, logging and error handling
-    for entry in sorted(iter_entry_points('space.wshook'), key=lambda x:x.name):
-        entry.load()(cmd)
+
+@contextmanager
+def switch_workspace(name, init=False, delete=False):
+    old_name = ws.name
+    ws.name = name
+
+    try:
+        if init:
+            ws.init()
+
+        ws.load()
+        yield ws
+
+        if delete:
+            ws.delete()
+    finally:
+        ws.name = old_name
+
+
+class Workspace:
+
+    WORKSPACES = Path.home() / '.space/'
+    HOOKS = ('init', 'status', 'full-init')
+    DEFAULT = 'main'
+
+    def __new__(cls, *args, **kwargs):
+        # Singleton
+        if not hasattr(cls, '_instance'):
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def __init__(self, name=None):
+        self.db = SqliteDatabase(None)
+        self.db.ws = self
+        self.config = SpaceConfig(self)
+        self.name = name if name is not None else self.DEFAULT
+
+    def __repr__(self):
+        return "<Workspace '{}'>".format(self.name)
+
+    @classmethod
+    def list(cls):
+        for _ws in cls.WORKSPACES.iterdir():
+            if _ws.is_dir():
+                if _ws.name == '_backup':
+                    continue
+                yield _ws
+
+    def _db_init(self):
+        self.db.init(self.folder / "space.db")
+        log.debug("{} database initialized".format(self.db.database.name))
+
+    def load(self):
+        self.config.load()
+        log.debug("{} loaded".format(self.config.filepath.name))
+        self._db_init()
+        log.debug("workspace '{}' loaded".format(self.name))
+
+    def delete(self):
+        if not self.folder.exists():
+            raise FileNotFoundError(self.folder)
+
+        shutil.rmtree(str(self.folder))
+        log.info("Workspace {} deleted".format(self.name))
+
+    @property
+    def folder(self):
+        return self.WORKSPACES / self.name
+
+    def exists(self):
+        return self.folder.exists()
+
+    def init(self, full=False):
+        print("Initializing workspace '{}'".format(self.name))
+        if not self.exists():
+            self.folder.mkdir(parents=True)
+
+        # Due to the way peewee works, we have to initialize the database
+        # even before the creation of any file
+        self._db_init()
+
+        if full:
+            self._trigger('full-init')
+        else:
+            self._trigger('init')
+
+        log.debug("{} workspace initialized".format(self.name))
+
+    def status(self):
+        log.info("Workspace '{}'".format(self.name))
+        log.info("folder {}".format(self.folder))
+        log.info("db     {}".format(self.db.database.name))
+        log.info("config {}".format(self.config.filepath.name))
+        self._trigger('status')
+
+    def _trigger(self, cmd):
+        if cmd not in self.HOOKS:
+            raise ValueError("Unknown workspace command '{}'".format(cmd))
+
+        # Each command is responsible of its own initialization, logging and error handling
+        for entry in sorted(iter_entry_points('space.wshook'), key=lambda x:x.name):
+            entry.load()(cmd)
+
+    def backup(self, filepath=None):
+
+        if filepath is None:
+            name = "{}-{:%Y%m%d_%H%M%S}.tar.gz".format(self.name, datetime.utcnow())
+            filepath = self.WORKSPACES / "_backup" / name
+            if not filepath.parent.exists():
+                filepath.parent.mkdir(parents=True)
+
+        def _filter(tarinfo):
+            """Filtering function
+            """
+            if "tmp" in tarinfo.name or "jpl" in tarinfo.name:
+                return None
+            else:
+                return tarinfo
+
+        log.info("Creating backup for workspace '{}'".format(self.name))
+        with tarfile.open(filepath, 'w:gz') as tar:
+            tar.add(self.folder, arcname=self.name, filter=_filter)
+
+        log.info("Backup created at {}".format(filepath))
+
+
+ws = Workspace()
 
 
 def wspace(*argv):
@@ -34,33 +157,41 @@ def wspace(*argv):
 
     Usage:
         wspace list
-        wspace (status|init) [<name>]
+        wspace status [<name>]
+        wspace init [--full] [<name>]
+        wspace backup [<name>]
         wspace delete <name>
 
     Options:
         init       Initialize workspace
         list       List existing workspaces
         delete     Delete a workspace
+        status     Print informations on a workspace
+        backup     Backup the workspace
         <name>     Name of the workspace to work in
+        --full     When initializating the workspace, retrieve data to fill it
+                   (download TLEs from celestrak)
 
     Examples
-    
         $ export SPACE_WORKSPACE=test  # switch workspace
         $ wspace init                  # Create empty data structures
         $ space tle fetch              # Retrieve TLEs from celestrak
-
     is equivalent to:
-
         $ wspace init test
         $ space tle fetch -w test
-
     """
+
+    logging.basicConfig(level=logging.INFO, format='%(message)s')
+
+    if '--pdb' in sys.argv:
+        sys.argv.remove('--pdb')
+        sys.excepthook = pm_on_crash
 
     args = docopt(wspace.__doc__, argv=sys.argv[1:])
 
     if args['delete']:
         # Deletion of a workspace
-        ws = config.WORKSPACES.joinpath(args["<name>"])
+        ws.name = args["<name>"]
         if not ws.exists():
             print("The workspace '{}' does not exist".format(args['<name>']))
         else:
@@ -68,8 +199,8 @@ def wspace(*argv):
 
             answer = input("> ")
             if answer == args['<name>']:
-                shutil.rmtree(str(ws))
-                print("{} deleted".format(ws))
+                ws.delete()
+                print("{} deleted".format(ws.name))
             else:
                 print("Deletion canceled")
     else:
@@ -77,24 +208,32 @@ def wspace(*argv):
         # in order to work properly
 
         if args['<name>']:
-            config.workspace = args['<name>']
+            name = args['<name>']
         elif 'SPACE_WORKSPACE' in os.environ:
-            config.workspace = os.environ['SPACE_WORKSPACE']
+            name = os.environ['SPACE_WORKSPACE']
+        else:
+            name = Workspace.DEFAULT
 
         if args['list']:
-            for ws in config.WORKSPACES.iterdir():
-                if ws.is_dir():
-                    if config.workspace == ws.name:
-                        mark = "*"
-                        color = "\033[32m"
-                        endc = "\033[39m"
-                    else:
-                        mark = ""
-                        color = ""
-                        endc = ""
-                    print("{:1} {}{}{}".format(mark, color, ws.name, endc))
+            for _ws in Workspace.list():
+                if name == _ws.name:
+                    mark = "*"
+                    color = "\033[32m"
+                    endc = "\033[39m"
+                else:
+                    mark = ""
+                    color = ""
+                    endc = ""
+                print("{:1} {}{}{}".format(mark, color, _ws.name, endc))
             sys.exit(0)
         else:
-            # Pass the subcommand to the proper module
-            cmd = [k for k, v in args.items() if v and not k.startswith('<')][0]
-            trigger_hooks(cmd)
+            ws.name = name
+
+            if args['init']:
+                ws.init(args['--full'])
+            else:
+                ws.load()
+                if args['backup']:
+                    ws.backup()
+                else:
+                    ws.status()

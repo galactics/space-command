@@ -5,7 +5,7 @@ from numpy import degrees, pi, radians
 from beyond.frames import get_frame, create_station
 from beyond.errors import UnknownFrameError
 
-from .config import config
+from .wspace import ws
 from .utils import dms2deg, deg2dms
 
 log = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class StationDb:
         if not hasattr(self, '_stations'):
 
             self._stations = {}
-            for abbr, charact in config['stations'].items():
+            for abbr, charact in ws.config['stations'].items():
 
                 charact['parent_frame'] = get_frame(charact['parent_frame'])
                 full_name = charact.pop('name')
@@ -71,19 +71,19 @@ class StationDb:
     def save(cls, station):
         self = cls()
 
-        config['stations'].update(station)
-        config.save()
+        ws.config['stations'].update(station)
+        ws.config.save()
 
         if hasattr(self, "_stations"):
             del self._stations
 
 
-def wshook(mode, *args, **kwargs):
+def wshook(cmd, *args, **kwargs):
     
-    if mode in ("init", "full-init"):
+    if cmd in ("init", "full-init"):
         name = 'TLS'
 
-        config.setdefault('stations', {})
+        ws.config.setdefault('stations', {})
 
         try:
             StationDb.get(name)

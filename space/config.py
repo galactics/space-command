@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 
 from beyond.config import config as beyond_config, Config as BeyondConfig
 
-
 log = logging.getLogger(__name__)
 
 
@@ -24,43 +23,19 @@ class SpaceFilter(logging.Filter):
 
 class SpaceConfig(BeyondConfig):
 
-    WORKSPACES = Path.home() / '.space/'
-    DEFAULT = "main"
+    verbose = False
 
-    def __new__(cls, *args, **kwargs):
+    def __init__(self, workspace):
+        self.workspace = workspace
 
-        if isinstance(cls._instance, BeyondConfig):
-            cls._instance = None
-
-        if cls._instance is None:
-            cls._instance = super().__new__(cls, *args, **kwargs)
-
-        return cls._instance
+    @property
+    def filepath(self):
+        return self.workspace.folder / "config.yml"
 
     def set(self, *args, save=False):
         super().set(*args)
         if save:
             self.save()
-
-    @property
-    def workspace(self):
-        return self._workspace if hasattr(self, '_workspace') else self.DEFAULT
-    
-    @workspace.setter
-    def workspace(self, workspace):
-        self._workspace = workspace
-
-    @workspace.deleter
-    def workspace(self):
-        del self._workspace
-
-    @property
-    def folder(self):
-        return self.WORKSPACES / self.workspace
-
-    @property
-    def filepath(self):
-        return self.folder / "config.yml"
 
     def init(self):
         """Initialize a given workspace folder and config file
@@ -68,9 +43,6 @@ class SpaceConfig(BeyondConfig):
 
         if self.filepath.exists():
             raise FileExistsError(self.filepath)
-
-        if not self.folder.exists():
-            self.folder.mkdir(parents=True)
 
         self.update({
             'beyond': {
@@ -111,7 +83,7 @@ class SpaceConfig(BeyondConfig):
                     "console":{
                         "class": "logging.StreamHandler",
                         "formatter": "simple",
-                        "level": "INFO",
+                        "level": "INFO" if not self.verbose else "DEBUG",
                         "filters": ["space_filter"],
                     },
                     "debug_file_handler": {
@@ -143,9 +115,6 @@ class SpaceConfig(BeyondConfig):
 
     def save(self):
         yaml.safe_dump(dict(self), self.filepath.open('w'), indent=4)
-
-
-config = SpaceConfig()
 
 
 def get_dict(d):
@@ -204,17 +173,23 @@ class Lock:
         return True
 
 
-def wshook(mode):
+def wshook(cmd):
 
-    if mode in ("init", "full-init"):
+    from .wspace import ws
+
+    if cmd in ("init", "full-init"):
+
         try:
-            config.init()
+            ws.config.init()
         except FileExistsError as e:
+            ws.config.load()
             log.warning("config file already exists at '{}'".format(Path(str(e)).absolute()))
         else:
-            log.info("config creation at {}".format(config.filepath.absolute()))
-        finally:
-            config.load()  # Load the newly created config file
+            ws.config.load()  # Load the newly created config file
+            log.info("config creation at {}".format(ws.config.filepath.absolute()))
+
+        ws.config.load()  # Load the newly created config file
+        log.info("config creation at {}".format(ws.config.filepath.absolute()))
 
 
 def space_config(*argv):
@@ -248,14 +223,15 @@ def space_config(*argv):
     from subprocess import run
 
     from .utils import docopt
+    from space.wspace import ws
 
     args = docopt(space_config.__doc__)
 
-    lock = Lock(config.filepath)
+    lock = Lock(ws.config.filepath)
 
     if args['edit']:
         if not lock.locked():
-            run([os.environ['EDITOR'], str(config.filepath)])
+            run([os.environ['EDITOR'], str(ws.config.filepath)])
             if lock.file.read_text() == lock.backup.read_text():
                 log.info("Unchanged config file")
             else:
@@ -268,16 +244,16 @@ def space_config(*argv):
             try:
                 keys = args['<keys>'].split(".")
                 if args['--append']:
-                    prev = config.get(*keys, fallback=[])
+                    prev = ws.config.get(*keys, fallback=[])
                     if not isinstance(prev, list):
                         if isinstance(prev, str):
                             prev = [prev]
                         else:
                             prev = list(prev)
                     prev.append(args['<value>'])
-                    config.set(*keys, prev, save=False)
+                    ws.config.set(*keys, prev, save=False)
                 else:
-                    config.set(*keys, args['<value>'], save=False)
+                    ws.config.set(*keys, args['<value>'], save=False)
             except TypeError as e:
                 # For some reason we don't have the right to set this
                 # value
@@ -285,7 +261,7 @@ def space_config(*argv):
                 sys.exit(-1)
             else:
                 # If everything went fine, we save the file in its new state
-                config.save()
+                ws.config.save()
                 log.debug("'{}' now set to '{}'".format(args['<keys>'], args['<value>']))
         else:
             print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
@@ -307,7 +283,7 @@ def space_config(*argv):
         lock.lock()
     else:
 
-        subdict = config
+        subdict = ws.config
 
         try:
             if args['<keys>']:
@@ -318,7 +294,7 @@ def space_config(*argv):
             sys.exit(-1)
 
         if hasattr(subdict, 'filepath'):
-            print("config :", config.filepath)
+            print("config :", ws.config.filepath)
         if isinstance(subdict, dict):
             # print a part of the dict
             print(get_dict(subdict))
@@ -344,9 +320,9 @@ def space_log(*argv):
     import select
 
     from space.utils import docopt
-    from space.config import config
+    from space.wspace import ws
 
-    logfile = config.folder / "space.log"
+    logfile = ws.folder / "space.log"
 
     args = docopt(space_log.__doc__, argv=argv)
 

@@ -11,6 +11,7 @@ import beyond.io.ccsds as ccsds
 from .utils import docopt
 from .station import StationDb
 from .utils import parse_date, parse_timedelta
+from .wspace import ws
 
 
 def recurse(frame, already, level=""):
@@ -84,7 +85,7 @@ def space_planet(*args):
     """
 
     import requests
-    from .config import config
+    
     from logging import getLogger
 
     log = getLogger(__name__)
@@ -95,12 +96,12 @@ def space_planet(*args):
 
         url = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/"
 
-        folder = config.folder / "jpl"
+        folder = ws.folder / "jpl"
 
         if not folder.exists():
             folder.mkdir()
 
-        filelist = set(config.get("beyond", "env", "jpl", fallback=[]))
+        filelist = set(ws.config.get("beyond", "env", "jpl", fallback=[]))
 
         for file in ['de403_2000-2020.bsp']:
 
@@ -122,8 +123,8 @@ def space_planet(*args):
 
         log.debug("Adding {} to the list of jpl files".format(file))
         # Adding the file to the list and saving the new state of configuration
-        config.set("beyond", "env", "jpl", list(filelist), save=True)
-        config.save()
+        ws.config.set("beyond", "env", "jpl", list(filelist))
+        ws.config.save()
 
     elif args['<planet>']:
 
