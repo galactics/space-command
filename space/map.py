@@ -18,12 +18,20 @@ from .clock import Date, timedelta
 
 class WindowEphem(Ephem):
 
-    def __init__(self, orb):
-        self.orb = orb
+    def __init__(self, orb, ref_orb):
+        """
+        Args:
+            orb (Orbit) : Used as cursor
+            ref_orb (Orbit or Ephem): Used to propagate
+        """
+
         self.span = orb.infos.period * 2
+        start = orb.date - self.span / 2
+        stop = start + self.span
+        self.orb = ref_orb
         self.step = orb.infos.period / 100
 
-        orbs = orb.ephemeris(start=orb.date - self.span / 2, stop=self.span, step=self.step)
+        orbs = ref_orb.ephemeris(start=start, stop=stop, step=self.step, strict=False)
         super().__init__(orbs)
 
     def propagate(self, date):
@@ -37,8 +45,9 @@ class WindowEphem(Ephem):
                 orbs = list(self.orb.ephemeris(
                     start=self.stop + self.step,
                     stop=new,
-                    step=self.step
-            ))
+                    step=self.step,
+                    strict=False
+                ))
                 for x in orbs:
                     self._orbits.pop(0)
                     self._orbits.append(x)
@@ -46,8 +55,9 @@ class WindowEphem(Ephem):
                 orbs = list(self.orb.ephemeris(
                     start=self.start - self.step,
                     stop=new,
-                    step=-self.step
-            ))
+                    step=-self.step,
+                    strict=False
+                ))
                 for x in orbs:
                     self._orbits.pop()
                     self._orbits.insert(0, x)
@@ -55,7 +65,8 @@ class WindowEphem(Ephem):
             self._orbits = list(self.orb.ephemeris(
                 start=date - self.span / 2,
                 stop=self.span,
-                step=self.step
+                step=self.step,
+                strict=False
             ))
 
 
@@ -99,7 +110,7 @@ class SatAnim:
             sat.point, = plt.plot([], [], 'o', ms=5, color=color, animated=True, zorder=10)
             sat.circle, = plt.plot([], [], '.', ms=2, color=color, animated=True, zorder=10)
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)
-            sat.gt = []
+            sat.win_ephem = None
 
         self.breverse = Button(plt.axes([0.02, 0.02, 0.04, 0.05]), 'Reverse')
         self.breverse.on_clicked(self.reverse)
@@ -164,17 +175,22 @@ class SatAnim:
             plot_list.append(sat.circle)
 
             # Ground track
-            if hasattr(sat, 'gt'):
-                if not hasattr(sat, 'win_ephem'):
-                    sat.win_ephem = WindowEphem(orb)
+            if sat.win_ephem is None:
+                try:
+                    sat.win_ephem = WindowEphem(orb, sat.orb)
+                except ValueError:
+                    # In case of faulty windowed ephemeris, disable groundtrack
+                    # altogether
+                    sat.win_ephem = False
 
+            if sat.win_ephem:
                 sat.win_ephem.propagate(date)
 
                 lons, lats = [], []
                 segments = []
                 prev_lon, prev_lat = None, None
-                for orb in sat.win_ephem:
-                    lon, lat = self.lonlat(orb.copy(form='spherical', frame="ITRF"))
+                for win_orb in sat.win_ephem:
+                    lon, lat = self.lonlat(win_orb.copy(form='spherical', frame="ITRF"))
 
                     # Creation of multiple segments in order to not have a ground track
                     # doing impossible paths
@@ -182,13 +198,13 @@ class SatAnim:
                         lons = []
                         lats = []
                         segments.append((lons, lats))
-                    elif sat.orb.i < np.pi /2 and (np.sign(prev_lon) == 1 and np.sign(lon) == -1):
+                    elif orb.infos.kep.i < np.pi /2 and (np.sign(prev_lon) == 1 and np.sign(lon) == -1):
                         lons.append(lon + 360)
                         lats.append(lat)
                         lons = [prev_lon - 360]
                         lats = [prev_lat]
                         segments.append((lons, lats))
-                    elif sat.orb.i > np.pi/2 and (np.sign(prev_lon) == -1 and np.sign(lon) == 1):
+                    elif orb.infos.kep.i > np.pi/2 and (np.sign(prev_lon) == -1 and np.sign(lon) == 1):
                         lons.append(lon - 360)
                         lats.append(lat)
                         lons = [prev_lon + 360]
@@ -361,13 +377,14 @@ class SatAnim:
             self.multiplier *= -1
 
     def toggle_groundtrack(self, *args, **kwargs):
-        status = hasattr(self.sats[0], 'gt')
+        status = isinstance(self.sats[0].win_ephem, WindowEphem)
 
         for sat in self.sats:
             if status:
-                del sat.gt
+                sat.win_ephem = False
             else:
-                sat.gt = []
+                sat.win_ephem = None
+                # Force recomputation of the window ephemeris
 
 
 def space_map(*argv):
