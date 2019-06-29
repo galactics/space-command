@@ -39,6 +39,8 @@ def space_passes(*argv):
       -z --zenital       Reverse direction of azimut angle on the polar plot
                          to show as the passes as seen from the station
                          looking to the sky
+      --csv              Print in CSV format
+      --sep=<sep>        CSV separator [default: ,]
 
     Examples:
       Simple computation of the ISS, TLS is the name of my station
@@ -85,9 +87,19 @@ def space_passes(*argv):
         azims, elevs = [], []
         azims_e, elevs_e, text_e = [], [], []
 
-        header = "Infos           %sSat                        Time    Azim    Elev  Dist (km)  Light    " % (" " * (len(sat.name) - 3))
-        print(header)
-        print("=" * len(header))
+        info_size = 0
+        if args['--csv']:
+            print(args['--sep'].join(["date", "event", "name", "azimut", "elevation", "distance", "light"]))
+        else:
+            info_size = len(station.name) + 10
+            header = "Time                          {}Infos  {}Sat     Azim    Elev  Dist (km)  Light    ".format(
+                " " * (info_size - 5),
+                " " * (len(sat.name) - 3)
+            )
+
+            print(header)
+            print("=" * len(header))
+
         count = 0
         for orb in station.visibility(sat.orb, start=start, stop=stop, step=step, events=events):
 
@@ -106,9 +118,24 @@ def space_passes(*argv):
 
             light_info = "Umbra" if light(orb) <= 0 else "Light"
 
-            print("{event:15} {sat.name}  {orb.date:%Y-%m-%dT%H:%M:%S.%f} {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}".format(
+            if args['--csv']:
+                fmt = [
+                    "{orb.date:%Y-%m-%dT%H:%M:%S.%f}",
+                    "{event}",
+                    "{sat.name}",
+                    "{azim:.2f}",
+                    "{elev:.2f}",
+                    "{r:.2f}",
+                    "{light}"
+                ]
+                fmt = args['--sep'].join(fmt)
+            else:
+                fmt = "{orb.date:%Y-%m-%dT%H:%M:%S.%f}  {event:{info_size}} {sat.name}  {azim:7.2f} {elev:7.2f} {r:10.2f}  {light}"
+
+            print(fmt.format(
                 orb=orb, r=r, azim=azim, elev=elev, light=light_info,
-                sat=sat, event=orb.event if orb.event is not None else ""
+                sat=sat, event=orb.event if orb.event is not None else "",
+                info_size=info_size
             ))
 
             orb_itrf = orb.copy(frame='ITRF')
