@@ -13,11 +13,12 @@ from beyond.env.solarsystem import get_body
 from .clock import Date, timedelta
 from .utils import parse_date, parse_timedelta
 from .wspace import ws
+from .ephem import EphemDb
 
 log = logging.getLogger(__name__)
 
 
-class NoDataError(Exception):
+class NoDataError(ValueError):
 
     def __init__(self, orbdesc):
         self.od = orbdesc
@@ -68,6 +69,9 @@ class parse_sats:
 
     def __iter__(self):
         return iter(self.sats)
+
+    def __getitem__(self, key):
+        return self.sats[key]
 
     @classmethod
     def parse_orb(self, text):
@@ -137,7 +141,6 @@ class parse_sats:
     @classmethod
     def _get_sat(cls, orbdesc):
 
-        # Retrieving the corresponding orbit or ephem object
         try:
             sat = Sat.select().filter(**{orbdesc.selector: orbdesc.value}).get()
         except Sat.DoesNotExist:
@@ -145,44 +148,45 @@ class parse_sats:
         else:
             sat = SatOrb(sat, None)
 
+        sat.desc = orbdesc
+
         return sat
 
     @classmethod
-    def _get_orb(cls, orbdesc, sat):
+    def _get_orb(cls, sat):
 
+        # Retrieving the corresponding orbit or ephem object
         from .tle import TleDb, TleNotFound
 
-        if orbdesc.src == "tle":
-            if orbdesc.limit == "any":
-                tles = list(TleDb().history(**{orbdesc.selector: orbdesc.value}, number=orbdesc.last + 1))
+        if sat.desc.src == "tle":
+            if sat.desc.limit == "any":
+                tles = list(TleDb().history(**{sat.desc.selector: sat.desc.value}, number=sat.desc.last + 1))
                 if not tles:
-                    raise NoDataError(orbdesc)
-                if len(tles) <= orbdesc.last:
-                    raise NoDataError(orbdesc)
+                    raise NoDataError(sat.desc)
+                if len(tles) <= sat.desc.last:
+                    raise NoDataError(sat.desc)
 
                 sat.orb = tles[0].orbit()
             else:
                 try:
-                    tle = TleDb.get_dated(limit=orbdesc.limit, date=orbdesc.date.datetime, **{orbdesc.selector: orbdesc.value})
+                    tle = TleDb.get_dated(limit=sat.desc.limit, date=sat.desc.date.datetime, **{sat.desc.selector: sat.desc.value})
                 except TleNotFound:
-                    raise NoDataError(orbdesc)
+                    raise NoDataError(sat.desc)
                 else:
                     sat.orb = tle.orbit()
         else:
-            pattern = "*.{}".format(orbdesc.src)
+            pattern = "*.{}".format(sat.desc.src)
             if sat.folder.exists():
-                if orbdesc.limit == "any":
-                    files = list(sorted(sat.folder.glob(pattern)))
-                    if not files:
-                        raise NoDataError(orbdesc)
-                    if len(files) <= orbdesc.last:
-                        raise NoDataError(orbdesc)
-                    sat.orb = ccsds.load(files[-(1+orbdesc.last)].open())
+                if sat.desc.limit == "any":
+                    try:
+                        sat.orb = EphemDb(sat).get(last=sat.desc.last)
+                    except ValueError:
+                        raise NoDataError(sat.desc)
                 else:
                     # TODO Implement date handling
                     pass
             else:
-                raise NoDataError(orbdesc)
+                raise NoDataError(sat.desc)
 
         return sat
 
@@ -193,7 +197,7 @@ class parse_sats:
     @classmethod
     def _get_orb_from_desc(cls, desc, **kwargs):
         sat = cls._get_sat(desc, **kwargs)
-        return cls._get_orb(desc, sat, **kwargs)
+        return cls._get_orb(sat, **kwargs)
 
     @classmethod
     def get_orb(cls, txt, **kwargs):
@@ -267,52 +271,6 @@ class SatOrb:
         year, idx = self.cospar_id.split('-')
         return ws.folder / "satdb" / year / idx
 
-    def list(self, src='tle'):
-        if src == 'tle':
-            from .tle import TleDb
-            return list(reversed(list(TleDb().history(cospar_id=self.cospar_id))))
-        # elif src in ('oem', 'opm'):
-        elif src == 'oem':
-            return [ccsds.load(orb.open()) for orb in reversed(list(self.folder.glob("*.{}".format(src))))]
-        else:
-            raise ValueError('Unknown source')
-
-    def list_all(self):
-        tles = self.list('tle')
-        # opms = self.list('opm')
-        oems = self.list('oem')
-
-        def sort(o):
-            if isinstance(o, Orbit):
-                return o.date
-            elif isinstance(o, Tle):
-                return o.epoch
-            else:
-                return o.start
-
-        data = {}
-        for orb in sorted(tles + oems, key=sort):
-            yield orb
-
-    def save(self, force=False):
-        if not self.folder.exists():
-            self.folder.mkdir(parents=True)
-
-        if isinstance(self.orb, Ephem):
-            filename = "{self.cospar_id}_{self.orb.start:%Y%m%d_%H%M%S}.oem".format(self=self)
-        # elif isinstance(self.orb, Orbit):
-        #     filename = "{self.cospar_id}_{self.orb.date:%Y%m%d_%H%M%S}.opm".format(self=self)
-
-        filepath = self.folder / filename
-
-        if filepath.exists() and not force:
-            raise FileExistsError(filepath)
-
-        with filepath.open('w') as fp:
-            ccsds.dump(self.orb, fp)
-
-        log.info("{} saved".format(filepath))
-
 
 def sync_tle():
     from .tle import TleDb
@@ -346,23 +304,19 @@ def wshook(cmd, *args, **kwargs):
             log.info("Creating ISS alias")
 
 
-def space_sat(*args):
+def space_sat(*argv):
     """Get sat infos
 
     Usage:
-      space-sat insert (- | <file>) [--force]
       space-sat alias <alias> <selector> [--force]
       space-sat list-aliases
-      space-sat list-orbs <selector>
       space-sat orb <selector>
       space-sat sync-tle
 
     Options:
-      insert        Add TLEs from file or stdin
       alias         Create an alias for quick access
       orb           Display the orbit corresponding to the selector
       list-aliases  List existing aliases
-      list-orbs     List available orbit files (TLE or OEM)
       sync-tle      Update satellite database with existing TLEs
       <selector>    See below
 
@@ -375,30 +329,19 @@ def space_sat(*args):
       ISS~               : before last TLE
       ISS~~              : 2nd before last TLE
       ISS@oem~25         : 25th before last OEM
+      ISS@oem^2018-12-25 : first OEM after the date
+      ISS@tle?2018-12-25 : first tle before the date
     """
     # TODO
     # ISS@opm            : latest OPM
-    # ISS@oem^2018-12-25 : first OEM after the date
-    # ISS@tle?2018-12-25 : first tle before the date
 
     from .utils import docopt
+    from .tle import space_tle
+    from .ephem import space_ephem
 
-    args = docopt(space_sat.__doc__)
+    args = docopt(space_sat.__doc__, argv=argv)
 
-    if args['insert']:
-        if args['-'] and not sys.stdin.isatty():
-            txt = sys.stdin.read()
-        else:
-            txt = open(args['<file>']).read()
-
-        for sat in parse_sats.parse_orb(txt):
-            try:
-                sat.save(args['--force'])
-            except FileExistsError as e:
-                log.error("{} already exists".format(e))
-                sys.exit(-1)
-
-    elif args['alias']:
+    if args['alias']:
         selector = args['<selector>']
         name = args['<alias>']
 
@@ -430,7 +373,12 @@ def space_sat(*args):
         sync_tle()
 
     elif args['orb']:
-        sat = parse_sats.get_orb(args['<selector>'])
+        try:
+            sat = parse_sats.get_orb(args['<selector>'])
+        except ValueError as e:
+            log.error(e)
+            sys.exit(-1)
+
         if isinstance(sat.orb, Ephem):
             print(ccsds.dumps(sat.orb))
         else:
@@ -441,36 +389,3 @@ def space_sat(*args):
                 name=sat.name
             )
             print("{0.name}\n{0}".format(tle))
-
-    else:
-        try:
-            orbdesc = parse_sats.get_desc(args['<selector>'])
-            sat = parse_sats._get_sat(orbdesc)
-        except ValueError as e:
-            log.error(e)
-            sys.exit(-1)
-
-        fmt = "%Y-%m-%dT%H:%M:%S"
-
-        print("       Date/Start           Stop")
-        print("-"*50)
-        if orbdesc.src is None:
-            for orb in list(sat.list_all())[-18:]:
-                if isinstance(orb, Ephem):
-                    print("  OEM  {orb.start:{fmt}}  {orb.stop:{fmt}}".format(orb=orb, fmt=fmt))
-                # elif isinstance(orb, Orbit):
-                #     print("OPM  {orb.date:{fmt}}".format(orb=orb, fmt=fmt))
-                else:
-                    print("  TLE  {orb.epoch:{fmt}}".format(orb=orb, fmt=fmt))
-        else:
-            orbs = list(reversed(list(sat.list(orbdesc.src))[:18]))
-            for i, orb in enumerate(orbs):
-
-                s = ">" if len(orbs) - i - 1 == orbdesc.last else ""
-
-                if isinstance(orb, Ephem):
-                    print("{s:1} OEM  {orb.start:{fmt}}  {orb.stop:{fmt}}".format(s=s, orb=orb, fmt=fmt))
-                # elif isinstance(orb, Orbit):
-                #     print("OPM  {orb.date:{fmt}}".format(orb=orb, fmt=fmt))
-                else:
-                    print("{s:1} TLE  {orb.epoch:{fmt}}".format(s=s, orb=orb, fmt=fmt))
