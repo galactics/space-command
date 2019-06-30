@@ -322,6 +322,17 @@ class TleDb:
         return sats
 
 
+def print_stats():
+    db = TleDb()
+    first = db.model.select(fn.MIN(TleModel.insert_date)).scalar()
+    last = db.model.select(fn.MAX(TleModel.insert_date)).scalar()
+
+    print("Objects       {}".format(db.model.select().group_by(TleModel.norad_id).count()))
+    print("TLE           {}".format(db.model.select().count()))
+    print("First fetch   {}".format(first))
+    print("Last fetch    {}".format(last))
+
+
 class TleModel(Model):
 
     norad_id = IntegerField()
@@ -353,6 +364,11 @@ def wshook(cmd, *args, **kwargs):
             log.info("TLE database initialized")
         else:
             log.info("TLE database already exists")
+    elif cmd == "status":
+        print()
+        print("TLE")
+        print("---")
+        print_stats()
 
 
 def space_tle(*argv):
@@ -409,7 +425,7 @@ def space_tle(*argv):
 
     from glob import glob
 
-    args = docopt(space_tle.__doc__)
+    args = docopt(space_tle.__doc__, argv=argv)
 
     db = TleDb()
 
@@ -485,13 +501,7 @@ def space_tle(*argv):
         for tle in db.dump(all=args['--all']):
             print("{0.name}\n{0}\n".format(tle))
     elif args['stats']:
-        first = db.model.select(fn.MIN(TleModel.insert_date)).scalar()
-        last = db.model.select(fn.MAX(TleModel.insert_date)).scalar()
-
-        print("Objects       {}".format(db.model.select().group_by(TleModel.norad_id).count()))
-        print("TLE           {}".format(db.model.select().count()))
-        print("First fetch   {}".format(first))
-        print("Last fetch    {}".format(last))
+        print_stats()
     else:
         try:
             sat = parse_sats.get_sat(" ".join(args['<selector>']))
