@@ -87,14 +87,14 @@ class SpaceConfig(BeyondConfig):
                         "filters": ["space_filter"],
                     },
                     "debug_file_handler": {
-                        "backupCount": 20,
-                        "class": "logging.handlers.RotatingFileHandler",
+                        "backupCount": 5,
+                        "when": "W2",
+                        "class": "logging.handlers.TimedRotatingFileHandler",
                         "encoding": "utf8",
                         "filename": str(self.filepath.parent / "space.log"),
                         "filters": ["space_filter"],
                         "formatter": "dated",
                         "level": "DEBUG",
-                        "maxBytes": 10485760,
                     },
                 },
                 "loggers": {
