@@ -188,9 +188,6 @@ def wshook(cmd):
             ws.config.load()  # Load the newly created config file
             log.info("config creation at {}".format(ws.config.filepath.absolute()))
 
-        ws.config.load()  # Load the newly created config file
-        log.info("config creation at {}".format(ws.config.filepath.absolute()))
-
 
 def space_config(*argv):
     """Configuration handling

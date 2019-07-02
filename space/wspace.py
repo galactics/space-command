@@ -72,8 +72,9 @@ class Workspace:
                 yield _ws
 
     def _db_init(self):
-        self.db.init(self.folder / "space.db")
-        log.debug("{} database initialized".format(self.db.database.name))
+        filepath = self.folder / "space.db"
+        self.db.init(str(filepath))
+        log.debug("{} database initialized".format(filepath.name))
 
     def load(self):
         self.config.load()
@@ -114,7 +115,7 @@ class Workspace:
     def status(self):
         log.info("Workspace '{}'".format(self.name))
         log.info("folder {}".format(self.folder))
-        log.info("db     {}".format(self.db.database.name))
+        log.info("db     {}".format(self.db.database))
         log.info("config {}".format(self.config.filepath.name))
         self._trigger('status')
 

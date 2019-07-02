@@ -110,6 +110,8 @@ def main():
         print(" -v, --verbose           Show DEBUG level messages")
         print(" -w, --workspace <name>  Select the workspace to use")
         print()
+        print("To list, create and delete workspaces, use the companion command 'wspace'")
+        print()
         sys.exit(-1)
 
     # retrieve the subcommand and its arguments
