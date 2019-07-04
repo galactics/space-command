@@ -39,7 +39,7 @@ def test_list_subcommands(run):
         k, _, v = line.strip().partition(" ")
         subdict[k] = v.strip()
 
-    assert len(data['subcommands']) == 11
+    assert len(data['subcommands']) == 12
     assert len(data['options']) == 5
     assert not r.stderr
     assert not r.success

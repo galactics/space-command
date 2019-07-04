@@ -51,158 +51,155 @@ class OrbDesc:
         return txt.format(o=self)
 
 
-class parse_sats:
+def parse_sats(*args, text=""):
     """Parser of satellite description and input, both as command arguments and stdin
     """
 
-    def __init__(self, *args, text=""):
-        self.args = args
-        self.text = text
-        self.descs = [self.get_desc(txt) for txt in self.args]
+    descs = [get_desc(txt) for txt in args]
 
-        self.sats = []
+    sats = []
 
-        if self.descs:
-            self.sats = [self._get_orb_from_desc(desc) for desc in self.descs]
-        else:
-            self.sats = [sat for sat in self.parse_orb(self.text)]
+    if descs:
+        sats = [_get_orb_from_desc(desc) for desc in descs]
+    else:
+        sats = [sat for sat in parse_orb(text)]
 
-    def __iter__(self):
-        return iter(self.sats)
+    return sats
 
-    def __getitem__(self, key):
-        return self.sats[key]
 
-    @classmethod
-    def parse_orb(self, text):
-        sats = [SatOrb.from_orb(tle) for tle in Tle.from_string(text)]
+def parse_orb(text):
+    sats = [SatOrb.from_orb(tle) for tle in Tle.from_string(text)]
 
-        if not sats:
-            try:
-                orb = ccsds.loads(text)
-            except ValueError:
-                raise ValueError("No valid TLE nor CCSDS")
-            else:
-                if isinstance(orb, (Ephem, Orbit)):
-                    sats = [SatOrb.from_orb(orb)]
-                else:
-                    sats = [SatOrb.from_orb(ephem) for ephem in orb]
-
-        return sats
-
-    @classmethod
-    def get_desc(cls, txt, alias=True):
-        # Parsing the string
-
-        delimiters = r"[@~\^\?\$]"
-        selector = re.split(delimiters, txt)[0]
-
-        if alias:
-            # Retrieve alias if it exists
-            rq = Alias.select().where(Alias.name==selector)
-            if rq.exists():
-                selector = rq.get().selector
-
-        if "=" in selector:
-            k, v = selector.split('=')
-            if k in ('norad', 'cospar'):
-                k += "_id"
-        else:
-            k, v = "name", selector
-        selector = k
-        value = v
-
-        last = 0
-        if "~" in txt:
-            last = txt.count("~")
-            if last == 1:
-                m = re.search(r"~(\d+)", txt)
-                if m:
-                    last = int(m.group(1))
-
-        m = re.search(r"@(oem|tle)", txt, flags=re.I)
-        if m:
-            src = m.group(1).lower()
-        else:
-            src = ws.config.get('satellites', 'default_selector', fallback='tle')
-
-        limit = "any"
-        date = "any"
-        m = re.search(r"(\^|\?)([0-9-T:.]+)", txt)
-        if m:
-            limit = "after" if m.group(1) == "^" else "before"
-            try:
-                date = parse_date(m.group(2), fmt='date')
-            except ValueError:
-                date = parse_date(m.group(2))
-
-        return OrbDesc(selector, value, src, last, limit, date)
-
-    @classmethod
-    def _get_sat(cls, orbdesc):
-
+    if not sats:
         try:
-            sat = Sat.select().filter(**{orbdesc.selector: orbdesc.value}).get()
-        except Sat.DoesNotExist:
-            raise ValueError("No satellite corresponding to {0.selector}={0.value}".format(orbdesc))
+            orb = ccsds.loads(text)
+        except ValueError:
+            raise ValueError("No valid TLE nor CCSDS")
         else:
-            sat = SatOrb(sat, None)
-
-        sat.desc = orbdesc
-
-        return sat
-
-    @classmethod
-    def _get_orb(cls, sat):
-
-        # Retrieving the corresponding orbit or ephem object
-        from .tle import TleDb, TleNotFound
-
-        if sat.desc.src == "tle":
-            if sat.desc.limit == "any":
-                tles = list(TleDb().history(**{sat.desc.selector: sat.desc.value}, number=sat.desc.last + 1))
-                if not tles:
-                    raise NoDataError(sat.desc)
-                if len(tles) <= sat.desc.last:
-                    raise NoDataError(sat.desc)
-
-                sat.orb = tles[0].orbit()
+            if isinstance(orb, (Ephem, Orbit)):
+                sats = [SatOrb.from_orb(orb)]
             else:
-                try:
-                    tle = TleDb.get_dated(limit=sat.desc.limit, date=sat.desc.date.datetime, **{sat.desc.selector: sat.desc.value})
-                except TleNotFound:
-                    raise NoDataError(sat.desc)
-                else:
-                    sat.orb = tle.orbit()
-        else:
-            pattern = "*.{}".format(sat.desc.src)
-            if sat.folder.exists():
-                if sat.desc.limit == "any":
-                    try:
-                        sat.orb = EphemDb(sat).get(last=sat.desc.last)
-                    except ValueError:
-                        raise NoDataError(sat.desc)
-                else:
-                    # TODO Implement date handling
-                    pass
-            else:
+                sats = [SatOrb.from_orb(ephem) for ephem in orb]
+
+    return sats
+
+
+def get_desc(txt, alias=True):
+    # Parsing the string
+
+    delimiters = r"[@~\^\?\$]"
+    selector = re.split(delimiters, txt)[0]
+
+    if alias:
+        # Retrieve alias if it exists
+        rq = Alias.select().where(Alias.name==selector)
+        if rq.exists():
+            selector = rq.get().selector
+
+    if "=" in selector:
+        k, v = selector.split('=')
+        if k in ('norad', 'cospar'):
+            k += "_id"
+    else:
+        k, v = "name", selector
+
+    if k not in ("name", "cospar_id", "norad_id"):
+        raise ValueError("Unknown selector '{}'".format(k))
+
+    selector = k
+    value = v
+
+    last = 0
+    if "~" in txt:
+        last = txt.count("~")
+        if last == 1:
+            m = re.search(r"~(\d+)", txt)
+            if m:
+                last = int(m.group(1))
+
+    m = re.search(r"@(oem|tle)", txt, flags=re.I)
+    if m:
+        src = m.group(1).lower()
+    else:
+        src = ws.config.get('satellites', 'default_selector', fallback='tle')
+
+    limit = "any"
+    date = "any"
+    m = re.search(r"(\^|\?)([0-9-T:.]+)", txt)
+    if m:
+        limit = "after" if m.group(1) == "^" else "before"
+        try:
+            date = parse_date(m.group(2), fmt='date')
+        except ValueError:
+            date = parse_date(m.group(2))
+
+    return OrbDesc(selector, value, src, last, limit, date)
+
+
+def _get_sat(orbdesc):
+
+    try:
+        sat = Sat.select().filter(**{orbdesc.selector: orbdesc.value}).get()
+    except Sat.DoesNotExist:
+        raise ValueError("No satellite corresponding to {0.selector}={0.value}".format(orbdesc))
+    else:
+        sat = SatOrb(sat, None)
+
+    sat.desc = orbdesc
+
+    return sat
+
+
+def _get_orb(sat):
+
+    # Retrieving the corresponding orbit or ephem object
+    from .tle import TleDb, TleNotFound
+
+    if sat.desc.src == "tle":
+        if sat.desc.limit == "any":
+            tles = list(TleDb().history(**{sat.desc.selector: sat.desc.value}, number=sat.desc.last + 1))
+            if not tles:
+                raise NoDataError(sat.desc)
+            if len(tles) <= sat.desc.last:
                 raise NoDataError(sat.desc)
 
-        return sat
+            sat.orb = tles[0].orbit()
+        else:
+            try:
+                tle = TleDb.get_dated(limit=sat.desc.limit, date=sat.desc.date.datetime, **{sat.desc.selector: sat.desc.value})
+            except TleNotFound:
+                raise NoDataError(sat.desc)
+            else:
+                sat.orb = tle.orbit()
+    else:
+        pattern = "*.{}".format(sat.desc.src)
+        if sat.folder.exists():
+            if sat.desc.limit == "any":
+                try:
+                    sat.orb = EphemDb(sat).get(last=sat.desc.last)
+                except ValueError:
+                    raise NoDataError(sat.desc)
+            else:
+                # TODO Implement date handling
+                pass
+        else:
+            raise NoDataError(sat.desc)
 
-    @classmethod
-    def get_sat(cls, txt, **kwargs):
-        return cls._get_sat(cls.get_desc(txt, **kwargs), **kwargs)
+    return sat
 
-    @classmethod
-    def _get_orb_from_desc(cls, desc, **kwargs):
-        sat = cls._get_sat(desc, **kwargs)
-        return cls._get_orb(sat, **kwargs)
 
-    @classmethod
-    def get_orb(cls, txt, **kwargs):
-        desc = cls.get_desc(txt, **kwargs)
-        return cls._get_orb_from_desc(desc, **kwargs)
+def get_sat(txt, **kwargs):
+    return _get_sat(get_desc(txt, **kwargs), **kwargs)
+
+
+def _get_orb_from_desc(desc, **kwargs):
+    sat = _get_sat(desc, **kwargs)
+    return _get_orb(sat, **kwargs)
+
+
+def get_orb(txt, **kwargs):
+    desc = get_desc(txt, **kwargs)
+    return _get_orb_from_desc(desc, **kwargs)
 
 
 class MyModel(Model):
@@ -211,9 +208,12 @@ class MyModel(Model):
 
 
 class Sat(MyModel):
-    norad_id = IntegerField(unique=True)
-    cospar_id = CharField()
+    norad_id = IntegerField(null=True)
+    cospar_id = CharField(null=True)
     name = CharField()
+
+    def exists(self):
+        return Sat.select().where(Sat.cospar_id == self.cospar_id).exists()
 
     @classmethod
     def from_tle(cls, tle):
@@ -312,16 +312,18 @@ def space_sat(*argv):
       space-sat list-aliases
       space-sat orb <selector>
       space-sat sync-tle
+      space-sat infos <selector>
 
     Options:
       alias         Create an alias for quick access
       orb           Display the orbit corresponding to the selector
       list-aliases  List existing aliases
       sync-tle      Update satellite database with existing TLEs
+      infos         Display informations about a satellite
       <selector>    See below
 
     Satellite selectors
-      ISS                : latest TLE if ISS
+      ISS                : latest TLE of ISS
       norad=25544        : latest TLE of ISS selected by norad number
       cospar=2018-027A   : latest TLE of GSAT-6A
       ISS@oem            : latest OEM
@@ -346,7 +348,7 @@ def space_sat(*argv):
         name = args['<alias>']
 
         try:
-            sat = parse_sats.get_sat(selector)
+            sat = get_sat(selector)
         except ValueError as e:
             log.error("Unknown satellite '{}'".format(selector))
             sys.exit(-1)
@@ -374,7 +376,7 @@ def space_sat(*argv):
 
     elif args['orb']:
         try:
-            sat = parse_sats.get_orb(args['<selector>'])
+            sat = get_orb(args['<selector>'])
         except ValueError as e:
             log.error(e)
             sys.exit(-1)
@@ -389,3 +391,11 @@ def space_sat(*argv):
                 name=sat.name
             )
             print("{0.name}\n{0}".format(tle))
+
+    elif args['infos']:
+        sat = get_sat(args['<selector>'])
+        print("""name       {0.name}
+cospar id  {0.cospar_id}
+norad id   {0.norad_id}
+folder     {0.folder}
+""".format(sat))

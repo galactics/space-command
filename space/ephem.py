@@ -32,6 +32,9 @@ class EphemDb:
         if not self.sat.folder.exists():
             self.sat.folder.mkdir(parents=True)
 
+        if not self.sat.sat.exists():
+            self.sat.sat.save()
+
         filename = "{sat.cospar_id}_{sat.orb.start:%Y%m%d_%H%M%S}.{ext}".format(sat=self.sat, ext=self.EXT)
         filepath = self.sat.folder / filename
 
@@ -83,7 +86,7 @@ def space_ephem(*argv):
     """
 
     from .utils import docopt
-    from .sat import parse_sats
+    from .sat import parse_sats, get_sat, _get_orb, parse_orb
 
     args = docopt(space_ephem.__doc__, argv=argv)
 
@@ -128,7 +131,7 @@ def space_ephem(*argv):
             txt = open(args['<file>']).read()
 
         try:
-            sats = parse_sats.parse_orb(txt)
+            sats = parse_orb(txt)
         except ValueError as e:
             log.error(e)
             sys.exit(1)
@@ -146,9 +149,9 @@ def space_ephem(*argv):
         for selector in args['<selector>']:
 
             try:
-                sat = parse_sats.get_sat(selector)
+                sat = get_sat(selector)
                 sat.desc.src = "oem"
-                sat = parse_sats._get_orb(sat)
+                sat = _get_orb(sat)
             except ValueError as e:
                 log.error(e)
                 sys.exit(1)
@@ -191,7 +194,7 @@ def space_ephem(*argv):
         ephems = []
         try:
             for selector in args['<selector>']:
-                sat = parse_sats.get_sat(selector)
+                sat = get_sat(selector)
                 ephems.append(EphemDb(sat).get(last=sat.desc.last))
         except ValueError as e:
             log.error(e)

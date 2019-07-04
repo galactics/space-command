@@ -1,6 +1,6 @@
 from pytest import raises
 
-from space.sat import parse_sats
+from space.sat import parse_sats, get_desc, get_orb, get_sat
 from space.clock import Date
 
 
@@ -15,7 +15,7 @@ ISS (ZARYA)
 
 def test_parse_desc(space_tmpdir):
 
-    desc = parse_sats.get_desc("ISS (ZARYA)")
+    desc = get_desc("ISS (ZARYA)")
 
     assert desc.selector == "name"
     assert desc.value == "ISS (ZARYA)"
@@ -23,7 +23,7 @@ def test_parse_desc(space_tmpdir):
     assert desc.src == "tle"
     # assert desc.limit == ""
 
-    desc = parse_sats.get_desc("norad=25544~3@oem")
+    desc = get_desc("norad=25544~3@oem")
 
     assert desc.selector == "norad_id"
     assert desc.value == "25544"
@@ -31,31 +31,34 @@ def test_parse_desc(space_tmpdir):
     assert desc.src == "oem"
 
     # Selection by alias
-    desc = parse_sats.get_desc("ISS")
+    desc = get_desc("ISS")
 
     assert desc.selector == "norad_id"
     assert desc.value == "25544"
     assert desc.last == 0
     assert desc.src == "tle"
 
-    desc = parse_sats.get_desc("norad=25544?2019-02-27")
+    desc = get_desc("norad=25544?2019-02-27")
 
     assert desc.selector == "norad_id"
     assert desc.value == "25544"
     assert desc.limit == "before"
     assert desc.date == Date(2019, 2, 27)
 
-    desc = parse_sats.get_desc("norad=25544^2019-02-27T12:00:00")
+    desc = get_desc("norad=25544^2019-02-27T12:00:00")
 
     assert desc.selector == "norad_id"
     assert desc.value == "25544"
     assert desc.limit == "after"
     assert desc.date == Date(2019, 2, 27, 12)
 
+    with raises(ValueError):
+        desc = get_desc("norod=25544")
+
 
 def test_get_sat(space_tmpdir):
 
-    sat = parse_sats.get_sat("ISS")
+    sat = get_sat("ISS")
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
@@ -63,7 +66,7 @@ def test_get_sat(space_tmpdir):
     assert sat.orb == None
 
     with raises(ValueError):
-        sat = parse_sats.get_orb("XMM")
+        sat = get_sat("XMM")
 
 
 def test_get_orb(space_tmpdir, run):
@@ -71,14 +74,14 @@ def test_get_orb(space_tmpdir, run):
     r = run("space tle insert - ", stdin=tle2)
     assert r.success
 
-    sat = parse_sats.get_orb("ISS")
+    sat = get_orb("ISS")
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
     assert sat.norad_id == 25544
     assert sat.orb.date == Date(2019, 6, 10, 5, 43, 40, 581696)
 
-    sat = parse_sats.get_orb("ISS~")
+    sat = get_orb("ISS~")
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
@@ -86,9 +89,9 @@ def test_get_orb(space_tmpdir, run):
     assert sat.orb.date == Date(2018, 10, 24, 13, 14, 20, 814720)
 
     # After the date
-    sat = parse_sats.get_orb("ISS^2018-01-01")
+    sat = get_orb("ISS^2018-01-01")
     assert sat.orb.date == Date(2018, 10, 24, 13, 14, 20, 814720)
 
     # Before the date
-    sat = parse_sats.get_orb("ISS?2018-01-01")
+    sat = get_orb("ISS?2018-01-01")
     assert sat.orb.date == Date(2017, 12, 9, 6, 33, 16, 76736)

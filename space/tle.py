@@ -14,7 +14,7 @@ from peewee import (
 from beyond.io.tle import Tle
 
 from .wspace import ws
-from .sat import parse_sats, sync_tle
+from .sat import get_desc, get_sat, sync_tle
 
 log = logging.getLogger(__name__)
 
@@ -437,9 +437,9 @@ def space_tle(*argv):
             kwargs['files'] = args['<file>']
         elif src == "spacetrack":
             try:
-                sat = parse_sats.get_sat(" ".join(args['<selector>']))
+                sat = get_sat(" ".join(args['<selector>']))
             except ValueError:
-                desc = parse_sats.get_desc(" ".join(args['<selector>']))
+                desc = get_desc(" ".join(args['<selector>']))
                 kwargs[desc.selector] = desc.value
             else:
                 kwargs['norad_id'] = sat.norad_id
@@ -504,7 +504,7 @@ def space_tle(*argv):
         print_stats()
     else:
         try:
-            sat = parse_sats.get_sat(" ".join(args['<selector>']))
+            sat = get_sat(" ".join(args['<selector>']))
         except ValueError as e:
             log.error(str(e))
             sys.exit(-1)
