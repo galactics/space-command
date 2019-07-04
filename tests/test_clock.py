@@ -20,7 +20,7 @@ def test_display(run):
 def test_set_date(run):
 
     # Set the clock to a future, happy date
-    r = run("space clock set-date 2018-12-25T00:00:00 2018-11-01T00:00:00")
+    r = run("space clock set-date 2018-12-25T00:00:00.000000 2018-11-01T00:00:00.000000")
 
     assert r.stderr == "Clock date set to 2018-12-25T00:00:00 UTC\n\n"
 
@@ -33,7 +33,7 @@ def test_set_date(run):
 
     # For this test case, as it is dependant of the system time,
     # it is very hard to test
-    r = run("space clock set-date 2018-12-25T00:00:00")
+    r = run("space clock set-date 2018-12-25T00:00:00.000000")
 
     assert r.stderr.startswith("Clock date set to 2018-12-25T00:00:00 UTC")
 
@@ -74,7 +74,7 @@ def test_set_offset(run):
 def test_set_then_sync(run):
 
     # Set the clock to a future, happy date
-    r = run("space clock set-date 2018-12-25T00:00:00 2018-11-01T00:00:00")
+    r = run("space clock set-date 2018-12-25T00:00:00.000000 2018-11-01T00:00:00.000000")
 
     assert r.stderr == "Clock date set to 2018-12-25T00:00:00 UTC\n\n"
 

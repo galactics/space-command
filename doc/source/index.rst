@@ -97,7 +97,18 @@ Command Argmuents
 
 **Dates**
 
+If not specified otherwise, dates should be given following the ISO 8601
+format %Y-%m-%dT%H:%M:%S. You can also use the keywords 'now', 'midnight' and 'tomorrow'.
+
 **Time range**
+
+Time ranges may be expressed in weeks (*w*), days (*d*), hours (*h*), minutes (*m*) or seconds (*s*):
+
+    - `600s` is 600 seconds (10 minutes)
+    - `2w7h` is 2 weeks and 7 hours
+    - `3h20.5m` is 3 hours 20 minutes and 30 seconds
+
+All descriptors except weeks accept decimals.
 
 **Satellite Name**
 

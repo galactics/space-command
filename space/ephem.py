@@ -72,7 +72,8 @@ def space_ephem(*argv):
         insert                Insert a ephemeris into the database
         <selector>            Selector of the satellite
         -f, --frame <frame>   Frame in which to write the file to
-        -d, --date <date>     Date in format %Y-%m-%d [default: midnight]
+        -d, --date <date>     Start date of the ephem [default: midnight]
+                              (format %Y-%m-%dT%H:%M:%S)
         -r, --range <days>    Duration of extrapolation [default: 3d]
         -s, --step <step>     Step size of the ephemeris [default: 180s]
         -i, --interp <inter>  Interpolation method (linear, lagrange) [default: lagrange]
@@ -89,7 +90,7 @@ def space_ephem(*argv):
     if args['compute']:
 
         try:
-            start = parse_date(args['--date'], 'date')
+            start = parse_date(args['--date'])
             stop = parse_timedelta(args['--range'])
             step = parse_timedelta(args['--step'])
             satlist = parse_sats(*args['<selector>'], text=sys.stdin.read() if args['-'] else "")

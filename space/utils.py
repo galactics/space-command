@@ -83,7 +83,7 @@ def parse_timedelta(txt, negative=False):
 
     from .clock import timedelta
 
-    m = re.search(r'(?P<sign>-)?((?P<weeks>\d+)w)?((?P<days>\d+)d)?((?P<hours>[\d.]+)h)?((?P<minutes>[\d.]+)m)?((?P<seconds>[\d.]+)s)?', txt)
+    m = re.search(r'(?P<sign>-)?((?P<weeks>\d+)w)?((?P<days>[\d.]+)d)?((?P<hours>[\d.]+)h)?((?P<minutes>[\d.]+)m)?((?P<seconds>[\d.]+)s)?', txt)
 
     sign = 1
     if negative and m.group('sign') is not None:

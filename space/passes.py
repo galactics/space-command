@@ -27,7 +27,7 @@ def space_passes(*argv):
       <satellite>        Satellite to track.
       -                  If used the orbit should be provided as stdin in TLE
                          or CCSDS format (see example)
-      -d --date <date>   Starting date of the simulation [default: now]
+      -d --date <date>   Starting date of the computation [default: now]
                          (format: "%Y-%m-%dT%H:%M:%S")
       -r --range <days>  Range of the computation [default: 1d]
       -n --no-events     Don't compute AOS, MAX and LOS

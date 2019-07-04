@@ -96,19 +96,16 @@ def space_phase(*argv):
     """
     import sys
     from .clock import Date
-    from .utils import docopt
+    from .utils import docopt, parse_date
     from .station import StationDb
 
     args = docopt(space_phase.__doc__)
 
-    if args['<date>'] is None:
-        date = Date.now()
-    else:
-        try:
-            date = Date.strptime(args['<date>'], "%Y-%m-%dT%H:%M:%S")
-        except ValueError as e:
-            print(e, file=sys.stderr)
-            sys.exit(-1)
+    try:
+        date = parse_date(args['<date>'])
+    except ValueError as e:
+        print(e, file=sys.stderr)
+        sys.exit(-1)
 
     StationDb.list()
 

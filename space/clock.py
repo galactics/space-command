@@ -66,7 +66,7 @@ def space_clock(*argv):
         sync        Set the time to be the same as the system
         set-date    Define the date
         set-offset  Define offset
-        <date>      New date to set (%Y-%m-%dT%H:%M:%S)
+        <date>      New date to set (%Y-%m-%dT%H:%M:%S.%f)
         <ref>       Date at witch the new date is set (same format as <date>).
                     If absent, the current system time is used
         <offset>    Offset in seconds
@@ -83,8 +83,8 @@ def space_clock(*argv):
         if args['<ref>'] is None:
             ref = LegacyDate.now()
         else:
-            ref = LegacyDate.strptime(args['<ref>'], "%Y-%m-%dT%H:%M:%S")
-        date = LegacyDate.strptime(args['<date>'], "%Y-%m-%dT%H:%M:%S")
+            ref = LegacyDate.strptime(args['<ref>'], "%Y-%m-%dT%H:%M:%S.%f")
+        date = LegacyDate.strptime(args['<date>'], "%Y-%m-%dT%H:%M:%S.%f")
 
         set_date(date, ref)
 

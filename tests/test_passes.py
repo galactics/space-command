@@ -3,7 +3,7 @@ from pytest import fixture
 
 @fixture
 def run_date(run):
-    run("space clock set-date 2018-11-01T09:00:00")
+    run("space clock set-date 2018-11-01T09:00:00.000000")
     return run
 
 
