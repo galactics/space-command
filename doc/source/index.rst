@@ -50,29 +50,6 @@ declare a new station of observation.
     space station --map                 # Check if your station is well where you want it to be
     space passes <abbrev> "ISS (ZARYA)"  # Compute the next pass of the ISS from your location
 
-When a satellite name is needed in a command, it's the full name of the satellite is expected,
-as defined on the TLE. Alternatively you can access satellites by their identifiers
-(NORAD ID or COSPAR ID). All following commands are equivalent
-
-.. code-block :: shell
-
-    space passes <station> norad=25544
-    space passes <station> cospar=1998-067A
-    space passes <station> "name=ISS (ZARYA)"
-    space passes <station> "ISS (ZARYA)"
-
-Sometimes the full name is rather complex (e.g. "ISS (ZARYA)"), so you can define
-aliases as follow
-
-.. code-block:: shell
-
-    space sat alias ISS norad=25544
-
-The alias 'ISS' is already defined.
-
-To avoid creating thousand of abbreviations, you can just chain commands as
-demonstrated in :ref:`pipping`.
-
 Available commands
 ------------------
 
@@ -92,30 +69,117 @@ For full details on a command, use ``-h`` or ``--help`` arguments
 
 ``space tle`` : Retrieve TLEs from Celestrak or Space-Track, store them and consult them
 
+``space ephem`` : Compute Ephemeris and manage Ephemeris database
+
+In addition, the following commands allow you to access non orbital informations
+
+``space clock`` : Handle the time
+
+``space config`` : Allow to get and set different values to change the way the space command behaves
+
+``space log`` : Access the log of all space commands
+
 Command Argmuents
 ^^^^^^^^^^^^^^^^^
 
-**Dates**
+Dates
+"""""
+Unless otherwise specified, dates should be given following the ISO 8601
+format ``%Y-%m-%dT%H:%M:%S``. You can also use the keywords 'now', 'midnight' and 'tomorrow'.
+All dates are expressed in UTC
 
-If not specified otherwise, dates should be given following the ISO 8601
-format %Y-%m-%dT%H:%M:%S. You can also use the keywords 'now', 'midnight' and 'tomorrow'.
+Example: It is *2019-07-04T20:11:37*, ``now`` will yield *2019-07-04T20:11:37*, ``midnight`` will yield *2019-07-04T00:00:00*, and ``tomorrow`` will yield *2019-07-05T00:00:00*.
 
-**Time range**
+Dates are generally used to give the starting point of a computation.
 
-Time ranges may be expressed in weeks (*w*), days (*d*), hours (*h*), minutes (*m*) or seconds (*s*):
+Time range
+""""""""""
+Time ranges may be expressed in weeks (*w*), days (*d*), hours (*h*), minutes (*m*) or seconds (*s*).
+All descriptors except weeks accept decimals:
 
-    - `600s` is 600 seconds (10 minutes)
-    - `2w7h` is 2 weeks and 7 hours
-    - `3h20.5m` is 3 hours 20 minutes and 30 seconds
+    - ``600s`` is 600 seconds (10 minutes)
+    - ``2w7h`` is 2 weeks and 7 hours
+    - ``3h20.5m`` is 3 hours 20 minutes and 30 seconds
 
-All descriptors except weeks accept decimals.
+Time ranges are generally used to give the ending point and the step size of a computation.
 
-**Satellite Name**
+Station selection
+"""""""""""""""""
+Station selection is done using the abbreviation of the station. By default, only the station
+``TLS`` (located in Toulouse, France) is present.
+
+Satellite selection
+"""""""""""""""""""
+Satellite selection, or rather *Orbit selection* can be made multiple ways.
+First you have to pick the descriptor of the satellite.
+For instance, the International Space Station (ISS) can be accessed by its name
+(``ISS (ZARYA)``), NORAD ID (``25544``), or COSPAR ID ``1998-067A``. The following
+commands are equivalent
+
+.. code-block:: bash
+
+    $ space passes TLS name="ISS (ZARYA)"
+    $ space passes TLS "ISS (ZARYA)"   # default to name field
+    $ space passes TLS norad=25544
+    $ space passes TLS cospar=1998-067A
+
+As this could be a bit tiresome, it is possible to define aliases.
+
+.. code-block:: shell
+
+    space sat alias ISS norad=25544
+
+The ``ISS`` alias is already defined
+
+Then, you have to decide which source you want to compute from.
+By default, space-command uses TLE previously fetched, but this behaviour
+can be overridden.
+In some cases, it is not possible to retrieve TLEs for a given object, particularly
+if this object is an interplanetary spacecraft. In this case, we have to rely on
+ephemeris files (OEM).
+
+**Examples**
+
+.. code-block:: bash
+
+    $ space passes TLS ISS      # Use the latest TLE
+    $ space passes TLS ISS@tle  # Use the latest TLE
+    $ space passes TLS ISS@oem  # Use the latest OEM
+
+.. code-block:: text
+
+    ISS                : latest TLE of ISS
+    norad=25544        : latest TLE of ISS selected by norad number
+    cospar=2018-027A   : latest TLE of GSAT-6A selected by COSPAR ID
+    ISS@oem            : latest OEM
+    ISS@tle            : latest TLE
+    ISS~               : one before last TLE
+    ISS~~              : 2nd before last TLE
+    ISS@oem~25         : 25th before last OEM
+    ISS@oem^2018-12-25 : first OEM after the date
+    ISS@tle?2018-12-25 : first tle before the date
+
 
 Workspaces
 ^^^^^^^^^^
 
-Workspaces allow the user to work on non-colluding databases. They 
+Workspaces allow the user to work on non-colluding databases. The default workspace is
+*main*.
+The companion command ``wspace`` allow to list, create or delete workspaces.
+To actually use a workspace during a computation, you can use the ``SPACE_WORKSPACE``
+environment variable, or directly in the command line, with the ``-w`` or ``--workspace`` options
+
+.. code-block:: bash
+
+    $ export SPACE_WORKSPACE=test  # all commands coming after will be in the 'test' workspace
+    $ space passes TLS ISS
+    $ space events ISS
+    ...
+    $ unset SPACE_WORKSPACE  # Disable the 'test' workspace, return to 'main'
+
+    # The above is equivalent to
+    $ space passes TLS ISS -w test
+    $ space -w test events ISS
 
 .. _pipping:
 
@@ -129,7 +193,7 @@ command.
 .. code-block:: shell
 
     # Compute the pass of Mars above a station
-    space planet Mars | space passes TLS - -s 600 -g
+    space planet Mars | space passes TLS - -s 600s -g
 
     # Search for TLEs and display them on a map
     space tle find tintin | space map -
