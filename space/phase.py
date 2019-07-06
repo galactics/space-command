@@ -105,7 +105,7 @@ def space_phase(*argv):
         date = parse_date(args['<date>'])
     except ValueError as e:
         print(e, file=sys.stderr)
-        sys.exit(-1)
+        sys.exit(1)
 
     StationDb.list()
 

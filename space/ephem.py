@@ -99,7 +99,7 @@ def space_ephem(*argv):
             satlist = parse_sats(*args['<selector>'], text=sys.stdin.read() if args['-'] else "")
         except ValueError as e:
             log.error(e)
-            sys.exit(-1)
+            sys.exit(1)
 
         ephems = []
         for sat in satlist:

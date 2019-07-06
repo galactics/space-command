@@ -351,7 +351,7 @@ def space_sat(*argv):
             sat = get_sat(selector)
         except ValueError as e:
             log.error("Unknown satellite '{}'".format(selector))
-            sys.exit(-1)
+            sys.exit(1)
 
         q = Alias.select().where(Alias.name == name)
         if q.exists():
@@ -379,7 +379,7 @@ def space_sat(*argv):
             sat = get_orb(args['<selector>'])
         except ValueError as e:
             log.error(e)
-            sys.exit(-1)
+            sys.exit(1)
 
         if isinstance(sat.orb, Ephem):
             print(ccsds.dumps(sat.orb))

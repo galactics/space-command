@@ -479,7 +479,7 @@ def space_tle(*argv):
                 log.error(e)
         else:
             log.error("No TLE provided")
-            sys.exit(-1)
+            sys.exit(1)
 
         if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
             # Update the Satellite DB
@@ -491,7 +491,7 @@ def space_tle(*argv):
             result = db.find(txt)
         except TleNotFound as e:
             log.error(str(e))
-            sys.exit(-1)
+            sys.exit(1)
 
         for tle in result:
             print("{0.name}\n{0}\n".format(tle))
@@ -507,7 +507,7 @@ def space_tle(*argv):
             sat = get_sat(" ".join(args['<selector>']))
         except ValueError as e:
             log.error(str(e))
-            sys.exit(-1)
+            sys.exit(1)
 
         try:
             if args['history']:
@@ -521,4 +521,4 @@ def space_tle(*argv):
                 print("{0.name}\n{0}\n".format(tle))
         except TleNotFound as e:
             log.error(str(e))
-            sys.exit(-1)
+            sys.exit(1)

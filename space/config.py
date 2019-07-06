@@ -235,7 +235,7 @@ def space_config(*argv):
                 log.info("Config file modified")
         else:
             print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
-            sys.exit(-1)
+            sys.exit(1)
     elif args['set']:
         if not lock.locked():
             try:
@@ -255,14 +255,14 @@ def space_config(*argv):
                 # For some reason we don't have the right to set this
                 # value
                 print(e, file=sys.stderr)
-                sys.exit(-1)
+                sys.exit(1)
             else:
                 # If everything went fine, we save the file in its new state
                 ws.config.save()
                 log.debug("'{}' now set to '{}'".format(args['<keys>'], args['<value>']))
         else:
             print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
-            sys.exit(-1)
+            sys.exit(1)
 
     elif args['unlock']:
         if args['--yes']:
@@ -275,7 +275,7 @@ def space_config(*argv):
                 lock.unlock()
             elif ans.lower() != "no":
                 print("unknown answer '{}'".format(ans), file=sys.stderr)
-                sys.exit(-1)
+                sys.exit(1)
     elif args["lock"]:
         lock.lock()
     else:
@@ -288,7 +288,7 @@ def space_config(*argv):
                     subdict = subdict[k]
         except KeyError as e:
             print("Unknown field", e, file=sys.stderr)
-            sys.exit(-1)
+            sys.exit(1)
 
         if hasattr(subdict, 'filepath'):
             print("config :", ws.config.filepath)

@@ -56,4 +56,4 @@ def test_version(run):
     assert lines[1].split() == ["beyond" , beyond.__version__]
 
     assert not r.stderr
-    assert r.success
+    assert not r.success

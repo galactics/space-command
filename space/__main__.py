@@ -7,6 +7,7 @@ import os
 import sys
 import logging
 from pkg_resources import iter_entry_points
+from docopt import DocoptExit
 
 from . import __version__
 from .utils import docopt
@@ -52,7 +53,7 @@ def main():
 
         print("space-command  {}".format(__version__))
         print("beyond         {}".format(beyond.__version__))
-        sys.exit(0)
+        sys.exit(127)
 
     # Set logging verbosity level.
     # This setting will be overridden when loading the workspace (see `ws.init()` below)
@@ -112,7 +113,7 @@ def main():
         print()
         print("To list, create and delete workspaces, use the companion command 'wspace'")
         print()
-        sys.exit(-1)
+        sys.exit(1)
 
     # retrieve the subcommand and its arguments
     _, command, *args = sys.argv
@@ -126,15 +127,32 @@ def main():
     except FileNotFoundError:
         log.error("It seems you are running 'space' for the first time")
         log.error("To initialize the workspace '{}', please use the command 'wspace'".format(ws.name))
-        sys.exit(-1)
+        sys.exit(1)
 
-    log.debug("=== starting subcommand '{}' ===".format(command))
+    log.debug("=== starting command '{}' ===".format(command))
 
     # get the function associated with the subcommand
     func = commands[command].load()
 
-    # Call the function associated with the subcommand
-    func(*args)
+    try:
+        # Call the function associated with the subcommand
+        func(*args)
+    except DocoptExit as e:
+        # Docopt override the SystemExit exception with its own subclass, and
+        # pass a string containing the usage of the command as argument.
+        # This benefit from the behavior of the SystemExit exception which
+        # when not catched, print any non-integer argument and exit with code 1
+
+        # So we have to catch the DocoptExit in order to modify the return code
+        # and override it with a decent value.
+        print(e, file=sys.stderr)
+        log.debug("=== command '{}' failed with return code 2 ===".format(command, e.code))
+        sys.exit(2)
+    except SystemExit as e:
+        log.debug("=== command '{}' failed with return code {} ===".format(command, e.code))
+        raise
+    else:
+        log.debug("=== command '{}' exited with return code 0 ===".format(command))
 
 
 if __name__ == "__main__":

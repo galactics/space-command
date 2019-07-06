@@ -39,7 +39,7 @@ def space_events(*argv):
         step = parse_timedelta(args['--step'])
     except ValueError as e:
         print(e, file=sys.stdout)
-        sys.exit(-1)
+        sys.exit(1)
 
     try:
         for sat in satlist:

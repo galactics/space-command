@@ -2,9 +2,9 @@
 # coding=utf-8
 
 import sys
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
-
 from pathlib import Path
 
 from beyond.orbits.listeners import LightListener
@@ -13,6 +13,8 @@ from beyond.errors import UnknownFrameError
 from .utils import circle, docopt, parse_date, parse_timedelta
 from .station import StationDb
 from .sat import parse_sats
+
+log = logging.getLogger(__name__)
 
 
 def space_passes(*argv):
@@ -63,14 +65,14 @@ def space_passes(*argv):
         pass_nb = int(args['--passes'])
         sats = parse_sats(*args['<satellite>'], text=sys.stdin.read() if args["-"] else "")
     except ValueError as e:
-        print(e, file=sys.stderr)
-        sys.exit(-1)
+        log.error(e)
+        sys.exit(1)
 
     try:
         station = StationDb.get(args["<station>"])
     except UnknownFrameError:
-        print("Unknwon station '{}'".format(args['<station>']), file=sys.stderr)
-        sys.exit(-1)
+        log.error("Unknwon station '{}'".format(args['<station>']))
+        sys.exit(1)
 
     events = not args['--no-events']
 

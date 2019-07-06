@@ -134,7 +134,7 @@ def space_planet(*args):
             step = parse_timedelta(args['--step'])
         except ValueError as e:
             print(e, file=sys.stderr)
-            sys.exit(-1)
+            sys.exit(1)
 
         # Create all frames from .bsp files, if they are available
         try:
@@ -151,7 +151,7 @@ def space_planet(*args):
             frame = get_frame(args['--frame'])
         except UnknownFrameError as e:
             print(e, file=sys.stderr)
-            sys.exit(-1)
+            sys.exit(1)
 
         # Computation
         ephems = []
@@ -164,7 +164,7 @@ def space_planet(*args):
                     body = jpl.get_orbit(body_name, date)
             except UnknownBodyError as e:
                 print(e, file=sys.stderr)
-                sys.exit(-1)
+                sys.exit(1)
 
             ephem = body.ephem(start=date, stop=stop, step=step)
             ephem.frame = frame
