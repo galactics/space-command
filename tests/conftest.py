@@ -5,7 +5,7 @@ from pytest import yield_fixture, fixture
 
 from space.wspace import switch_workspace
 from space.tle import TleDb
-from space.sat import sync_tle
+from space.sat import sync
 
 
 @fixture
@@ -20,7 +20,7 @@ def space_tmpdir():
 2 25544  51.6407  94.0557 0003791 332.0725 138.3982 15.53858634138630""", src='stdin')
 
         # Synchronize the Satellite database with the TleDatabase
-        sync_tle()
+        sync()
         yield ws
 
 
@@ -29,7 +29,7 @@ def run(script_runner, space_tmpdir):
     """Launch the space command in the dedicated tmp workdir
     """
 
-    def _run(txt, stdin=None):
+    def _run(args, stdin=None):
 
         # kwargs = {'cwd': str(space_tmpdir)}
         kwargs = {}
@@ -40,6 +40,9 @@ def run(script_runner, space_tmpdir):
         kwargs['env'] = os.environ.copy()
         kwargs['env']['SPACE_WORKSPACE'] = 'tmp-pytest'
 
-        return script_runner.run(*txt.split(), **kwargs)
+        if isinstance(args, str):
+            args = args.split()
+
+        return script_runner.run(*args, **kwargs)
 
     return _run

@@ -32,10 +32,7 @@ class EphemDb:
         if not self.sat.folder.exists():
             self.sat.folder.mkdir(parents=True)
 
-        if not self.sat.sat.exists():
-            self.sat.sat.save()
-
-        filename = "{sat.cospar_id}_{sat.orb.start:%Y%m%d_%H%M%S}.{ext}".format(sat=self.sat, ext=self.EXT)
+        filename = "{sat.cospar_id}_{orb.start:%Y%m%d_%H%M%S}.{ext}".format(sat=self.sat, orb=orb, ext=self.EXT)
         filepath = self.sat.folder / filename
 
         if filepath.exists() and not force:
@@ -47,19 +44,34 @@ class EphemDb:
 
         log.info("{} saved".format(filepath))
 
-    def get(self, last=0):
+    def get(self, offset=0):
         files = list(sorted(self.sat.folder.glob(self.pattern)))
 
-        if not files or len(files) <= last:
+        if not files or len(files) <= offset:
             raise ValueError()
 
-        return ccsds.load(files[-(1+last)].open())
+        return ccsds.load(files[-(1+offset)].open())
 
     def get_dated(self, limit, date):
-        pass
+
+        reverse = False
+        if limit == 'before':
+            func = '__lt__'
+            reverse = True
+        else:
+            func = '__gt__'
+
+        for file in sorted(self.sat.folder.glob(self.pattern), reverse=reverse):
+            mtime = Date.strptime(file.stem.partition('_')[2], "%Y%m%d_%H%M%S")
+            if getattr(mtime, func)(date):
+                break
+        else:
+            raise ValueError("No ephemeris found")
+
+        return ccsds.load(file.open())   
 
 
-def space_ephem(*argv):
+def space_ephem(*argv):  # pragma: no cover
     """Compute ephemeris from a given TLE
 
     Usage:
@@ -86,7 +98,7 @@ def space_ephem(*argv):
     """
 
     from .utils import docopt
-    from .sat import parse_sats, get_sat, _get_orb, parse_orb
+    from .sat import Sat
 
     args = docopt(space_ephem.__doc__, argv=argv)
 
@@ -96,7 +108,7 @@ def space_ephem(*argv):
             start = parse_date(args['--date'])
             stop = parse_timedelta(args['--range'])
             step = parse_timedelta(args['--step'])
-            satlist = parse_sats(*args['<selector>'], text=sys.stdin.read() if args['-'] else "")
+            satlist = Sat.from_input(*args['<selector>'], text=sys.stdin.read() if args['-'] else "")
         except ValueError as e:
             log.error(e)
             sys.exit(1)
@@ -117,9 +129,8 @@ def space_ephem(*argv):
             originator=config.get('center', 'name', fallback="N/A"),
         )
 
-        if not args['--insert']:
-            print(txt)
-            print("")
+        print(txt)
+        print("")
 
     if args['insert'] or (args['compute'] and args['--insert']):
 
@@ -131,7 +142,7 @@ def space_ephem(*argv):
             txt = open(args['<file>']).read()
 
         try:
-            sats = parse_orb(txt)
+            sats = Sat.from_input(text=txt, create=True)
         except ValueError as e:
             log.error(e)
             sys.exit(1)
@@ -146,56 +157,57 @@ def space_ephem(*argv):
 
         max_idx = int(args['--last'])
 
-        for selector in args['<selector>']:
+        try:
+            for sat in Sat.from_selector(*args['<selector>'], type='oem'):
 
-            try:
-                sat = get_sat(selector)
-                sat.desc.src = "oem"
-                sat = _get_orb(sat)
-            except ValueError as e:
-                log.error(e)
-                sys.exit(1)
+                print(sat.name)
+                print("idx  Start                Stop                 Steps")
+                print("-" * 55)
+                print(sat.req)
 
-            print(sat.name)
-            print("idx  Start                Stop                 Steps")
-            print("-" * 55)
-            for idx, ephem in enumerate(EphemDb(sat).list()):
+                for idx, ephem in enumerate(EphemDb(sat).list()):
 
-                if sat.desc.limit == "any" and idx == sat.desc.last or ephem.start == sat.orb.start:
-                    color = "* \033[32m"
-                    endcolor = "\033[39m"
-                else:
-                    color = "  "
-                    endcolor = ""
+                    if sat.req.limit == "any" and idx == sat.req.offset or ephem.start == sat.orb.start:
+                        color = "* \033[32m"
+                        endcolor = "\033[39m"
+                    else:
+                        color = "  "
+                        endcolor = ""
 
-                if idx >= max_idx:
-                    break
+                    if idx >= max_idx:
+                        break
 
-                steps = set()
-                for orb_i, orb_j in zip(ephem[:-1], ephem[1:]):
-                    steps.add(orb_j.date - orb_i.date)
+                    steps = set()
+                    for orb_i, orb_j in zip(ephem[:-1], ephem[1:]):
+                        steps.add(orb_j.date - orb_i.date)
 
-                if len(steps) == 1:
-                    steps, = steps
-                else:
-                    steps = "[{}, {}]".format(min(steps), max(steps))
+                    if len(steps) == 1:
+                        steps, = steps
+                    else:
+                        steps = "[{}, {}]".format(min(steps), max(steps))
 
-                print("{color}{idx:<2} {ephem.start:{fmt}}  {ephem.stop:{fmt}}  {steps}{endcolor}".format(
-                    idx=idx,
-                    ephem=ephem,
-                    fmt="%Y-%m-%dT%H:%M:%S",
-                    steps=steps,
-                    color=color,
-                    endcolor=endcolor
-                ))
-            print()
+                    print("{color}{idx:<2} {ephem.start:{fmt}}  {ephem.stop:{fmt}}  {steps}{endcolor}".format(
+                        idx=idx,
+                        ephem=ephem,
+                        fmt="%Y-%m-%dT%H:%M:%S",
+                        steps=steps,
+                        color=color,
+                        endcolor=endcolor
+                    ))
+                print()
+        except ValueError as e:
+            log.error(e)
+            sys.exit(1)
 
     elif args['get']:
         ephems = []
         try:
-            for selector in args['<selector>']:
-                sat = get_sat(selector)
-                ephems.append(EphemDb(sat).get(last=sat.desc.last))
+            for sat in Sat.from_selector(*args['<selector>'], src='oem'):
+                if not isinstance(sat.req.date, Date):
+                    ephem = EphemDb(sat).get(offset=sat.req.offset)
+                else:
+                    ephem = EphemDb(sat).get_dated(date=sat.req.date, limit=sat.req.limit)
+                ephems.append(ephem)
         except ValueError as e:
             log.error(e)
             sys.exit(1)

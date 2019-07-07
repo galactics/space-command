@@ -400,10 +400,10 @@ def space_map(*argv):
     """
 
     from .utils import docopt
-    from .sat import parse_sats
+    from .sat import Sat
 
     args = docopt(space_map.__doc__)
-    sats = list(parse_sats(*args['<satellite>'], text=sys.stdin.read() if args['-'] else ""))
+    sats = list(Sat.from_input(*args['<satellite>'], text=sys.stdin.read() if args['-'] else ""))
 
     sat_anim = SatAnim(sats)
 

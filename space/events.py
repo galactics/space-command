@@ -7,7 +7,7 @@ from beyond.orbits.listeners import (
 
 from .clock import Date, timedelta
 from .station import StationDb
-from .sat import parse_sats
+from .sat import Sat
 from .utils import parse_date, parse_timedelta
 
 
@@ -33,7 +33,7 @@ def space_events(*argv):
     args = docopt(space_events.__doc__, argv=argv)
 
     try:
-        satlist = parse_sats(*args['<sat>'], text=sys.stdin.read() if args['-'] else "")
+        satlist = Sat.from_input(*args['<sat>'], text=sys.stdin.read() if args['-'] else "")
         start = parse_date(args['--date'])
         stop = parse_timedelta(args['--range'])
         step = parse_timedelta(args['--step'])

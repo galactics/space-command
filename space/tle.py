@@ -14,7 +14,6 @@ from peewee import (
 from beyond.io.tle import Tle
 
 from .wspace import ws
-from .sat import get_desc, get_sat, sync_tle
 
 log = logging.getLogger(__name__)
 
@@ -422,6 +421,7 @@ def space_tle(*argv):
     """
 
     from .utils import docopt
+    from .sat import Sat, Request, sync
 
     from glob import glob
 
@@ -437,9 +437,9 @@ def space_tle(*argv):
             kwargs['files'] = args['<file>']
         elif src == "spacetrack":
             try:
-                sat = get_sat(" ".join(args['<selector>']))
+                sat = Sat.from_input(*args['<selector>'])
             except ValueError:
-                desc = get_desc(" ".join(args['<selector>']))
+                desc = Request.from_text(*args['<selector>'])
                 kwargs[desc.selector] = desc.value
             else:
                 kwargs['norad_id'] = sat.norad_id
@@ -455,7 +455,7 @@ def space_tle(*argv):
         finally:
             if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
                 # Update the Satellite DB
-                sync_tle()
+                sync('tle')
 
     elif args['insert']:
         # Process the file list provided by the command line
@@ -483,7 +483,7 @@ def space_tle(*argv):
 
         if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
             # Update the Satellite DB
-            sync_tle()
+            sync()
 
     elif args['find']:
         txt = " ".join(args['<text>'])
@@ -504,21 +504,22 @@ def space_tle(*argv):
         print_stats()
     else:
         try:
-            sat = get_sat(" ".join(args['<selector>']))
+            sats = list(Sat.from_selector(*args['<selector>']))
         except ValueError as e:
             log.error(str(e))
             sys.exit(1)
 
-        try:
-            if args['history']:
-                number = int(args['--last']) if args['--last'] is not None else None
-                tles = db.history(number=number, cospar_id=sat.cospar_id)
+        for sat in sats:
+            try:
+                if args['history']:
+                    number = int(args['--last']) if args['--last'] is not None else None
+                    tles = db.history(number=number, cospar_id=sat.cospar_id)
 
-                for tle in tles:
+                    for tle in tles:
+                        print("{0.name}\n{0}\n".format(tle))
+                else:
+                    tle = db.get(cospar_id=sat.cospar_id)
                     print("{0.name}\n{0}\n".format(tle))
-            else:
-                tle = db.get(cospar_id=sat.cospar_id)
-                print("{0.name}\n{0}\n".format(tle))
-        except TleNotFound as e:
-            log.error(str(e))
-            sys.exit(1)
+            except TleNotFound as e:
+                log.error(str(e))
+                sys.exit(1)

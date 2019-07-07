@@ -13,7 +13,7 @@ tle2 = """ISS (ZARYA)
 
 def test_get(run):
 
-    r = run("space tle get ISS (ZARYA)")
+    r = run(("space", "tle", "get", "ISS (ZARYA)"))
     assert not r.stderr
     assert r.stdout.strip() == tle1
     assert r.success
