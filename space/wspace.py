@@ -26,6 +26,15 @@ def pm_on_crash(type, value, tb):
 
 @contextmanager
 def switch_workspace(name, init=False, delete=False):
+    """Temporarily switch workspace, with a context manager
+
+    Args:
+        name (str): Name of the workspace to temporarily load
+        init (bool): If ``True``, this will perform an init of the workspace
+        delete (bool): At the end of the use of the workspace, delete it
+    Yield:
+        Workspace 
+    """
     old_name = ws.name
     ws.name = name
 
@@ -43,8 +52,10 @@ def switch_workspace(name, init=False, delete=False):
 
 
 class Workspace:
+    """Workspace handling class
+    """
 
-    WORKSPACES = Path.home() / '.space/'
+    WORKSPACES = Path(os.environ.get('SPACE_WORKSPACES_FOLDER', Path.home() / '.space/'))
     HOOKS = ('init', 'status', 'full-init')
     DEFAULT = 'main'
 
@@ -65,6 +76,8 @@ class Workspace:
 
     @classmethod
     def list(cls):
+        """List available workspaces
+        """
         for _ws in cls.WORKSPACES.iterdir():
             if _ws.is_dir():
                 if _ws.name == '_backup':
@@ -77,6 +90,8 @@ class Workspace:
         log.debug("{} database initialized".format(filepath.name))
 
     def load(self):
+        """Load the workspace
+        """
         self.config.load()
         log.debug("{} loaded".format(self.config.filepath.name))
         self._db_init()
@@ -91,12 +106,17 @@ class Workspace:
 
     @property
     def folder(self):
+        """Path to the folder of this workspace, as a pathlib.Path object
+        """
         return self.WORKSPACES / self.name
 
     def exists(self):
         return self.folder.exists()
 
     def init(self, full=False):
+        """Initilize the workspace
+        """
+
         print("Initializing workspace '{}'".format(self.name))
         if not self.exists():
             self.folder.mkdir(parents=True)
@@ -128,6 +148,8 @@ class Workspace:
             entry.load()(cmd)
 
     def backup(self, filepath=None):
+        """Backup the current workspace into a tar.gz file
+        """
 
         if filepath is None:
             name = "{}-{:%Y%m%d_%H%M%S}.tar.gz".format(self.name, datetime.utcnow())

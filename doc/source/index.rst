@@ -181,6 +181,9 @@ environment variable, or directly in the command line, with the ``-w`` or ``--wo
     $ space passes TLS ISS -w test
     $ space -w test events ISS
 
+By default all workspaces are located in the ``.space/`` folder in the home directory.
+It is possible to change the location with the ``SPACE_WORKSPACES_FOLDER`` environment variable.
+
 .. _pipping:
 
 Pipping commands
