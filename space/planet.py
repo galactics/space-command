@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 from beyond.errors import UnknownBodyError, UnknownFrameError
 from beyond.frames import get_frame
@@ -63,13 +64,13 @@ def space_planet(*args):
         space-planet Moon -f Phobos  # Position of the moon as seen from Phobos
 
     This command relies on .bsp files, parsed by the incredible jplephem lib.
-    Bsp file can be retrived at
+    Bsp file can be retrieved at
 
         https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/
 
     Files examples:
 
-        de432s.bsp     Moon, Sun, Mercury, Venus and main bodies barycenters
+        de432s.bsp     Moon, Sun, Mercury, Venus and main bodies barycentre
         mar097.bsp     Mars, Phobos and Deimos
         jup310.bsp     Jupiter and its major moons
         sat360xl.bsp   Saturn and its major moons
@@ -93,36 +94,68 @@ def space_planet(*args):
 
     if args["fetch"]:
 
-        url = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/"
-
         folder = ws.folder / "jpl"
 
         if not folder.exists():
             folder.mkdir()
 
-        filelist = set(ws.config.get("beyond", "env", "jpl", fallback=[]))
+        naif = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/"
+        baseurl = {
+            "de403_2000-2020.bsp": naif
+            + "spk/planets/a_old_versions/",  # Data until 2020-01-01
+            "de430.bsp": naif + "spk/planets/",
+            "de432s.bsp": naif + "spk/planets/",
+            "de435.bsp": naif + "spk/planets/",
+            "jup310.bsp": naif + "spk/satellites/",
+            "sat360xl.bsp": naif + "spk/satellites/",
+            "mar097.bsp": naif + "spk/satellites/",
+            "pck00010.tpc": naif + "pck/",
+            "gm_de431.tpc": naif + "pck/",
+        }
 
-        for file in ["de403_2000-2020.bsp"]:
+        success = []
 
-            if not (folder / file).exists():
+        filelist = ws.config.get("beyond", "env", "jpl", fallback="de403_2000-2020.bsp")
+        if not isinstance(filelist, list):
+            filelist = [filelist]
 
-                log.info("Fetching {}".format(file))
-                log.debug(url + file)
-                r = requests.get(url + file)
+        for filepath in filelist:
 
-                r.raise_for_status()
+            filepath = Path(filepath)
+            if not filepath.is_absolute():
+                filepath = folder / filepath
 
-                with open(folder / file, "bw") as fp:
-                    for chunk in r.iter_content(chunk_size=128):
-                        fp.write(chunk)
+            if not filepath.exists():
+
+                url = baseurl.get(filepath.name, "") + str(filepath.name)
+                log.info("Fetching {}".format(filepath.name))
+                log.debug(url)
+
+                try:
+                    r = requests.get(url)
+                except requests.exceptions.ConnectionError as e:
+                    log.error(e)
+                else:
+                    try:
+                        r.raise_for_status()
+                    except requests.exceptions.HTTPError as e:
+                        log.error("{} {}".format(filepath.name, e))
+                    else:
+                        with filepath.open("bw") as fp:
+                            for chunk in r.iter_content(chunk_size=128):
+                                fp.write(chunk)
+                        success.append(str(filepath.absolute()))
+                        log.debug(
+                            "Adding {} to the list of jpl files".format(filepath.name)
+                        )
             else:
-                log.info("File {} already downloaded".format(file))
+                success.append(str(filepath.absolute()))
+                log.info("File {} already downloaded".format(filepath.name))
 
-            filelist.add(folder / file)
-
-        log.debug("Adding {} to the list of jpl files".format(file))
         # Adding the file to the list and saving the new state of configuration
-        ws.config.set("beyond", "env", "jpl", list(filelist))
+        if success:
+            ws.config.set("beyond", "env", "jpl", success)
+
         ws.config.save()
 
     elif args["<planet>"]:
