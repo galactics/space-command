@@ -21,6 +21,7 @@ def pm_on_crash(type, value, tb):
     """
     import pdb
     import traceback
+
     traceback.print_exception(type, value, tb)
     pdb.pm()
 
@@ -40,8 +41,8 @@ def main():
     """Direct the user to the right subcommand
     """
 
-    if '--pdb' in sys.argv:
-        sys.argv.remove('--pdb')
+    if "--pdb" in sys.argv:
+        sys.argv.remove("--pdb")
         func = pm_on_crash
     else:
         func = log_on_crash
@@ -61,30 +62,32 @@ def main():
     if "-v" in sys.argv or "--verbose" in sys.argv:
 
         if "-v" in sys.argv:
-            sys.argv.remove('-v')
+            sys.argv.remove("-v")
         else:
-            sys.argv.remove('--verbose')
+            sys.argv.remove("--verbose")
 
         verbose = True
-        logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+        logging.basicConfig(level=logging.DEBUG, format="%(message)s")
         log.debug("Verbose mode activated")
     else:
         verbose = False
-        logging.basicConfig(level=logging.INFO, format='%(message)s')
+        logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     # Retrieve the workspace if defined both as a command argument or as a
     # environment variable. The command line argument takes precedence
-    if "-w" in sys.argv or '--workspace' in sys.argv:
-        idx = sys.argv.index('-w') if "-w" in sys.argv else sys.argv.index('--workspace')
+    if "-w" in sys.argv or "--workspace" in sys.argv:
+        idx = (
+            sys.argv.index("-w") if "-w" in sys.argv else sys.argv.index("--workspace")
+        )
         sys.argv.pop(idx)
         ws.name = sys.argv.pop(idx)
-    elif 'SPACE_WORKSPACE' in os.environ:
-        ws.name = os.environ['SPACE_WORKSPACE']
+    elif "SPACE_WORKSPACE" in os.environ:
+        ws.name = os.environ["SPACE_WORKSPACE"]
 
     log.debug("workspace '{}'".format(ws.name))
 
     # List of available subcommands
-    commands = {entry.name: entry for entry in iter_entry_points('space.commands')}
+    commands = {entry.name: entry for entry in iter_entry_points("space.commands")}
 
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
         # No or wrong subcommand
@@ -106,12 +109,16 @@ def main():
             print(addons)
 
         print("Options :")
-        print(" --pdb                   Launch the python debugger when an exception is raised")
+        print(
+            " --pdb                   Launch the python debugger when an exception is raised"
+        )
         print(" --version               Show the version of the space-command utility")
         print(" -v, --verbose           Show DEBUG level messages")
         print(" -w, --workspace <name>  Select the workspace to use")
         print()
-        print("To list, create and delete workspaces, use the companion command 'wspace'")
+        print(
+            "To list, create and delete workspaces, use the companion command 'wspace'"
+        )
         print()
         sys.exit(1)
 
@@ -126,7 +133,11 @@ def main():
         ws.load()
     except FileNotFoundError:
         log.error("It seems you are running 'space' for the first time")
-        log.error("To initialize the workspace '{}', please use the command 'wspace'".format(ws.name))
+        log.error(
+            "To initialize the workspace '{}', please use the command 'wspace'".format(
+                ws.name
+            )
+        )
         sys.exit(1)
 
     log.debug("=== starting command '{}' ===".format(command))
@@ -146,10 +157,14 @@ def main():
         # So we have to catch the DocoptExit in order to modify the return code
         # and override it with a decent value.
         print(e, file=sys.stderr)
-        log.debug("=== command '{}' failed with return code 2 ===".format(command, e.code))
+        log.debug(
+            "=== command '{}' failed with return code 2 ===".format(command, e.code)
+        )
         sys.exit(2)
     except SystemExit as e:
-        log.debug("=== command '{}' failed with return code {} ===".format(command, e.code))
+        log.debug(
+            "=== command '{}' failed with return code {} ===".format(command, e.code)
+        )
         raise
     else:
         log.debug("=== command '{}' exited with return code 0 ===".format(command))

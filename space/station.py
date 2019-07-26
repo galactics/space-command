@@ -1,4 +1,3 @@
-
 import logging
 from numpy import degrees, pi, radians
 
@@ -12,10 +11,9 @@ log = logging.getLogger(__name__)
 
 
 class StationDb:
-
     def __new__(cls):
 
-        if not hasattr(cls, '_instance'):
+        if not hasattr(cls, "_instance"):
             # Singleton
             cls._instance = super().__new__(cls)
 
@@ -26,24 +24,27 @@ class StationDb:
 
         self = cls()
 
-        if not hasattr(self, '_stations'):
+        if not hasattr(self, "_stations"):
 
             self._stations = {}
-            for abbr, charact in ws.config['stations'].items():
+            for abbr, charact in ws.config["stations"].items():
 
-                charact['parent_frame'] = get_frame(charact['parent_frame'])
-                full_name = charact.pop('name')
-                mask = charact.get('mask')
+                charact["parent_frame"] = get_frame(charact["parent_frame"])
+                full_name = charact.pop("name")
+                mask = charact.get("mask")
                 if mask:
                     # reverse direction of the mask to put it in counterclockwise
                     # to comply with the mathematical definition
-                    charact['mask'] = (2 * pi - radians(mask['azims'][::-1])), radians(mask['elevs'][::-1])
+                    charact["mask"] = (
+                        (2 * pi - radians(mask["azims"][::-1])),
+                        radians(mask["elevs"][::-1]),
+                    )
 
                 # Deletion of all unknown characteristics from the charact dict
                 # and conversion to object attributes (they may be used by addons)
                 extra_charact = {}
                 for key in list(charact.keys()):
-                    if key not in ('parent_frame', 'latlonalt', 'mask'):
+                    if key not in ("parent_frame", "latlonalt", "mask"):
                         extra_charact[key] = charact.pop(key)
 
                 self._stations[abbr] = create_station(abbr, **charact)
@@ -71,7 +72,7 @@ class StationDb:
     def save(cls, station):
         self = cls()
 
-        ws.config['stations'].update(station)
+        ws.config["stations"].update(station)
         ws.config.save()
 
         if hasattr(self, "_stations"):
@@ -79,22 +80,24 @@ class StationDb:
 
 
 def wshook(cmd, *args, **kwargs):
-    
-    if cmd in ("init", "full-init"):
-        name = 'TLS'
 
-        ws.config.setdefault('stations', {})
+    if cmd in ("init", "full-init"):
+        name = "TLS"
+
+        ws.config.setdefault("stations", {})
 
         try:
             StationDb.get(name)
         except UnknownFrameError:
-            StationDb.save({
-                name: {
-                    'latlonalt': [43.604482, 1.443962, 172.0],
-                    'name': 'Toulouse',
-                    'parent_frame': 'WGS84'
+            StationDb.save(
+                {
+                    name: {
+                        "latlonalt": [43.604482, 1.443962, 172.0],
+                        "name": "Toulouse",
+                        "parent_frame": "WGS84",
+                    }
                 }
-            })
+            )
             log.info("Station {} created".format(name))
         else:
             log.warning("Station {} already exists".format(name))
@@ -123,7 +126,7 @@ def space_station(*argv):
 
     station = StationDb()
 
-    if args['create']:
+    if args["create"]:
         print("Create a new station")
         abbr = input("Abbreviation : ")
         name = input("Name : ")
@@ -143,14 +146,20 @@ def space_station(*argv):
         altitude = float(input("Altitude : "))
 
         log.info("Creation of station '{}' ({})".format(name, abbr))
-        log.debug("{} {}, altitude : {} m".format(deg2dms(latitude, 'lat'), deg2dms(longitude, 'lon'), altitude))
-        StationDb.save({
-            abbr: {
-                "name": name,
-                "latlonalt": (latitude, longitude, altitude),
-                "parent_frame": "WGS84"
+        log.debug(
+            "{} {}, altitude : {} m".format(
+                deg2dms(latitude, "lat"), deg2dms(longitude, "lon"), altitude
+            )
+        )
+        StationDb.save(
+            {
+                abbr: {
+                    "name": name,
+                    "latlonalt": (latitude, longitude, altitude),
+                    "parent_frame": "WGS84",
+                }
             }
-        })
+        )
     else:
 
         stations = []
@@ -161,25 +170,29 @@ def space_station(*argv):
             lat, lon, alt = station.latlonalt
             lat, lon = degrees([lat, lon])
             print("name:     {}".format(station.full_name))
-            print("altitude: {} m\nposition: {}, {}".format(alt, deg2dms(lat, "lat"), deg2dms(lon, "lon")))
+            print(
+                "altitude: {} m\nposition: {}, {}".format(
+                    alt, deg2dms(lat, "lat"), deg2dms(lon, "lon")
+                )
+            )
             print()
 
             stations.append((station.name, lat, lon))
 
-        if args['--map']:
+        if args["--map"]:
             path = Path(__file__).parent / "static/earth.png"
             im = plt.imread(str(path))
             plt.figure(figsize=(15.2, 8.2))
             plt.imshow(im, extent=[-180, 180, -90, 90])
             plt.xlim([-180, 180])
             plt.ylim([-90, 90])
-            plt.grid(True, linestyle=':', alpha=0.4)
+            plt.grid(True, linestyle=":", alpha=0.4)
             plt.xticks(range(-180, 181, 30))
             plt.yticks(range(-90, 91, 30))
             plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.1)
 
             for name, lat, lon in stations:
-                plt.plot([lon], [lat], 'ko')
+                plt.plot([lon], [lat], "ko")
                 plt.text(lon + 1, lat + 1, name)
 
             plt.show()

@@ -7,7 +7,7 @@ from numpy import cos, sin, arccos, arcsin, pi, ones, linspace, copysign
 from beyond.constants import Earth
 
 
-__all__ = ['circle', 'docopt']
+__all__ = ["circle", "docopt"]
 
 
 def parse_date(txt, fmt="full"):
@@ -36,10 +36,7 @@ def parse_date(txt, fmt="full"):
 
     from .clock import Date
 
-    fmts = {
-        'full': "%Y-%m-%dT%H:%M:%S",
-        'date': "%Y-%m-%d"
-    }
+    fmts = {"full": "%Y-%m-%dT%H:%M:%S", "date": "%Y-%m-%d"}
 
     if txt == "now":
         date = Date.now()
@@ -83,16 +80,19 @@ def parse_timedelta(txt, negative=False):
 
     from .clock import timedelta
 
-    m = re.search(r'(?P<sign>-)?((?P<weeks>\d+)w)?((?P<days>[\d.]+)d)?((?P<hours>[\d.]+)h)?((?P<minutes>[\d.]+)m)?((?P<seconds>[\d.]+)s)?', txt)
+    m = re.search(
+        r"(?P<sign>-)?((?P<weeks>\d+)w)?((?P<days>[\d.]+)d)?((?P<hours>[\d.]+)h)?((?P<minutes>[\d.]+)m)?((?P<seconds>[\d.]+)s)?",
+        txt,
+    )
 
     sign = 1
-    if negative and m.group('sign') is not None:
+    if negative and m.group("sign") is not None:
         sign = -1
-    weeks   = float(m.group('weeks')) if m.group('weeks') is not None else 0
-    days    = float(m.group('days')) if m.group('days') is not None else 0
-    hours   = float(m.group('hours')) if m.group('hours') is not None else 0
-    minutes = float(m.group('minutes')) if m.group('minutes') is not None else 0
-    seconds = float(m.group('seconds')) if m.group('seconds') is not None else 0
+    weeks = float(m.group("weeks")) if m.group("weeks") is not None else 0
+    days = float(m.group("days")) if m.group("days") is not None else 0
+    hours = float(m.group("hours")) if m.group("hours") is not None else 0
+    minutes = float(m.group("minutes")) if m.group("minutes") is not None else 0
+    seconds = float(m.group("seconds")) if m.group("seconds") is not None else 0
 
     days += 7 * weeks
     seconds += minutes * 60 + hours * 3600
@@ -140,7 +140,9 @@ def circle(alt, lon, lat, mask=0):
         point_lat = arcsin(sin(lat) * cos(alpha) + cos(lat) * sin(alpha) * cos(theta))
 
         # Longitude
-        dlon = arccos(-(sin(point_lat) * sin(lat) - cos(alpha)) / (cos(point_lat) * cos(lat)))
+        dlon = arccos(
+            -(sin(point_lat) * sin(lat) - cos(alpha)) / (cos(point_lat) * cos(lat))
+        )
 
         if theta < pi:
             point_lon = lon - dlon
@@ -232,7 +234,7 @@ def dms2deg(dms):
     """
     d, m, s, sign = dms_split(dms)
 
-    return sign * (d + m / 60. + s / 3600.)
+    return sign * (d + m / 60.0 + s / 3600.0)
 
 
 def hms2deg(h, m, s):
@@ -246,4 +248,4 @@ def hms2deg(h, m, s):
         float
     """
 
-    return h * 360 / 24 + m / 60. + s / 3600.
+    return h * 360 / 24 + m / 60.0 + s / 3600.0

@@ -1,4 +1,3 @@
-
 import sys
 
 from beyond.errors import UnknownBodyError, UnknownFrameError
@@ -85,14 +84,14 @@ def space_planet(*args):
     """
 
     import requests
-    
+
     from logging import getLogger
 
     log = getLogger(__name__)
 
     args = docopt(space_planet.__doc__)
 
-    if args['fetch']:
+    if args["fetch"]:
 
         url = "https://naif.jpl.nasa.gov/pub/naif/generic_kernels/spk/planets/a_old_versions/"
 
@@ -103,7 +102,7 @@ def space_planet(*args):
 
         filelist = set(ws.config.get("beyond", "env", "jpl", fallback=[]))
 
-        for file in ['de403_2000-2020.bsp']:
+        for file in ["de403_2000-2020.bsp"]:
 
             if not (folder / file).exists():
 
@@ -126,12 +125,12 @@ def space_planet(*args):
         ws.config.set("beyond", "env", "jpl", list(filelist))
         ws.config.save()
 
-    elif args['<planet>']:
+    elif args["<planet>"]:
 
         try:
-            date = parse_date(args['--date'], fmt='date')
-            stop = parse_timedelta(args['--range'])
-            step = parse_timedelta(args['--step'])
+            date = parse_date(args["--date"], fmt="date")
+            stop = parse_timedelta(args["--range"])
+            step = parse_timedelta(args["--step"])
         except ValueError as e:
             print(e, file=sys.stderr)
             sys.exit(1)
@@ -148,7 +147,7 @@ def space_planet(*args):
         StationDb.list()
 
         try:
-            frame = get_frame(args['--frame'])
+            frame = get_frame(args["--frame"])
         except UnknownFrameError as e:
             print(e, file=sys.stderr)
             sys.exit(1)
@@ -156,9 +155,9 @@ def space_planet(*args):
         # Computation
         ephems = []
 
-        for body_name in args['<planet>']:
+        for body_name in args["<planet>"]:
             try:
-                if args['--analytical'] or jpl_error:
+                if args["--analytical"] or jpl_error:
                     body = solar.get_body(body_name).propagate(date)
                 else:
                     body = jpl.get_orbit(body_name, date)

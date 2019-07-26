@@ -1,8 +1,13 @@
 import sys
 import numpy as np
 from beyond.orbits.listeners import (
-    NodeListener, ApsideListener, LightListener, stations_listeners,
-    SignalEvent, MaxEvent, TerminatorListener
+    NodeListener,
+    ApsideListener,
+    LightListener,
+    stations_listeners,
+    SignalEvent,
+    MaxEvent,
+    TerminatorListener,
 )
 
 from .clock import Date, timedelta
@@ -33,10 +38,12 @@ def space_events(*argv):
     args = docopt(space_events.__doc__, argv=argv)
 
     try:
-        satlist = Sat.from_input(*args['<sat>'], text=sys.stdin.read() if args['-'] else "")
-        start = parse_date(args['--date'])
-        stop = parse_timedelta(args['--range'])
-        step = parse_timedelta(args['--step'])
+        satlist = Sat.from_input(
+            *args["<sat>"], text=sys.stdin.read() if args["-"] else ""
+        )
+        start = parse_date(args["--date"])
+        stop = parse_timedelta(args["--range"])
+        step = parse_timedelta(args["--step"])
     except ValueError as e:
         print(e, file=sys.stdout)
         sys.exit(1)
@@ -47,21 +54,23 @@ def space_events(*argv):
             print("=" * len(sat.name))
             listeners = []
 
-            if 'station' in args['--events'] or args['--events'] == 'all':
+            if "station" in args["--events"] or args["--events"] == "all":
                 for sta in StationDb.list().values():
                     listeners.extend(stations_listeners(sta))
 
-            if 'light' in args['--events'] or args['--events'] == 'all':
+            if "light" in args["--events"] or args["--events"] == "all":
                 listeners.append(LightListener())
                 listeners.append(LightListener("penumbra"))
-            if 'node' in args['--events'] or args['--events'] == 'all':
+            if "node" in args["--events"] or args["--events"] == "all":
                 listeners.append(NodeListener())
-            if 'apside' in args['--events'] or args['--events'] == 'all':
+            if "apside" in args["--events"] or args["--events"] == "all":
                 listeners.append(ApsideListener())
-            if 'terminator' in args['--events'] or args['--events'] == 'all':
+            if "terminator" in args["--events"] or args["--events"] == "all":
                 listeners.append(TerminatorListener())
 
-            for orb in sat.orb.iter(start=start, stop=stop, step=step, listeners=listeners):
+            for orb in sat.orb.iter(
+                start=start, stop=stop, step=step, listeners=listeners
+            ):
 
                 if orb.event is None:
                     continue
@@ -72,10 +81,11 @@ def space_events(*argv):
                 else:
                     other = ""
 
-                print("{:20} {:%Y-%m-%dT%H:%M:%S.%f} {}".format(
-                    orb.event if orb.event is not None else "",
-                    orb.date, other
-                ))
+                print(
+                    "{:20} {:%Y-%m-%dT%H:%M:%S.%f} {}".format(
+                        orb.event if orb.event is not None else "", orb.date, other
+                    )
+                )
 
             print()
     except KeyboardInterrupt:

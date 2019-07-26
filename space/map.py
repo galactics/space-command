@@ -17,7 +17,6 @@ from .clock import Date, timedelta
 
 
 class WindowEphem(Ephem):
-
     def __init__(self, orb, ref_orb):
         """
         Args:
@@ -42,44 +41,50 @@ class WindowEphem(Ephem):
             new = (date_i - mid) * self.step
 
             if date_i > mid:
-                orbs = list(self.orb.ephemeris(
-                    start=self.stop + self.step,
-                    stop=new,
-                    step=self.step,
-                    strict=False
-                ))
+                orbs = list(
+                    self.orb.ephemeris(
+                        start=self.stop + self.step,
+                        stop=new,
+                        step=self.step,
+                        strict=False,
+                    )
+                )
                 for x in orbs:
                     self._orbits.pop(0)
                     self._orbits.append(x)
             elif date_i < mid - 1:
-                orbs = list(self.orb.ephemeris(
-                    start=self.start - self.step,
-                    stop=new,
-                    step=-self.step,
-                    strict=False
-                ))
+                orbs = list(
+                    self.orb.ephemeris(
+                        start=self.start - self.step,
+                        stop=new,
+                        step=-self.step,
+                        strict=False,
+                    )
+                )
                 for x in orbs:
                     self._orbits.pop()
                     self._orbits.insert(0, x)
         else:
-            self._orbits = list(self.orb.ephemeris(
-                start=date - self.span / 2,
-                stop=self.span,
-                step=self.step,
-                strict=False
-            ))
+            self._orbits = list(
+                self.orb.ephemeris(
+                    start=date - self.span / 2,
+                    stop=self.span,
+                    step=self.step,
+                    strict=False,
+                )
+            )
 
 
 class SatAnim:
 
-    COLORS = 'r', 'g', 'b', 'c', 'm', 'y', 'k', 'w'
+    COLORS = "r", "g", "b", "c", "m", "y", "k", "w"
 
     def __init__(self, sats):
         self.sats = sats
         self.multiplier = None
         self.interval = 200
 
-        mpl.rcParams['toolbar'] = 'None'
+        mpl.rcParams["toolbar"] = "None"
 
         path = Path(__file__).parent / "static/earth.png"
         im = plt.imread(str(path))
@@ -88,42 +93,52 @@ class SatAnim:
         plt.imshow(im, extent=[-180, 180, -90, 90])
         plt.xlim([-180, 180])
         plt.ylim([-90, 90])
-        plt.grid(True, linestyle=':', alpha=0.4)
+        plt.grid(True, linestyle=":", alpha=0.4)
         plt.xticks(range(-180, 181, 30))
         plt.yticks(range(-90, 91, 30))
         plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.1)
 
-        self.sun, = plt.plot([], [], 'yo', markersize=10, markeredgewidth=0, animated=True, zorder=2)
-        self.moon, = plt.plot([], [], 'wo', markersize=10, markeredgewidth=0, animated=True, zorder=2)
-        self.night = plt.fill_between([], [], color='k', alpha=0.3, lw=0, animated=True, zorder=1)
+        self.sun, = plt.plot(
+            [], [], "yo", markersize=10, markeredgewidth=0, animated=True, zorder=2
+        )
+        self.moon, = plt.plot(
+            [], [], "wo", markersize=10, markeredgewidth=0, animated=True, zorder=2
+        )
+        self.night = plt.fill_between(
+            [], [], color="k", alpha=0.3, lw=0, animated=True, zorder=1
+        )
         self.date_text = plt.text(-175, 80, "")
 
         for station in StationDb.list().values():
             lat, lon = np.degrees(station.latlonalt[:-1])
-            plt.plot([lon], [lat], 'k+')
+            plt.plot([lon], [lat], "k+")
             plt.text(lon + 1, lat + 1, station.abbr)
 
         # For each satellite, initialisation of graphical representation
         for i, sat in enumerate(self.sats):
             color = self.COLORS[i % len(self.COLORS)]
 
-            sat.point, = plt.plot([], [], 'o', ms=5, color=color, animated=True, zorder=10)
-            sat.circle, = plt.plot([], [], '.', ms=2, color=color, animated=True, zorder=10)
+            sat.point, = plt.plot(
+                [], [], "o", ms=5, color=color, animated=True, zorder=10
+            )
+            sat.circle, = plt.plot(
+                [], [], ".", ms=2, color=color, animated=True, zorder=10
+            )
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)
             sat.win_ephem = None
 
-        self.breverse = Button(plt.axes([0.02, 0.02, 0.04, 0.05]), 'Reverse')
+        self.breverse = Button(plt.axes([0.02, 0.02, 0.04, 0.05]), "Reverse")
         self.breverse.on_clicked(self.reverse)
-        self.bslow = Button(plt.axes([0.07, 0.02, 0.04, 0.05]), 'Slower')
+        self.bslow = Button(plt.axes([0.07, 0.02, 0.04, 0.05]), "Slower")
         self.bslow.on_clicked(self.slower)
-        self.breal = Button(plt.axes([0.12, 0.02, 0.08, 0.05]), 'Real Time')
+        self.breal = Button(plt.axes([0.12, 0.02, 0.08, 0.05]), "Real Time")
         self.breal.on_clicked(self.real)
-        self.bplay = Button(plt.axes([0.21, 0.02, 0.04, 0.05]), 'x1')
+        self.bplay = Button(plt.axes([0.21, 0.02, 0.04, 0.05]), "x1")
         self.bplay.on_clicked(self.reset)
-        self.bfast = Button(plt.axes([0.26, 0.02, 0.04, 0.05]), 'Faster')
+        self.bfast = Button(plt.axes([0.26, 0.02, 0.04, 0.05]), "Faster")
         self.bfast.on_clicked(self.faster)
 
-        self.ground = Button(plt.axes([0.9, 0.02, 0.08, 0.05]), 'Ground-Track')
+        self.ground = Button(plt.axes([0.9, 0.02, 0.08, 0.05]), "Ground-Track")
         self.ground.on_clicked(self.toggle_groundtrack)
 
         self.ani = FuncAnimation(self.fig, self, interval=self.interval, blit=True)
@@ -149,10 +164,7 @@ class SatAnim:
             sign = "" if self.multiplier > 0 else "-"
             text = "{}x{:0.0f} {}".format(sign, value, adj)
 
-        self.date_text.set_text("{:%Y-%m-%d %H:%M:%S}\n{}".format(
-            date,
-            text
-        ))
+        self.date_text.set_text("{:%Y-%m-%d %H:%M:%S}\n{}".format(date, text))
         plot_list.append(self.date_text)
 
         for i, sat in enumerate(self.sats):
@@ -190,7 +202,7 @@ class SatAnim:
                 segments = []
                 prev_lon, prev_lat = None, None
                 for win_orb in sat.win_ephem:
-                    lon, lat = self.lonlat(win_orb.copy(form='spherical', frame="ITRF"))
+                    lon, lat = self.lonlat(win_orb.copy(form="spherical", frame="ITRF"))
 
                     # Creation of multiple segments in order to not have a ground track
                     # doing impossible paths
@@ -198,13 +210,17 @@ class SatAnim:
                         lons = []
                         lats = []
                         segments.append((lons, lats))
-                    elif orb.infos.kep.i < np.pi /2 and (np.sign(prev_lon) == 1 and np.sign(lon) == -1):
+                    elif orb.infos.kep.i < np.pi / 2 and (
+                        np.sign(prev_lon) == 1 and np.sign(lon) == -1
+                    ):
                         lons.append(lon + 360)
                         lats.append(lat)
                         lons = [prev_lon - 360]
                         lats = [prev_lat]
                         segments.append((lons, lats))
-                    elif orb.infos.kep.i > np.pi/2 and (np.sign(prev_lon) == -1 and np.sign(lon) == 1):
+                    elif orb.infos.kep.i > np.pi / 2 and (
+                        np.sign(prev_lon) == -1 and np.sign(lon) == 1
+                    ):
                         lons.append(lon - 360)
                         lats.append(lat)
                         lons = [prev_lon + 360]
@@ -224,11 +240,15 @@ class SatAnim:
 
                 sat.gt = []
                 for lons, lats in segments:
-                    sat.gt.append(self.ax.plot(lons, lats, color=color, alpha=0.5, lw=2, animated=True)[0])
+                    sat.gt.append(
+                        self.ax.plot(
+                            lons, lats, color=color, alpha=0.5, lw=2, animated=True
+                        )[0]
+                    )
                     plot_list.append(sat.gt[-1])
 
         # Updating the sun
-        sun = get_body('Sun').propagate(date).copy(form="spherical", frame="ITRF")
+        sun = get_body("Sun").propagate(date).copy(form="spherical", frame="ITRF")
         lon, lat = self.lonlat(sun)
         self.sun.set_data([lon], [lat])
         plot_list.append(self.sun)
@@ -239,17 +259,13 @@ class SatAnim:
         season = -95 if lat > 0 else 95
         lonlat = lonlat[lonlat[:, 0].argsort()]  # Sorting array by ascending longitude
 
-        lonlat = np.concatenate([
+        lonlat = np.concatenate(
             [
-                [-185, season],
-                [-185, lonlat[0, 1]]
-            ],
-            lonlat,
-            [
-                [185, lonlat[-1, 1]],
-                [185, season],
+                [[-185, season], [-185, lonlat[0, 1]]],
+                lonlat,
+                [[185, lonlat[-1, 1]], [185, season]],
             ]
-        ])
+        )
 
         verts = [lonlat]
 
@@ -276,9 +292,7 @@ class SatAnim:
                 min_lon = min(pos_lonlat[:, 0])
                 max_lon = max(neg_lonlat[:, 0])
 
-                lonlat = np.concatenate([
-                    neg_lonlat, pos_lonlat
-                ])
+                lonlat = np.concatenate([neg_lonlat, pos_lonlat])
 
                 if abs(min_lon - max_lon) > 30:
                     # This deals with the case when the umbra is spread between
@@ -290,20 +304,18 @@ class SatAnim:
                     # east west and also north or south
 
                     # sort by ascending longitude
-                    lonlat = lonlat[lonlat[:,0].argsort()]
+                    lonlat = lonlat[lonlat[:, 0].argsort()]
 
                     west_lat = lonlat[0, 1]
                     east_lat = lonlat[-1, 1]
 
-                    v = np.concatenate([
+                    v = np.concatenate(
                         [
-                            [-360, season], [-360, west_lat]
-                        ],
-                        lonlat,
-                        [
-                            [360, east_lat], [360, season]
-                        ],
-                    ])
+                            [[-360, season], [-360, west_lat]],
+                            lonlat,
+                            [[360, east_lat], [360, season]],
+                        ]
+                    )
 
                     verts.append(v)
 
@@ -311,7 +323,7 @@ class SatAnim:
         plot_list.insert(0, self.night)
 
         # Updating the moon
-        moon = get_body('Moon').propagate(date).copy(frame='ITRF', form="spherical")
+        moon = get_body("Moon").propagate(date).copy(frame="ITRF", form="spherical")
         lon, lat = self.lonlat(moon)
         self.moon.set_data([lon], [lat])
         plot_list.append(self.moon)
@@ -347,7 +359,7 @@ class SatAnim:
 
         steps = [2, 2.5, 2]
 
-        if not hasattr(self, '_step'):
+        if not hasattr(self, "_step"):
             self._step = 0
         else:
             self._step += 1
@@ -360,13 +372,13 @@ class SatAnim:
     def slower(self, *args, **kwargs):
         steps = [2, 2.5, 2]
 
-        if not hasattr(self, '_step'):
+        if not hasattr(self, "_step"):
             self._step = 0
         else:
             self._step += 1
 
         if self.multiplier is None:
-            self.multiplier = 1/2
+            self.multiplier = 1 / 2
         else:
             self.multiplier /= steps[self._step % len(steps)]
 
@@ -403,7 +415,9 @@ def space_map(*argv):
     from .sat import Sat
 
     args = docopt(space_map.__doc__)
-    sats = list(Sat.from_input(*args['<satellite>'], text=sys.stdin.read() if args['-'] else ""))
+    sats = list(
+        Sat.from_input(*args["<satellite>"], text=sys.stdin.read() if args["-"] else "")
+    )
 
     sat_anim = SatAnim(sats)
 

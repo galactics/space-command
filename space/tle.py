@@ -7,8 +7,13 @@ import requests
 import logging
 from datetime import datetime
 from peewee import (
-    Model, IntegerField, CharField, TextField, DateTimeField, SqliteDatabase,
-    fn
+    Model,
+    IntegerField,
+    CharField,
+    TextField,
+    DateTimeField,
+    SqliteDatabase,
+    fn,
 )
 
 from beyond.io.tle import Tle
@@ -19,7 +24,6 @@ log = logging.getLogger(__name__)
 
 
 class TleNotFound(Exception):
-
     def __init__(self, selector, mode=None):
         self.selector = selector
         self.mode = mode
@@ -41,22 +45,55 @@ class TleDb:
 
     CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
     CELESTRAK_PAGES = [
-        "stations.txt", "tle-new.txt", "visual.txt", "weather.txt", "noaa.txt",
-        "goes.txt", "resource.txt", "sarsat.txt", "dmc.txt", "tdrss.txt",
-        "argos.txt", "geo.txt", "intelsat.txt", "gorizont.txt", "raduga.txt",
-        "molniya.txt", "iridium.txt", "orbcomm.txt", "globalstar.txt",
-        "amateur.txt", "x-comm.txt", "other-comm.txt", "gps-ops.txt",
-        "glo-ops.txt", "galileo.txt", "beidou.txt", "sbas.txt", "nnss.txt",
-        "musson.txt", "science.txt", "geodetic.txt", "engineering.txt",
-        "education.txt", "military.txt", "radar.txt", "cubesat.txt",
-        "other.txt", "active.txt", "analyst.txt", "planet.txt", 'spire.txt',
-        "ses.txt", "iridium-NEXT.txt",
+        "stations.txt",
+        "tle-new.txt",
+        "visual.txt",
+        "weather.txt",
+        "noaa.txt",
+        "goes.txt",
+        "resource.txt",
+        "sarsat.txt",
+        "dmc.txt",
+        "tdrss.txt",
+        "argos.txt",
+        "geo.txt",
+        "intelsat.txt",
+        "gorizont.txt",
+        "raduga.txt",
+        "molniya.txt",
+        "iridium.txt",
+        "orbcomm.txt",
+        "globalstar.txt",
+        "amateur.txt",
+        "x-comm.txt",
+        "other-comm.txt",
+        "gps-ops.txt",
+        "glo-ops.txt",
+        "galileo.txt",
+        "beidou.txt",
+        "sbas.txt",
+        "nnss.txt",
+        "musson.txt",
+        "science.txt",
+        "geodetic.txt",
+        "engineering.txt",
+        "education.txt",
+        "military.txt",
+        "radar.txt",
+        "cubesat.txt",
+        "other.txt",
+        "active.txt",
+        "analyst.txt",
+        "planet.txt",
+        "spire.txt",
+        "ses.txt",
+        "iridium-NEXT.txt",
     ]
 
     db = SqliteDatabase(None)
 
     def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, '_instance'):
+        if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
@@ -79,9 +116,9 @@ class TleDb:
 
     def fetch(self, src=None, **kwargs):
 
-        if src == 'spacetrack':
+        if src == "spacetrack":
             self.fetch_spacetrack(**kwargs)
-        elif src == 'celestrak':
+        elif src == "celestrak":
             loop = asyncio.get_event_loop()
             loop.run_until_complete(self.fetch_celestrak(**kwargs))
         else:
@@ -90,21 +127,18 @@ class TleDb:
     def fetch_spacetrack(self, **kwargs):
 
         try:
-            auth = ws.config['spacetrack']
+            auth = ws.config["spacetrack"]
         except KeyError:
             raise ValueError("No login information available for spacetrack")
 
         _conv = {
-            'norad_id' : "NORAD_CAT_ID",
-            'cospar_id': "INTLDES",
-            'name': "OBJECT_NAME"
+            "norad_id": "NORAD_CAT_ID",
+            "cospar_id": "INTLDES",
+            "name": "OBJECT_NAME",
         }
 
         key = next(iter(kwargs.keys()))
-        url = self.SPACETRACK_URL.format(
-            mode=_conv[key],
-            selector=kwargs[key]
-        )
+        url = self.SPACETRACK_URL.format(mode=_conv[key], selector=kwargs[key])
 
         log.debug("Authentication to Space-Track website")
         init = requests.post(self.SPACETRACK_URL_AUTH, auth)
@@ -116,7 +150,7 @@ class TleDb:
             log.exception(e)
             raise
 
-        if init.text != "\"\"":
+        if init.text != '""':
             log.error("Authentication failed")
             log.debug("Response from authentication page '{}'".format(init.text))
             return
@@ -203,7 +237,12 @@ class TleDb:
         """
 
         try:
-            return self.model.select().filter(**kwargs).order_by(self.model.epoch.desc()).get()
+            return (
+                self.model.select()
+                .filter(**kwargs)
+                .order_by(self.model.epoch.desc())
+                .get()
+            )
         except TleModel.DoesNotExist as e:
             mode, selector = kwargs.popitem()
             raise TleNotFound(selector, mode=mode) from e
@@ -214,7 +253,11 @@ class TleDb:
         self = cls()
 
         if limit == "after":
-            r = self.model.select().where(self.model.epoch >= date).order_by(self.model.epoch.asc())
+            r = (
+                self.model.select()
+                .where(self.model.epoch >= date)
+                .order_by(self.model.epoch.asc())
+            )
         else:
             r = self.model.select().where(self.model.epoch <= date)
 
@@ -272,19 +315,19 @@ class TleDb:
                     # found, there is no need to update it
                     entity = self.model.get(
                         self.model.norad_id == tle.norad_id,
-                        self.model.epoch == tle.epoch.datetime
+                        self.model.epoch == tle.epoch.datetime,
                     )
                     continue
                 except TleModel.DoesNotExist:
                     # This TLE is not registered yet, lets go !
                     entity = {
-                        'norad_id': int(tle.norad_id),
-                        'cospar_id': tle.cospar_id,
-                        'name': tle.name,
-                        'data': tle.text,
-                        'epoch': tle.epoch.datetime,
-                        'src': src,
-                        'insert_date': datetime.now(),
+                        "norad_id": int(tle.norad_id),
+                        "cospar_id": tle.cospar_id,
+                        "name": tle.name,
+                        "data": tle.text,
+                        "epoch": tle.epoch.datetime,
+                        "src": src,
+                        "insert_date": datetime.now(),
                     }
                     entities.append(entity)
 
@@ -326,7 +369,9 @@ def print_stats():
     first = db.model.select(fn.MIN(TleModel.insert_date)).scalar()
     last = db.model.select(fn.MAX(TleModel.insert_date)).scalar()
 
-    print("Objects       {}".format(db.model.select().group_by(TleModel.norad_id).count()))
+    print(
+        "Objects       {}".format(db.model.select().group_by(TleModel.norad_id).count())
+    )
     print("TLE           {}".format(db.model.select().count()))
     print("First fetch   {}".format(first))
     print("Last fetch    {}".format(last))
@@ -346,11 +391,7 @@ class TleModel(Model):
         database = TleDb.db
 
 
-TleModel.add_index(
-    TleModel.norad_id.desc(),
-    TleModel.epoch.desc(),
-    unique=True
-)
+TleModel.add_index(TleModel.norad_id.desc(), TleModel.epoch.desc(), unique=True)
 
 
 def wshook(cmd, *args, **kwargs):
@@ -359,7 +400,7 @@ def wshook(cmd, *args, **kwargs):
         try:
             TleDb.get(norad_id=25544)
         except TleNotFound:
-            TleDb().fetch(src='celestrak')
+            TleDb().fetch(src="celestrak")
             log.info("TLE database initialized")
         else:
             log.info("TLE database already exists")
@@ -429,22 +470,22 @@ def space_tle(*argv):
 
     db = TleDb()
 
-    if args['fetch'] or args['fetch-st']:
+    if args["fetch"] or args["fetch-st"]:
         kwargs = {}
-        src = "celestrak" if args['fetch'] else "spacetrack"
+        src = "celestrak" if args["fetch"] else "spacetrack"
 
-        if src == 'celestrak' and args['<file>']:
-            kwargs['files'] = args['<file>']
+        if src == "celestrak" and args["<file>"]:
+            kwargs["files"] = args["<file>"]
         elif src == "spacetrack":
             try:
-                sat = Sat.from_input(*args['<selector>'])
+                sat = Sat.from_input(*args["<selector>"])
             except ValueError:
-                desc = Request.from_text(*args['<selector>'])
+                desc = Request.from_text(*args["<selector>"])
                 kwargs[desc.selector] = desc.value
             else:
-                kwargs['norad_id'] = sat.norad_id
+                kwargs["norad_id"] = sat.norad_id
 
-        kwargs['src'] = src
+        kwargs["src"] = src
 
         log.info("Retrieving TLEs from {}".format(src))
 
@@ -453,15 +494,15 @@ def space_tle(*argv):
         except ValueError as e:
             log.error(e)
         finally:
-            if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
+            if ws.config.get("satellites", "auto-sync-tle", fallback=True):
                 # Update the Satellite DB
-                sync('tle')
+                sync("tle")
 
-    elif args['insert']:
+    elif args["insert"]:
         # Process the file list provided by the command line
-        if args['<file>']:
+        if args["<file>"]:
             files = []
-            for f in args['<file>']:
+            for f in args["<file>"]:
                 files.extend(glob(f))
 
             # Insert each file into the database
@@ -471,7 +512,7 @@ def space_tle(*argv):
                 except Exception as e:
                     log.error(e)
 
-        elif args['-'] and not sys.stdin.isatty():
+        elif args["-"] and not sys.stdin.isatty():
             try:
                 # Insert the content of stdin into the database
                 db.insert(sys.stdin.read(), "stdin")
@@ -481,12 +522,12 @@ def space_tle(*argv):
             log.error("No TLE provided")
             sys.exit(1)
 
-        if ws.config.get('satellites', 'auto-sync-tle', fallback=True):
+        if ws.config.get("satellites", "auto-sync-tle", fallback=True):
             # Update the Satellite DB
             sync()
 
-    elif args['find']:
-        txt = " ".join(args['<text>'])
+    elif args["find"]:
+        txt = " ".join(args["<text>"])
         try:
             result = db.find(txt)
         except TleNotFound as e:
@@ -497,22 +538,22 @@ def space_tle(*argv):
             print("{0.name}\n{0}\n".format(tle))
 
         log.info("==> {} entries found for '{}'".format(len(result), txt))
-    elif args['dump']:
-        for tle in db.dump(all=args['--all']):
+    elif args["dump"]:
+        for tle in db.dump(all=args["--all"]):
             print("{0.name}\n{0}\n".format(tle))
-    elif args['stats']:
+    elif args["stats"]:
         print_stats()
     else:
         try:
-            sats = list(Sat.from_selector(*args['<selector>']))
+            sats = list(Sat.from_selector(*args["<selector>"]))
         except ValueError as e:
             log.error(str(e))
             sys.exit(1)
 
         for sat in sats:
             try:
-                if args['history']:
-                    number = int(args['--last']) if args['--last'] is not None else None
+                if args["history"]:
+                    number = int(args["--last"]) if args["--last"] is not None else None
                     tles = db.history(number=number, cospar_id=sat.cospar_id)
 
                     for tle in tles:

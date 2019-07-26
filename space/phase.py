@@ -57,23 +57,25 @@ def draw_phase(date, phase, body="Moon", filepath=False):
         # im = plt.imread(str(path / "static/moon.png"))
         circle = plt.Circle((0, 0), 138, color="orange")
         ax.add_artist(circle)
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
 
-    plt.fill_between(x, y, color='k', lw=0, alpha=0.8, zorder=100)
+    plt.fill_between(x, y, color="k", lw=0, alpha=0.8, zorder=100)
 
     plt.xlim([-150, 150])
     plt.ylim([-150, 150])
-    plt.axis('off')
+    plt.axis("off")
 
     x_text = -140
 
-    date_txt = "{} - {:%d/%m %H:%M:%S} - {:.1f}%".format(body, date, illumination(phase) * 100)
+    date_txt = "{} - {:%d/%m %H:%M:%S} - {:.1f}%".format(
+        body, date, illumination(phase) * 100
+    )
     plt.text(x_text, 140, date_txt, color="white")
 
     plt.tight_layout()
 
     if filepath:
-        plt.savefig(filepath, bbox_inches='tight')
+        plt.savefig(filepath, bbox_inches="tight")
         log.info("file saved at {}".format(Path(filepath).absolute()))
     else:
         plt.show()
@@ -102,14 +104,14 @@ def space_phase(*argv):
     args = docopt(space_phase.__doc__)
 
     try:
-        date = parse_date(args['<date>'])
+        date = parse_date(args["<date>"])
     except ValueError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
 
     StationDb.list()
 
-    body = args['<body>']
+    body = args["<body>"]
 
     if body == "Moon":
         center = "EME2000"
@@ -125,8 +127,12 @@ def space_phase(*argv):
         src = "analytical"
     else:
         src = "JPL"
-        if args['--analytical']:
-            log.warning("No analytical model available for '{}'. Switching to JPL source".format(body))
+        if args["--analytical"]:
+            log.warning(
+                "No analytical model available for '{}'. Switching to JPL source".format(
+                    body
+                )
+            )
         jpl.create_frames()
         first = jpl.get_orbit(body, date)
         second = jpl.get_orbit(second, first.date)
@@ -142,5 +148,5 @@ def space_phase(*argv):
     log.debug("Computing {} phase using source '{}'".format(body, src))
     log.info("{} at {:%Y-%m-%dT%H:%M:%S} : {:0.2f}%".format(body, date, illumin * 100))
 
-    if args['--graph'] or args['--file']:
-        draw_phase(date, phase, body=args['<body>'], filepath=args['--file'])
+    if args["--graph"] or args["--file"]:
+        draw_phase(date, phase, body=args["<body>"], filepath=args["--file"])

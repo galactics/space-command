@@ -76,21 +76,21 @@ def space_clock(*argv):
 
     args = docopt(space_clock.__doc__, options_first=True)
 
-    if args['sync']:
+    if args["sync"]:
         sync()
         print(file=sys.stderr)
-    elif args['set-date']:
-        if args['<ref>'] is None:
+    elif args["set-date"]:
+        if args["<ref>"] is None:
             ref = LegacyDate.now()
         else:
-            ref = LegacyDate.strptime(args['<ref>'], "%Y-%m-%dT%H:%M:%S.%f")
-        date = LegacyDate.strptime(args['<date>'], "%Y-%m-%dT%H:%M:%S.%f")
+            ref = LegacyDate.strptime(args["<ref>"], "%Y-%m-%dT%H:%M:%S.%f")
+        date = LegacyDate.strptime(args["<date>"], "%Y-%m-%dT%H:%M:%S.%f")
 
         set_date(date, ref)
 
         print(file=sys.stderr)
-    elif args['set-offset']:
-        offset = parse_timedelta(args['<offset>'], negative=True)
+    elif args["set-offset"]:
+        offset = parse_timedelta(args["<offset>"], negative=True)
         set_offset(offset)
         print(file=sys.stderr)
 

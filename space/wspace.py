@@ -20,6 +20,7 @@ def pm_on_crash(type, value, tb):
     """
     import pdb
     import traceback
+
     traceback.print_exception(type, value, tb)
     pdb.pm()
 
@@ -55,13 +56,15 @@ class Workspace:
     """Workspace handling class
     """
 
-    WORKSPACES = Path(os.environ.get('SPACE_WORKSPACES_FOLDER', Path.home() / '.space/'))
-    HOOKS = ('init', 'status', 'full-init')
-    DEFAULT = 'main'
+    WORKSPACES = Path(
+        os.environ.get("SPACE_WORKSPACES_FOLDER", Path.home() / ".space/")
+    )
+    HOOKS = ("init", "status", "full-init")
+    DEFAULT = "main"
 
     def __new__(cls, *args, **kwargs):
         # Singleton
-        if not hasattr(cls, '_instance'):
+        if not hasattr(cls, "_instance"):
             cls._instance = super().__new__(cls, *args, **kwargs)
         return cls._instance
 
@@ -80,7 +83,7 @@ class Workspace:
         """
         for _ws in cls.WORKSPACES.iterdir():
             if _ws.is_dir():
-                if _ws.name == '_backup':
+                if _ws.name == "_backup":
                     continue
                 yield _ws
 
@@ -126,9 +129,9 @@ class Workspace:
         self._db_init()
 
         if full:
-            self._trigger('full-init')
+            self._trigger("full-init")
         else:
-            self._trigger('init')
+            self._trigger("init")
 
         log.debug("{} workspace initialized".format(self.name))
 
@@ -137,14 +140,14 @@ class Workspace:
         log.info("folder {}".format(self.folder))
         log.info("db     {}".format(self.db.database))
         log.info("config {}".format(self.config.filepath.name))
-        self._trigger('status')
+        self._trigger("status")
 
     def _trigger(self, cmd):
         if cmd not in self.HOOKS:
             raise ValueError("Unknown workspace command '{}'".format(cmd))
 
         # Each command is responsible of its own initialization, logging and error handling
-        for entry in sorted(iter_entry_points('space.wshook'), key=lambda x:x.name):
+        for entry in sorted(iter_entry_points("space.wshook"), key=lambda x: x.name):
             entry.load()(cmd)
 
     def backup(self, filepath=None):
@@ -166,7 +169,7 @@ class Workspace:
                 return tarinfo
 
         log.info("Creating backup for workspace '{}'".format(self.name))
-        with tarfile.open(filepath, 'w:gz') as tar:
+        with tarfile.open(filepath, "w:gz") as tar:
             tar.add(self.folder, arcname=self.name, filter=_filter)
 
         log.info("Backup created at {}".format(filepath))
@@ -204,24 +207,28 @@ def wspace(*argv):
         $ space tle fetch -w test
     """
 
-    logging.basicConfig(level=logging.INFO, format='%(message)s')
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    if '--pdb' in sys.argv:
-        sys.argv.remove('--pdb')
+    if "--pdb" in sys.argv:
+        sys.argv.remove("--pdb")
         sys.excepthook = pm_on_crash
 
     args = docopt(wspace.__doc__, argv=sys.argv[1:])
 
-    if args['delete']:
+    if args["delete"]:
         # Deletion of a workspace
         ws.name = args["<name>"]
         if not ws.exists():
-            print("The workspace '{}' does not exist".format(args['<name>']))
+            print("The workspace '{}' does not exist".format(args["<name>"]))
         else:
-            print("If you are sure to delete the workspace '{}', please enter it's name".format(args['<name>']))
+            print(
+                "If you are sure to delete the workspace '{}', please enter it's name".format(
+                    args["<name>"]
+                )
+            )
 
             answer = input("> ")
-            if answer == args['<name>']:
+            if answer == args["<name>"]:
                 ws.delete()
                 print("{} deleted".format(ws.name))
             else:
@@ -230,14 +237,14 @@ def wspace(*argv):
         # The following commands need the `config.workspace` variable set
         # in order to work properly
 
-        if args['<name>']:
-            name = args['<name>']
-        elif 'SPACE_WORKSPACE' in os.environ:
-            name = os.environ['SPACE_WORKSPACE']
+        if args["<name>"]:
+            name = args["<name>"]
+        elif "SPACE_WORKSPACE" in os.environ:
+            name = os.environ["SPACE_WORKSPACE"]
         else:
             name = Workspace.DEFAULT
 
-        if args['list']:
+        if args["list"]:
             for _ws in Workspace.list():
                 if name == _ws.name:
                     mark = "*"
@@ -252,11 +259,11 @@ def wspace(*argv):
         else:
             ws.name = name
 
-            if args['init']:
-                ws.init(args['--full'])
+            if args["init"]:
+                ws.init(args["--full"])
             else:
                 ws.load()
-                if args['backup']:
+                if args["backup"]:
                     ws.backup()
                 else:
                     ws.status()

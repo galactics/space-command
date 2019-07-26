@@ -17,7 +17,7 @@ class SpaceFilter(logging.Filter):
     """
 
     def filter(self, record):
-        pkg, sep, rest = record.name.partition('.')
+        pkg, sep, rest = record.name.partition(".")
         return pkg in ("space", "beyond")
 
 
@@ -44,13 +44,7 @@ class SpaceConfig(BeyondConfig):
         if self.filepath.exists():
             raise FileExistsError(self.filepath)
 
-        self.update({
-            'beyond': {
-                'eop': {
-                    'missing_policy': "pass",
-                }
-            },
-        })
+        self.update({"beyond": {"eop": {"missing_policy": "pass"}}})
         self.save()
 
     def load(self):
@@ -60,27 +54,23 @@ class SpaceConfig(BeyondConfig):
         data = yaml.safe_load(self.filepath.open())
         self.update(data)
 
-        beyond_config.update(self['beyond'])
+        beyond_config.update(self["beyond"])
 
-        if 'logging' in self.keys():
-            logging_dict = self['logging']
+        if "logging" in self.keys():
+            logging_dict = self["logging"]
         else:
             logging_dict = {
                 "disable_existing_loggers": False,
-                "filters": {
-                    "space_filter": {
-                        "()": SpaceFilter
-                    },
-                },
-                "formatters":{
+                "filters": {"space_filter": {"()": SpaceFilter}},
+                "formatters": {
                     "dated": {
-                        "format": '%(asctime)s.%(msecs)03d :: %(name)s :: %(levelname)s :: %(message)s',
+                        "format": "%(asctime)s.%(msecs)03d :: %(name)s :: %(levelname)s :: %(message)s",
                         "datefmt": "%Y-%m-%dT%H:%M:%S",
                     },
-                    "simple": {"format": '%(message)s'}
+                    "simple": {"format": "%(message)s"},
                 },
                 "handlers": {
-                    "console":{
+                    "console": {
                         "class": "logging.StreamHandler",
                         "formatter": "simple",
                         "level": "INFO" if not self.verbose else "DEBUG",
@@ -98,7 +88,7 @@ class SpaceConfig(BeyondConfig):
                     },
                 },
                 "loggers": {
-                    "space_logger":{
+                    "space_logger": {
                         "handlers": ["console", "debug_file_handler"],
                         "level": "DEBUG",
                         "propagate": False,
@@ -108,13 +98,13 @@ class SpaceConfig(BeyondConfig):
                     "handlers": ["console", "debug_file_handler"],
                     "level": "DEBUG",
                 },
-                "version": 1
+                "version": 1,
             }
 
         logging.config.dictConfig(logging_dict)
 
     def save(self):
-        yaml.safe_dump(dict(self), self.filepath.open('w'), indent=4)
+        yaml.safe_dump(dict(self), self.filepath.open("w"), indent=4)
 
 
 def get_dict(d):
@@ -143,19 +133,23 @@ class Lock:
 
     @property
     def backup(self):
-        return self.file.with_suffix(self.file.suffix + '.backup')
+        return self.file.with_suffix(self.file.suffix + ".backup")
 
     def unlock(self):
 
         until = datetime.now() + self.duration
 
-        with self.lock_file.open('w') as fp:
+        with self.lock_file.open("w") as fp:
             fp.write(until.strftime(self.fmt))
 
         shutil.copy2(str(self.file), str(self.backup))
 
         log.info("Unlocking {} until {:{}}".format(self.file, until, self.fmt))
-        log.debug("A backup of the current config file has been created at {}".format(self.backup))
+        log.debug(
+            "A backup of the current config file has been created at {}".format(
+                self.backup
+            )
+        )
 
     def lock(self):
         if self.lock_file.exists():
@@ -183,7 +177,9 @@ def wshook(cmd):
             ws.config.init()
         except FileExistsError as e:
             ws.config.load()
-            log.warning("config file already exists at '{}'".format(Path(str(e)).absolute()))
+            log.warning(
+                "config file already exists at '{}'".format(Path(str(e)).absolute())
+            )
         else:
             ws.config.load()  # Load the newly created config file
             log.info("config creation at {}".format(ws.config.filepath.absolute()))
@@ -226,31 +222,34 @@ def space_config(*argv):
 
     lock = Lock(ws.config.filepath)
 
-    if args['edit']:
+    if args["edit"]:
         if not lock.locked():
-            run([os.environ['EDITOR'], str(ws.config.filepath)])
+            run([os.environ["EDITOR"], str(ws.config.filepath)])
             if lock.file.read_text() == lock.backup.read_text():
                 log.info("Unchanged config file")
             else:
                 log.info("Config file modified")
         else:
-            print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
+            print(
+                "Config file locked. Please use 'space config unlock' first",
+                file=sys.stderr,
+            )
             sys.exit(1)
-    elif args['set']:
+    elif args["set"]:
         if not lock.locked():
             try:
-                keys = args['<keys>'].split(".")
-                if args['--append']:
+                keys = args["<keys>"].split(".")
+                if args["--append"]:
                     prev = ws.config.get(*keys, fallback=[])
                     if not isinstance(prev, list):
                         if isinstance(prev, str):
                             prev = [prev]
                         else:
                             prev = list(prev)
-                    prev.append(args['<value>'])
+                    prev.append(args["<value>"])
                     ws.config.set(*keys, prev, save=False)
                 else:
-                    ws.config.set(*keys, args['<value>'], save=False)
+                    ws.config.set(*keys, args["<value>"], save=False)
             except TypeError as e:
                 # For some reason we don't have the right to set this
                 # value
@@ -259,13 +258,18 @@ def space_config(*argv):
             else:
                 # If everything went fine, we save the file in its new state
                 ws.config.save()
-                log.debug("'{}' now set to '{}'".format(args['<keys>'], args['<value>']))
+                log.debug(
+                    "'{}' now set to '{}'".format(args["<keys>"], args["<value>"])
+                )
         else:
-            print("Config file locked. Please use 'space config unlock' first", file=sys.stderr)
+            print(
+                "Config file locked. Please use 'space config unlock' first",
+                file=sys.stderr,
+            )
             sys.exit(1)
 
-    elif args['unlock']:
-        if args['--yes']:
+    elif args["unlock"]:
+        if args["--yes"]:
             lock.unlock()
         else:
             print("Are you sure you want to unlock the config file ?")
@@ -283,14 +287,14 @@ def space_config(*argv):
         subdict = ws.config
 
         try:
-            if args['<keys>']:
-                for k in args['<keys>'].split("."):
+            if args["<keys>"]:
+                for k in args["<keys>"].split("."):
                     subdict = subdict[k]
         except KeyError as e:
             print("Unknown field", e, file=sys.stderr)
             sys.exit(1)
 
-        if hasattr(subdict, 'filepath'):
+        if hasattr(subdict, "filepath"):
             print("config :", ws.config.filepath)
         if isinstance(subdict, dict):
             # print a part of the dict
@@ -323,11 +327,13 @@ def space_log(*argv):
 
     args = docopt(space_log.__doc__, argv=argv)
 
-    if args['--print']:
-        nb = int(args['--lines'])
+    if args["--print"]:
+        nb = int(args["--lines"])
 
         lines = logfile.read_text().splitlines()
-        filtered_lines = [l for l in lines if args['--verbose'] or ":: DEBUG ::" not in l]
+        filtered_lines = [
+            l for l in lines if args["--verbose"] or ":: DEBUG ::" not in l
+        ]
 
         for line in filtered_lines[-nb:]:
             print(line)
@@ -338,7 +344,7 @@ def space_log(*argv):
             # +F is for tail mode
             # -K is for "quit on iterrupt"
             # -S chops long lines
-            opt = "+F" if args['--follow'] else "+G"
-            f = subprocess.call(['less', '-KS', opt, str(logfile)])
+            opt = "+F" if args["--follow"] else "+G"
+            f = subprocess.call(["less", "-KS", opt, str(logfile)])
         except KeyboardInterrupt:
             pass

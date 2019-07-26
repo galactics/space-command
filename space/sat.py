@@ -2,7 +2,14 @@ import re
 import sys
 import logging
 from textwrap import indent
-from peewee import Model, IntegerField, CharField, SqliteDatabase, IntegrityError, TextField
+from peewee import (
+    Model,
+    IntegerField,
+    CharField,
+    SqliteDatabase,
+    IntegrityError,
+    TextField,
+)
 
 from beyond.orbits import Ephem, Orbit
 import beyond.io.ccsds as ccsds
@@ -19,7 +26,6 @@ log = logging.getLogger(__name__)
 
 
 class NoDataError(ValueError):
-
     def __init__(self, req):
         self.req = req
 
@@ -40,7 +46,7 @@ class Request:
 
         self.value = value
         """Value of the field"""
-        
+
         self.src = src
         """Source of orbit ('oem' or 'tle')"""
 
@@ -79,31 +85,31 @@ class Request:
 
         delimiters = r"[@~\^\?\$]"
 
-        if 'selector' in kwargs and 'value' in kwargs:
-            selector = kwargs['selector']
-            value = kwargs['value']
+        if "selector" in kwargs and "value" in kwargs:
+            selector = kwargs["selector"]
+            value = kwargs["value"]
         else:
             selector_str = re.split(delimiters, txt)[0]
 
             if "=" in selector_str:
-                selector, value = selector_str.split('=')
+                selector, value = selector_str.split("=")
             else:
                 selector, value = "name", selector_str
 
         if alias and selector == "name":
             # Retrieve alias if it exists
-            rq = Alias.select().where(Alias.name==value)
+            rq = Alias.select().where(Alias.name == value)
             if rq.exists():
                 selector, value = rq.get().selector.split("=")
 
-        if selector in ('norad', 'cospar'):
+        if selector in ("norad", "cospar"):
             selector += "_id"
 
         if selector not in ("name", "cospar_id", "norad_id"):
             raise ValueError("Unknown selector '{}'".format(selector))
 
-        if 'offset' in kwargs:
-            offset = kwargs['offset']
+        if "offset" in kwargs:
+            offset = kwargs["offset"]
         else:
             # Compute the offset
             offset = 0
@@ -114,18 +120,18 @@ class Request:
                     if m:
                         offset = int(m.group(1))
 
-        if 'src' in kwargs:
-            src = kwargs['src']
+        if "src" in kwargs:
+            src = kwargs["src"]
         else:
             m = re.search(r"@(oem|tle)", txt, flags=re.I)
             if m:
                 src = m.group(1).lower()
             else:
-                src = ws.config.get('satellites', 'default_selector', fallback='tle')
+                src = ws.config.get("satellites", "default_selector", fallback="tle")
 
-        if 'limit' in kwargs and 'date' in kwargs:
-            limit = kwargs['limit']
-            date = kwargs['date']
+        if "limit" in kwargs and "date" in kwargs:
+            limit = kwargs["limit"]
+            date = kwargs["date"]
         else:
             limit = "any"
             date = "any"
@@ -137,7 +143,7 @@ class Request:
                     limit = "before"
 
                 try:
-                    date = parse_date(m.group(2), fmt='date')
+                    date = parse_date(m.group(2), fmt="date")
                 except ValueError:
                     date = parse_date(m.group(2))
 
@@ -147,6 +153,7 @@ class Request:
 class MyModel(Model):
     """Generic database object
     """
+
     class Meta:
         database = ws.db
 
@@ -155,6 +162,7 @@ class SatModel(MyModel):
     """Satellite object to interact with the database, not directly given to the
     user
     """
+
     norad_id = IntegerField(null=True)
     cospar_id = CharField(null=True)
     name = CharField()
@@ -173,7 +181,6 @@ class Alias(MyModel):
 
 
 class Sat:
-
     def __init__(self, model):
         self.model = model
         self.orb = None
@@ -190,9 +197,9 @@ class Sat:
             model = SatModel.select().where(SatModel.cospar_id == orb.cospar_id).get()
         except SatModel.DoesNotExist:
             model = SatModel(
-                norad_id=getattr(orb, 'norad_id', None),
-                cospar_id=getattr(orb, 'cospar_id', None),
-                name=getattr(orb, 'name', None)
+                norad_id=getattr(orb, "norad_id", None),
+                cospar_id=getattr(orb, "cospar_id", None),
+                name=getattr(orb, "name", None),
             )
 
         if isinstance(orb, Tle):
@@ -234,7 +241,7 @@ class Sat:
     def from_input(cls, *selector, text="", alias=True, create=False, orb=True):
 
         sats = list(cls.from_selector(*selector, alias=alias, create=create, orb=orb))
-        
+
         if not sats:
             if text:
                 sats = cls.from_text(text)
@@ -255,7 +262,9 @@ class Sat:
                 model = SatModel(**{req.selector: req.value})
                 model.save()
             else:
-                raise ValueError("No satellite corresponding to {0.selector}={0.value}".format(req))
+                raise ValueError(
+                    "No satellite corresponding to {0.selector}={0.value}".format(req)
+                )
 
         sat = cls(model)
         sat.req = req
@@ -264,7 +273,12 @@ class Sat:
             if type == "tle" or (type is None and sat.req.src == "tle"):
                 if sat.req.limit == "any":
                     try:
-                        tles = list(TleDb().history(**{sat.req.selector: sat.req.value}, number=sat.req.offset + 1))
+                        tles = list(
+                            TleDb().history(
+                                **{sat.req.selector: sat.req.value},
+                                number=sat.req.offset + 1
+                            )
+                        )
                     except TleNotFound:
                         raise NoDataError(sat.req)
 
@@ -274,7 +288,11 @@ class Sat:
                     sat.orb = tles[0].orbit()
                 else:
                     try:
-                        tle = TleDb.get_dated(limit=sat.req.limit, date=sat.req.date.datetime, **{sat.req.selector: sat.req.value})
+                        tle = TleDb.get_dated(
+                            limit=sat.req.limit,
+                            date=sat.req.date.datetime,
+                            **{sat.req.selector: sat.req.value}
+                        )
                     except TleNotFound:
                         raise NoDataError(sat.req)
                     else:
@@ -289,7 +307,9 @@ class Sat:
                             raise NoDataError(sat.req)
                     else:
                         try:
-                            sat.orb = EphemDb(sat).get_dated(limit=sat.req.limit, date=sat.req.date)
+                            sat.orb = EphemDb(sat).get_dated(
+                                limit=sat.req.limit, date=sat.req.date
+                            )
                         except ValueError:
                             raise NoDataError(sat.req)
                 else:
@@ -311,7 +331,7 @@ class Sat:
 
     @property
     def folder(self):
-        year, idx = self.cospar_id.split('-')
+        year, idx = self.cospar_id.split("-")
         return ws.folder / "satdb" / year / idx
 
 
@@ -325,13 +345,19 @@ def sync(source="all"):
 
     sats = []
 
-    if source in ('all', 'tle'):
+    if source in ("all", "tle"):
         from .tle import TleDb
-        sats.extend([SatModel(name=tle.name, cospar_id=tle.cospar_id, norad_id=tle.norad_id) for tle in TleDb().dump()])
 
-    log.debug('{} satellites found in the TLE database'.format(len(sats)))
+        sats.extend(
+            [
+                SatModel(name=tle.name, cospar_id=tle.cospar_id, norad_id=tle.norad_id)
+                for tle in TleDb().dump()
+            ]
+        )
 
-    if source in ('all', 'ephem'):
+    log.debug("{} satellites found in the TLE database".format(len(sats)))
+
+    if source in ("all", "ephem"):
         folders = {}
         for folder in ws.folder.joinpath("satdb").glob("*/*"):
             cospar_id = "{}-{}".format(folder.parent.name, folder.name)
@@ -362,7 +388,7 @@ def sync(source="all"):
 
 def wshook(cmd, *args, **kwargs):
 
-    if cmd in ('init', 'full-init'):
+    if cmd in ("init", "full-init"):
 
         SatModel.create_table(safe=True)
         Alias.create_table(safe=True)
@@ -373,7 +399,7 @@ def wshook(cmd, *args, **kwargs):
             log.debug("Populating SatDb with TLE")
             sync()
 
-        if not Alias.select().where(Alias.name=='ISS').exists():
+        if not Alias.select().where(Alias.name == "ISS").exists():
             Alias(name="ISS", selector="norad_id=25544").save()
             log.info("Creating ISS alias")
 
@@ -417,9 +443,9 @@ def space_sat(*argv):
 
     args = docopt(space_sat.__doc__, argv=argv)
 
-    if args['alias']:
-        selector = args['<selector>']
-        name = args['<alias>']
+    if args["alias"]:
+        selector = args["<selector>"]
+        name = args["<alias>"]
 
         try:
             sat = Sat.from_input(selector)
@@ -429,28 +455,30 @@ def space_sat(*argv):
 
         q = Alias.select().where(Alias.name == name)
         if q.exists():
-            if args['--force']:
+            if args["--force"]:
                 alias = q.get()
                 alias.selector = selector
                 alias.save()
                 log.info("Alias '{}' ({}) created".format(name, selector))
             else:
-                log.error("Alias '{}' already exists for '{}'".format(name, q.get().selector))
+                log.error(
+                    "Alias '{}' already exists for '{}'".format(name, q.get().selector)
+                )
                 sys.exit()
         else:
             Alias(selector=selector, name=name).save()
             log.info("Alias '{}' ({}) created".format(name, selector))
 
-    elif args['list-aliases']:
+    elif args["list-aliases"]:
         for alias in Alias:
             print("{:20} {}".format(alias.name, alias.selector))
 
-    elif args['sync']:
+    elif args["sync"]:
         sync()
 
-    elif args['orb']:
+    elif args["orb"]:
         try:
-            sat = list(Sat.from_selector(args['<selector>']))[0]
+            sat = list(Sat.from_selector(args["<selector>"]))[0]
         except ValueError as e:
             log.error(e)
             sys.exit(1)
@@ -460,14 +488,18 @@ def space_sat(*argv):
         else:
             print("{0.name}\n{0}".format(sat.orb.tle))
 
-    elif args['infos']:
+    elif args["infos"]:
         try:
-            sat, = Sat.from_input(args['<selector>'], orb=False)
-            print("""name       {0.name}
+            sat, = Sat.from_input(args["<selector>"], orb=False)
+            print(
+                """name       {0.name}
     cospar id  {0.cospar_id}
     norad id   {0.norad_id}
     folder     {0.folder}
-    """.format(sat))
+    """.format(
+                    sat
+                )
+            )
         except ValueError as e:
             log.error(e)
             sys.exit(1)
