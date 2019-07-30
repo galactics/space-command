@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 import shutil
 import logging
 import tarfile
@@ -189,6 +190,7 @@ def wspace(*argv):
         wspace backup [<name>]
         wspace delete <name>
         wspace on <name> [--init]
+        wspace tmp [--init]
 
     Options:
         init       Initialize workspace
@@ -217,11 +219,19 @@ def wspace(*argv):
 
     args = docopt(wspace.__doc__, argv=sys.argv[1:])
 
-    if args['on']:
-        if 'SPACE_WORKSPACE' in os.environ:
+    if args["on"] or args["tmp"]:
+        if "SPACE_WORKSPACE" in os.environ:
             log.error("Nested workspace activation prohibited")
             sys.exit(-1)
 
+        if args["on"]:
+            ws.name = args["<name>"]
+        else:
+            # Temporary workspace
+            while True:
+                ws.name = str(uuid.uuid4()).split("-")[0]
+                if not ws.exists():
+                    break
 
         if args["--init"]:
             ws.init()
@@ -235,6 +245,10 @@ def wspace(*argv):
         shell = env["SHELL"]
 
         subprocess.run([shell], env=env)
+
+        if args["tmp"]:
+            if ws.exists():
+                ws.delete()
 
     elif args["delete"]:
         # Deletion of a workspace
