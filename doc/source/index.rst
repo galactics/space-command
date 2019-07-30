@@ -181,6 +181,25 @@ environment variable, or directly in the command line, with the ``-w`` or ``--wo
     $ space passes TLS ISS -w test
     $ space -w test events ISS
 
+It is also possible to use the ``wspace on`` command. It will open a new shell
+with the *SPACE_WORKSPACE* variable set.
+
+.. code-block:: bash
+
+    $ wspace on test-workspace  # Open the test workspace
+    $ space passes TLS ISS
+    $ space events ISS
+    $ exit  # back to the main workspace
+
+When using ``wspace on``, you can add the following lines to your ``.bashrc`` file
+to help visualize when working on workspaces
+
+.. code-block:: bash
+
+    if [[ -n $SPACE_WORKSPACE ]]; then
+        PS1="$PS1(\033[32m$SPACE_WORKSPACE\033[39m) "
+    fi
+
 By default all workspaces are located in the ``.space/`` folder in the home directory.
 It is possible to change the location with the ``SPACE_WORKSPACES_FOLDER`` environment variable.
 

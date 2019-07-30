@@ -3,6 +3,7 @@ import sys
 import shutil
 import logging
 import tarfile
+import subprocess
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
@@ -105,7 +106,7 @@ class Workspace:
             raise FileNotFoundError(self.folder)
 
         shutil.rmtree(str(self.folder))
-        log.info("Workspace {} deleted".format(self.name))
+        log.info("Workspace '{}' deleted".format(self.name))
 
     @property
     def folder(self):
@@ -187,6 +188,7 @@ def wspace(*argv):
         wspace init [--full] [<name>]
         wspace backup [<name>]
         wspace delete <name>
+        wspace on <name> [--init]
 
     Options:
         init       Initialize workspace
@@ -215,11 +217,30 @@ def wspace(*argv):
 
     args = docopt(wspace.__doc__, argv=sys.argv[1:])
 
-    if args["delete"]:
+    if args['on']:
+        if 'SPACE_WORKSPACE' in os.environ:
+            log.error("Nested workspace activation prohibited")
+            sys.exit(-1)
+
+
+        if args["--init"]:
+            ws.init()
+        elif ws.name not in [w.name for w in Workspace.list()]:
+            log.warning("The workspace '{}' is not initialized.".format(ws.name))
+            log.warning("Run 'wspace init' to start working")
+
+        # Duplication of environment variables, to add the SPACE_WORKSPACE variable
+        env = os.environ.copy()
+        env["SPACE_WORKSPACE"] = ws.name
+        shell = env["SHELL"]
+
+        subprocess.run([shell], env=env)
+
+    elif args["delete"]:
         # Deletion of a workspace
         ws.name = args["<name>"]
         if not ws.exists():
-            print("The workspace '{}' does not exist".format(args["<name>"]))
+            log.error("The workspace '{}' does not exist".format(args["<name>"]))
         else:
             print(
                 "If you are sure to delete the workspace '{}', please enter it's name".format(
@@ -230,7 +251,6 @@ def wspace(*argv):
             answer = input("> ")
             if answer == args["<name>"]:
                 ws.delete()
-                print("{} deleted".format(ws.name))
             else:
                 print("Deletion canceled")
     else:
