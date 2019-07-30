@@ -493,9 +493,9 @@ def space_sat(*argv):
             sat, = Sat.from_input(args["<selector>"], orb=False)
             print(
                 """name       {0.name}
-    cospar id  {0.cospar_id}
-    norad id   {0.norad_id}
-    folder     {0.folder}
+cospar id  {0.cospar_id}
+norad id   {0.norad_id}
+folder     {0.folder}
     """.format(
                     sat
                 )
