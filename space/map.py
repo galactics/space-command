@@ -1,4 +1,5 @@
 import sys
+import logging
 import numpy as np
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from beyond.orbits import Orbit, Ephem
 from .utils import circle
 from .station import StationDb
 from .clock import Date, timedelta
+
+log = logging.getLogger(__name__)
 
 
 class WindowEphem(Ephem):
@@ -415,9 +418,15 @@ def space_map(*argv):
     from .sat import Sat
 
     args = docopt(space_map.__doc__)
-    sats = list(
-        Sat.from_input(*args["<satellite>"], text=sys.stdin.read() if args["-"] else "")
-    )
+    try:
+        sats = list(
+            Sat.from_input(
+                *args["<satellite>"], text=sys.stdin.read() if args["-"] else ""
+            )
+        )
+    except ValueError as e:
+        log.error(e)
+        sys.exit(1)
 
     sat_anim = SatAnim(sats)
 
