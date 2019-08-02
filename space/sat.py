@@ -343,28 +343,54 @@ def sync(source="all"):
         source (str): 'all', 'tle', 'ephem'
     """
 
-    sats = []
+    new = []
+    update = []
 
     if source in ("all", "tle"):
         from .tle import TleDb
 
-        sats.extend(
-            [
-                SatModel(name=tle.name, cospar_id=tle.cospar_id, norad_id=tle.norad_id)
-                for tle in TleDb().dump()
-            ]
-        )
+        # The resoning of the Tle Database is by NORAD ID
+        all_sats = {sat.norad_id: sat for sat in SatModel.select()}
 
-    log.debug("{} satellites found in the TLE database".format(len(sats)))
+        for tle in TleDb().dump():
+            if tle.norad_id not in all_sats:
+                new.append(
+                    SatModel(
+                        name=tle.name, cospar_id=tle.cospar_id, norad_id=tle.norad_id
+                    )
+                )
+            else:
+                sat = all_sats[tle.norad_id]
+                if tle.name != sat.name or tle.cospar_id != sat.cospar_id:
+                    log.debug(
+                        "{} updated. name='{}'-->'{}' cospar_id='{}'-->'{}' ".format(
+                            sat.norad_id,
+                            sat.name,
+                            tle.name,
+                            sat.cospar_id,
+                            tle.cospar_id,
+                        )
+                    )
+                    sat.name = tle.name
+                    sat.cospar_id = tle.cospar_id
+                    update.append(sat)
 
+    log.debug("{} new satellites found in the TLE database".format(len(new)))
+    log.debug("{} satellites to update from the TLE database".format(len(update)))
+
+    new_idx = 0
     if source in ("all", "ephem"):
+
+        # The organization of the ephem database is by COSPAR ID
+        all_sats = {sat.cospar_id: sat for sat in SatModel.select()}
+
         folders = {}
         for folder in ws.folder.joinpath("satdb").glob("*/*"):
             cospar_id = "{}-{}".format(folder.parent.name, folder.name)
             folders[cospar_id] = list(folder.glob("*.oem"))
 
-        # Filtering out satellites for which a TLE exists
-        cospar_ids = set(folders.keys()).difference([sat.cospar_id for sat in sats])
+        # Filtering out satellites for which an entry in the Sat DB already exists
+        cospar_ids = set(folders.keys()).difference(all_sats.keys())
 
         for cospar_id in cospar_ids:
             # print(cospar_id, folders[cospar_id])
@@ -375,15 +401,24 @@ def sync(source="all"):
                 name = "UNKNOWN"
                 # log.debug()
 
-            log.debug("Satellite '{}' ({}) found in ephem file".format(name, cospar_id))
-            sats.append(SatModel(cospar_id=cospar_id, name=name))
+            log.debug(
+                "New satellite '{}' ({}) found in ephem file".format(name, cospar_id)
+            )
+            new.append(SatModel(cospar_id=cospar_id, name=name))
+            new_idx += 1
+
+        if not cospar_ids:
+            log.debug("{} new satellites found in ephem files".format(new_idx))
 
     with ws.db.atomic():
-        for sat in sats:
-            if not sat.exists():
-                sat.save()
+        for sat in update + new:
+            sat.save()
 
-    log.info("{} satellites registered".format(len(sats)))
+    log.info(
+        "{} new satellites registered, {} satellites updated".format(
+            len(new), len(update)
+        )
+    )
 
 
 def wshook(cmd, *args, **kwargs):
