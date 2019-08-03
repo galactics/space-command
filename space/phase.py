@@ -90,11 +90,12 @@ def space_phase(*argv):
         space-phase <body> [<date>] [--graph] [--frame <frame>] [-a] [--file <file>]
 
     Options:
-        <body>               Body
-        <date>               Date to compute the moon phase at (%Y-%m-%dT%H:%M:%S)
-        -g, --graph          Display the moon phase
-        -a, --analytical     Use analytical model instead of JPL files
-        --file <file>        File
+        <body>            Body
+        <date>            Date to compute the moon phase at [default: now]
+                          (format %Y-%m-%dT%H:%M:%S)
+        -g, --graph       Display the moon phase
+        -a, --analytical  Use analytical model instead of JPL files
+        --file <file>     File
     """
     import sys
     from .clock import Date
@@ -102,6 +103,9 @@ def space_phase(*argv):
     from .station import StationDb
 
     args = docopt(space_phase.__doc__)
+
+    if args["<date>"] is None:
+        args["<date>"] = "now"
 
     try:
         date = parse_date(args["<date>"])
