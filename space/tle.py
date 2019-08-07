@@ -16,6 +16,7 @@ from peewee import (
     fn,
 )
 
+from space.clock import Date, timedelta
 from beyond.io.tle import Tle
 
 from .wspace import ws
@@ -364,10 +365,21 @@ class TleDb:
         return sats
 
 
-def print_stats():
+def print_stats(graph=False):
+    import numpy as np
+
     db = TleDb()
     first = db.model.select(fn.MIN(TleModel.insert_date)).scalar()
     last = db.model.select(fn.MAX(TleModel.insert_date)).scalar()
+
+    ages = []
+    now = Date.now()
+    for tle in (
+        db.model.select()
+        .where(last.date() + timedelta(1) > db.model.insert_date >= last.date())
+        .group_by(db.model.norad_id)
+    ):
+        ages.append((now - tle.epoch).total_seconds() / 86400)
 
     print(
         "Objects       {}".format(db.model.select().group_by(TleModel.norad_id).count())
@@ -375,6 +387,15 @@ def print_stats():
     print("TLE           {}".format(db.model.select().count()))
     print("First fetch   {}".format(first))
     print("Last fetch    {}".format(last))
+    print("TLE age       {:.1f} days (last batch)".format(np.mean(ages)))
+
+    if graph:
+        import matplotlib.pyplot as plt
+
+        plt.figure()
+        plt.hist(ages, range(10), rwidth=0.9)
+        plt.grid(linestyle=":", color="#666666")
+        plt.show()
 
 
 class TleModel(Model):
@@ -422,7 +443,7 @@ def space_tle(*argv):
       space-tle find <text> ...
       space-tle history [--last <nb>] <selector>...
       space-tle dump [--all]
-      space-tle stats
+      space-tle stats [--graph]
 
     Options:
       dump             Display the last TLE for each object
@@ -439,6 +460,7 @@ def space_tle(*argv):
       -l, --last <nb>  Get the last <nb> TLE
       -a, --all        Display the entirety of the database, instead of only
                        the last TLE of each object
+      -g, --graph      Display statistics graphically
 
     Examples:
       space tle fetch                # Retrieve all the TLEs from celestrak
@@ -542,7 +564,7 @@ def space_tle(*argv):
         for tle in db.dump(all=args["--all"]):
             print("{0.name}\n{0}\n".format(tle))
     elif args["stats"]:
-        print_stats()
+        print_stats(args["--graph"])
     else:
         try:
             sats = list(Sat.from_selector(*args["<selector>"]))
