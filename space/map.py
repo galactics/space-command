@@ -406,7 +406,7 @@ def space_map(*argv):
     """Animated map of earth with ground track of satellites
 
     Usage:
-      space-map (- | <satellite>...) [-g]
+      space-map (- | <satellite>...)
 
     Option:
       <satellite>   Name of the satellites you want to display.
