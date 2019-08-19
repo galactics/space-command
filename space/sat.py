@@ -354,21 +354,21 @@ def sync(source="all"):
 
         for tle in TleDb().dump():
             if tle.norad_id not in all_sats:
-                new.append(
-                    SatModel(
-                        name=tle.name, cospar_id=tle.cospar_id, norad_id=tle.norad_id
+                sat = SatModel(
+                    name=tle.name, cospar_id=tle.cospar_id, norad_id=tle.norad_id
+                )
+                new.append(sat)
+                log.debug(
+                    "{sat.norad_id} added (name='{sat.name}' cospar_id='{sat.cospar_id}')".format(
+                        sat=sat
                     )
                 )
             else:
                 sat = all_sats[tle.norad_id]
                 if tle.name != sat.name or tle.cospar_id != sat.cospar_id:
                     log.debug(
-                        "{} updated. name='{}'-->'{}' cospar_id='{}'-->'{}' ".format(
-                            sat.norad_id,
-                            sat.name,
-                            tle.name,
-                            sat.cospar_id,
-                            tle.cospar_id,
+                        "{sat.norad_id} updated. name='{sat.name}'-->'{tle.name}' cospar_id='{sat.cospar_id}'-->'{tle.cospar_id}' ".format(
+                            sat=sat, tle=tle
                         )
                     )
                     sat.name = tle.name
