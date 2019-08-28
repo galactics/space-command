@@ -86,6 +86,7 @@ class SatAnim:
         self.sats = sats
         self.multiplier = None
         self.interval = 200
+        self.circle = True
 
         mpl.rcParams["toolbar"] = "None"
 
@@ -141,6 +142,8 @@ class SatAnim:
         self.bfast = Button(plt.axes([0.26, 0.02, 0.04, 0.05]), "Faster")
         self.bfast.on_clicked(self.faster)
 
+        self.bcircle = Button(plt.axes([0.8, 0.02, 0.08, 0.05]), "Circle")
+        self.bcircle.on_clicked(self.toggle_circle)
         self.ground = Button(plt.axes([0.9, 0.02, 0.08, 0.05]), "Ground-Track")
         self.ground.on_clicked(self.toggle_groundtrack)
 
@@ -183,11 +186,12 @@ class SatAnim:
             sat.text.set_position((lon + 0.75, lat + 0.75))
             plot_list.append(sat.text)
 
-            # Updating the circle of visibility
-            lonlat = np.degrees(circle(*orb_sph[:3]))
-            lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
-            sat.circle.set_data(lonlat[:, 0], lonlat[:, 1])
-            plot_list.append(sat.circle)
+            if self.circle:
+                # Updating the circle of visibility
+                lonlat = np.degrees(circle(*orb_sph[:3]))
+                lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
+                sat.circle.set_data(lonlat[:, 0], lonlat[:, 1])
+                plot_list.append(sat.circle)
 
             # Ground track
             if sat.win_ephem is None:
@@ -400,6 +404,14 @@ class SatAnim:
             else:
                 sat.win_ephem = None
                 # Force recomputation of the window ephemeris
+
+    def toggle_circle(self, *args, **kwargs):
+
+        if self.circle is True:
+            for sat in self.sats:
+                sat.circle.set_data([], [])
+
+        self.circle ^= True
 
 
 def space_map(*argv):
