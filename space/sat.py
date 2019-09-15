@@ -72,6 +72,16 @@ class Request:
 
         return txt.format(o=self, limit="^" if self.limit == "after" else "?")
 
+    def __repr__(self):
+        return """Request:
+  selector: {self.selector}
+  value: {self.value}
+  src: {self.src}
+  offset: {self.offset}
+  limit: {self.limit}
+  date: {self.date}
+""".format(self=self)
+
     @classmethod
     def from_text(cls, txt, alias=True, **kwargs):
         """Convert a strin 'cospar=1998-067A@tle~~' to a Request object
@@ -276,7 +286,7 @@ class Sat:
                         tles = list(
                             TleDb().history(
                                 **{sat.req.selector: sat.req.value},
-                                number=sat.req.offset + 1
+                                number=sat.req.offset + 1,
                             )
                         )
                     except TleNotFound:
@@ -291,7 +301,7 @@ class Sat:
                         tle = TleDb.get_dated(
                             limit=sat.req.limit,
                             date=sat.req.date.datetime,
-                            **{sat.req.selector: sat.req.value}
+                            **{sat.req.selector: sat.req.value},
                         )
                     except TleNotFound:
                         raise NoDataError(sat.req)
@@ -467,7 +477,7 @@ def space_sat(*argv):
       ISS~~              : 2nd before last TLE
       ISS@oem~25         : 25th before last OEM
       ISS@oem^2018-12-25 : first OEM after the date
-      ISS@tle?2018-12-25 : first tle before the date
+      ISS@tle?2018-12-25 : first TLE before the date
     """
     # TODO
     # ISS@opm            : latest OPM
