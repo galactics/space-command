@@ -108,7 +108,7 @@ def space_passes(*argv):
             )
         else:
             info_size = len(station.name) + 10
-            header = "Time                          {}Infos  {}Sat     Azim    Elev  Dist (km)  Light    ".format(
+            header = "Time                        Infos{} Sat{}     Azim    Elev  Dist (km)  Light    ".format(
                 " " * (info_size - 5), " " * (len(sat.name) - 3)
             )
 
