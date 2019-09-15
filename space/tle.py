@@ -1,11 +1,13 @@
 import os
 import sys
+import json
 import asyncio
 import aiohttp
 import async_timeout
 import requests
 import logging
 from datetime import datetime
+from bs4 import BeautifulSoup
 from peewee import (
     Model,
     IntegerField,
@@ -39,13 +41,13 @@ class TleNotFound(Exception):
 class TleDb:
 
     SPACETRACK_URL_AUTH = "https://www.space-track.org/ajaxauth/login"
-    # SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/EPOCH/>now-30/orderby/NORAD_CAT_ID/format/3le"
-    # SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/ORDINAL/1/EPOCH/%3Enow-30/orderby/NORAD_CAT_ID/format/3le/favorites/Amateur"
-
     SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/{mode}/{selector}/orderby/ORDINAL%20asc/limit/1/format/3le/emptyresult/show"
-
     CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
-    CELESTRAK_PAGES = [
+
+    TMP_FOLDER = ws.folder / "tmp" / "tle"
+    PAGE_LIST_CONFIG = ("celestrak", "page-list")
+
+    DEFAULT_FILES = [
         "stations.txt",
         "tle-new.txt",
         "visual.txt",
@@ -115,6 +117,40 @@ class TleDb:
         for tle in bd_request:
             yield Tle("%s\n%s" % (tle.name, tle.data), src=tle.src)
 
+    @property
+    def celestrak_pages(self):
+        return ws.config.get(*self.PAGE_LIST_CONFIG, fallback=self.DEFAULT_FILES)
+
+    def fetch_list(self):
+        """Rretireve list of available celestrak files
+        """
+
+        log.info("Retrieving list of available celestrak files")
+
+        log.debug("Downloading from {}".format(self.CELESTRAK_URL))
+        page = requests.get(self.CELESTRAK_URL)
+
+        files = []
+        bs = BeautifulSoup(page.text, features="lxml")
+        for link in bs.body.find_all("a"):
+            if link.get("href").endswith(".txt"):
+                files.append(link.get("href"))
+
+        log.info("{} celestrak files found".format(len(files)))
+
+        if not self.TMP_FOLDER.exists():
+            self.TMP_FOLDER.mkdir(parents=True)
+
+        for p in set(self.celestrak_pages).difference(files):
+            log.debug(
+                "Removing '{}' from the list of authorized celestrak pages".format(p)
+            )
+
+        for p in set(files).difference(self.celestrak_pages):
+            log.debug("Adding '{}' to the list of authorized celestrak pages".format(p))
+
+        ws.config.set(*self.PAGE_LIST_CONFIG, files, save=True)
+
     def fetch(self, src=None, **kwargs):
 
         if src == "spacetrack":
@@ -160,7 +196,7 @@ class TleDb:
         log.debug("Request at {}".format(url))
         full = requests.get(url, cookies=init.cookies)
 
-        cache = ws.folder / "tmp" / "spacetrack.txt"
+        cache = self.TMP_FOLDER / "spacetrack.txt"
         log.debug("Caching results into {}".format(cache))
         with cache.open("w") as fp:
             fp.write(full.text)
@@ -178,10 +214,10 @@ class TleDb:
             async with session.get(self.CELESTRAK_URL + filename) as response:
                 text = await response.text()
 
-                filepath = ws.folder / "tmp" / "celestrak" / filename
+                filepath = self.TMP_FOLDER / filename
 
-                if not filepath.parent.exists():
-                    filepath.parent.mkdir(parents=True)
+                if not self.TMP_FOLDER.exists():
+                    self.TMP_FOLDER.mkdir(parents=True)
 
                 with filepath.open("w") as fp:
                     fp.write(text)
@@ -193,12 +229,12 @@ class TleDb:
         """
 
         if files is None:
-            filelist = self.CELESTRAK_PAGES
+            filelist = self.celestrak_pages
         else:
             # Filter out file not included in the base list
             files = set(files)
-            filelist = files.intersection(self.CELESTRAK_PAGES)
-            remaining = files.difference(self.CELESTRAK_PAGES)
+            filelist = files.intersection(self.celestrak_pages)
+            remaining = files.difference(self.celestrak_pages)
 
             for p in remaining:
                 log.warning("Unknown celestrak pages '{}'".format(p))
@@ -425,7 +461,9 @@ def wshook(cmd, *args, **kwargs):
         try:
             TleDb.get(norad_id=25544)
         except TleNotFound:
-            TleDb().fetch(src="celestrak")
+            db = TleDb()
+            # db.fetch_list()
+            db.fetch(src="celestrak")
             log.info("TLE database initialized")
         else:
             log.info("TLE database already exists")
@@ -448,6 +486,7 @@ def space_tle(*argv):
       space-tle history [--last <nb>] <selector>...
       space-tle dump [--all]
       space-tle stats [--graph]
+      space-tle fetch-list
 
     Options:
       dump             Display the last TLE for each object
@@ -523,6 +562,8 @@ def space_tle(*argv):
             if ws.config.get("satellites", "auto-sync-tle", fallback=True):
                 # Update the Satellite DB
                 sync("tle")
+    elif args["fetch-list"]:
+        db.fetch_list()
 
     elif args["insert"]:
         # Process the file list provided by the command line
