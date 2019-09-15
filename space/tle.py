@@ -260,7 +260,11 @@ class TleDb:
                 .order_by(self.model.epoch.asc())
             )
         else:
-            r = self.model.select().where(self.model.epoch <= date)
+            r = (
+                self.model.select()
+                .where(self.model.epoch <= date)
+                .order_by(self.model.epoch.desc())
+            )
 
         try:
             entity = r.filter(**kwargs).get()
