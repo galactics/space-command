@@ -305,37 +305,57 @@ def space_config(*argv):
 
 
 def space_log(*argv):
-    """Display the log
+    """Display the log, with colors
 
     Usage:
-      space-log [options]
+      space-log list
+      space-log [-fn] [--file <file>]
 
     Options:
-      -p, --print        Print instead of shoing the log via less
-      -n, --lines <num>  When printing define the number of lines to print [default: 20]
-      -v, --verbose      Print DEBUG messages as well
+      list               List available log files
+      -F, --file <file>  Selected file [default: space.log]
       -f, --follow       Start directly in tail mode
+      -n, --no-color     Disable log highlight
     """
     import subprocess
 
     from space.utils import docopt
     from space.wspace import ws
 
-    logfile = ws.folder / "space.log"
-
     args = docopt(space_log.__doc__, argv=argv)
 
-    if args["--print"]:
-        nb = int(args["--lines"])
-
-        lines = logfile.read_text().splitlines()
-        filtered_lines = [
-            l for l in lines if ws.config.verbose or ":: DEBUG ::" not in l
-        ]
-
-        for line in filtered_lines[-nb:]:
-            print(line)
+    if args["list"]:
+        for f in sorted(ws.folder.glob("space.log*")):
+            print(f.name)
     else:
+
+        logfile = ws.folder / args["--file"]
+        # This is not working in case of live view of log (-f option)
+        less_args = "-KS"
+
+        if not args["--no-color"] and not args["--follow"]:
+            less_args += "R"
+
+            colorized = ws.folder / "tmp" / "colorize.log"
+            with colorized.open("w") as fp:
+                for line in logfile.open().read().splitlines():
+                    fields = line.split(" :: ")
+                    if len(fields) > 2:
+                        if fields[2] == "ERROR":
+                            line = f"\033[91m{line}\033[0m"
+                        elif fields[2] == "WARNING":
+                            line = f"\033[33m{line}\033[0m"
+                        elif fields[2] == "DEBUG":
+                            line = f"\033[37m{line}\033[0m"
+                    elif line == "Traceback (most recent call last):":
+                        line = f"\033[1;4m{line}\033[0m"
+                    elif "Error" in line:
+                        line = f"\033[1m{line}\033[0m"
+
+                    fp.write(f"{line}\n")
+
+            logfile = colorized
+
         try:
             # Handling the arguments of less
             # +G is for going directly at the bottom of the file
@@ -343,6 +363,6 @@ def space_log(*argv):
             # -K is for "quit on iterrupt"
             # -S chops long lines
             opt = "+F" if args["--follow"] else "+G"
-            f = subprocess.call(["less", "-KS", opt, str(logfile)])
+            f = subprocess.call(["less", less_args, opt, str(logfile)])
         except KeyboardInterrupt:
             pass
