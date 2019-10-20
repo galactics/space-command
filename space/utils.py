@@ -38,14 +38,22 @@ def parse_date(txt, fmt="full"):
 
     fmts = {"full": "%Y-%m-%dT%H:%M:%S", "date": "%Y-%m-%d"}
 
+    if not isinstance(txt, str):
+        raise TypeError("type 'str' expected, got '{}' instead".format(type(txt)))
+
+    txt, _, scale = txt.partition(" ")
+
+    if not scale:
+        scale = Date.DEFAULT_SCALE
+
     if txt == "now":
-        date = Date.now()
+        date = Date.now(scale=scale)
     elif txt == "midnight":
-        date = Date(Date.now().d)
+        date = Date(Date.now().d, scale=scale)
     elif txt == "tomorrow":
-        date = Date(Date.now().d + 1)
+        date = Date(Date.now().d + 1, scale=scale)
     else:
-        date = Date.strptime(txt, fmts.get(fmt, fmt))
+        date = Date.strptime(txt, fmts.get(fmt, fmt), scale=scale)
 
     return date
 
