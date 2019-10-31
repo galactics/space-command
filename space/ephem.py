@@ -166,7 +166,6 @@ def space_ephem(*argv):  # pragma: no cover
                 print(sat.name)
                 print("idx  Start                Stop                 Steps")
                 print("-" * 55)
-                print(sat.req)
 
                 for idx, ephem in enumerate(EphemDb(sat).list()):
 
