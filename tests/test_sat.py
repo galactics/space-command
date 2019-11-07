@@ -116,7 +116,7 @@ def test_parse_request(space_tmpdir):
 
 def test_get_sat(space_tmpdir):
 
-    sat, = Sat.from_selector("ISS", orb=False)
+    sat = Sat.from_selector("ISS", orb=False)
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
@@ -124,7 +124,7 @@ def test_get_sat(space_tmpdir):
     assert sat.orb == None
 
     with raises(ValueError):
-        sat, = Sat.from_selector("XMM", orb=False)
+        sat = Sat.from_selector("XMM", orb=False)
 
 
 def test_get_tle(space_tmpdir, run):
@@ -132,14 +132,14 @@ def test_get_tle(space_tmpdir, run):
     r = run("space tle insert - ", stdin=tle2)
     assert r.success
 
-    sat, = Sat.from_selector("ISS")
+    sat = Sat.from_selector("ISS")
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
     assert sat.norad_id == 25544
     assert sat.orb.date == Date(2019, 6, 10, 5, 43, 40, 581696)
 
-    sat, = Sat.from_selector("ISS~")
+    sat = Sat.from_selector("ISS~")
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
@@ -147,14 +147,14 @@ def test_get_tle(space_tmpdir, run):
     assert sat.orb.date == Date(2018, 10, 24, 13, 14, 20, 814720)
 
     with raises(ValueError):
-        sat, = Sat.from_selector("ISS~3")
+        sat = Sat.from_selector("ISS~3")
 
     # After the date
-    sat, = Sat.from_selector("ISS^2018-01-01")
+    sat = Sat.from_selector("ISS^2018-01-01")
     assert sat.orb.date == Date(2018, 10, 24, 13, 14, 20, 814720)
 
     # Before the date
-    sat, = Sat.from_selector("ISS?2018-01-01")
+    sat = Sat.from_selector("ISS?2018-01-01")
     assert sat.orb.date == Date(2017, 12, 9, 6, 33, 16, 76736)
 
 
@@ -163,7 +163,7 @@ def test_get_ephem(space_tmpdir, run):
     r = run("space ephem insert -", stdin=ephem)
     assert r.success
 
-    sat, = Sat.from_selector('ISS@oem')
+    sat = Sat.from_selector('ISS@oem')
 
     assert sat.name == "ISS (ZARYA)"
     assert sat.cospar_id == "1998-067A"
@@ -171,21 +171,21 @@ def test_get_ephem(space_tmpdir, run):
     assert sat.orb.start == Date(2019, 7, 21)
     assert sat.orb.stop == Date(2019, 7, 22)
 
-    sat, = Sat.from_selector('ISS@oem~')
+    sat = Sat.from_selector('ISS@oem~')
 
     assert sat.orb.start == Date(2019, 7, 19)
     assert sat.orb.stop == Date(2019, 7, 20)  
 
     with raises(ValueError):
-        sat, = Sat.from_selector("ISS@oem~3")
+        sat = Sat.from_selector("ISS@oem~3")
 
-    sat, = Sat.from_selector('ISS@oem^2019-07-20')
+    sat = Sat.from_selector('ISS@oem^2019-07-20')
     assert sat.orb.start == Date(2019, 7, 21)
     assert sat.orb.stop == Date(2019, 7, 22)
 
-    sat, = Sat.from_selector('ISS@oem?2019-07-20')
+    sat = Sat.from_selector('ISS@oem?2019-07-20')
     assert sat.orb.start == Date(2019, 7, 19)
     assert sat.orb.stop == Date(2019, 7, 20)
 
     with raises(ValueError):
-        sat, = Sat.from_selector('ISS@oem?2019-07-19')
+        sat = Sat.from_selector('ISS@oem?2019-07-19')

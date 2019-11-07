@@ -161,7 +161,7 @@ def space_ephem(*argv):  # pragma: no cover
         max_idx = int(args["--last"])
 
         try:
-            for sat in Sat.from_selector(*args["<selector>"], type="oem"):
+            for sat in Sat.from_selectors(*args["<selector>"], type="oem"):
 
                 print(sat.name)
                 print("idx  Start                Stop                 Steps")
@@ -210,7 +210,7 @@ def space_ephem(*argv):  # pragma: no cover
     elif args["get"]:
         ephems = []
         try:
-            for sat in Sat.from_selector(*args["<selector>"], src="oem"):
+            for sat in Sat.from_selectors(*args["<selector>"], src="oem"):
                 if not isinstance(sat.req.date, Date):
                     ephem = EphemDb(sat).get(offset=sat.req.offset)
                 else:

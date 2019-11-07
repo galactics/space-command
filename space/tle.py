@@ -612,7 +612,7 @@ def space_tle(*argv):
         print_stats(args["--graph"])
     else:
         try:
-            sats = list(Sat.from_selector(*args["<selector>"]))
+            sats = list(Sat.from_selectors(*args["<selector>"]))
         except ValueError as e:
             log.error(str(e))
             sys.exit(1)

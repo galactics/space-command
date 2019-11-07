@@ -220,13 +220,16 @@ class Sat:
         return sat
 
     @classmethod
-    def from_selector(cls, *selector, **kwargs):
+    def from_selector(cls, selector, **kwargs):
         """Method to parse a selector string such as 'norad=25544@oem~~'
         """
-        for sel in selector:
-            req = Request.from_text(sel, **kwargs)
-            sat = cls._from_request(req, **kwargs)
-            yield sat
+        req = Request.from_text(selector, **kwargs)
+        return cls._from_request(req, **kwargs)
+
+    @classmethod
+    def from_selectors(cls, *selectors, **kwargs):
+        for sel in selectors:
+            yield cls.from_selector(sel, **kwargs)
 
     @classmethod
     def from_text(cls, text):
@@ -250,7 +253,7 @@ class Sat:
     @classmethod
     def from_input(cls, *selector, text="", alias=True, create=False, orb=True):
 
-        sats = list(cls.from_selector(*selector, alias=alias, create=create, orb=orb))
+        sats = list(cls.from_selectors(*selector, alias=alias, create=create, orb=orb))
 
         if not sats:
             if text:
@@ -523,7 +526,7 @@ def space_sat(*argv):
 
     elif args["orb"]:
         try:
-            sat = list(Sat.from_selector(args["<selector>"]))[0]
+            sat = list(Sat.from_selectors(args["<selector>"]))[0]
         except ValueError as e:
             log.error(e)
             sys.exit(1)
