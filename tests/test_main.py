@@ -33,14 +33,25 @@ def test_list_subcommands(run):
         elif line == "Options :":
             mode = "options"
             continue
+        if line[0] != " ":
+            # If the line is not indented, then it's not a valid subcommand
+            # or option, but a mere text
+            continue
 
         subdict = data.setdefault(mode, {})
 
         k, _, v = line.strip().partition(" ")
         subdict[k] = v.strip()
 
-    assert len(data['subcommands']) == 12
-    assert len(data['options']) == 5
+    assert list(sorted(data['subcommands'].keys())) == [
+        "clock", "config", "ephem", "events", "log", "map", "passes",
+        "phase", "planet", "sat", "station", "tle"
+    ]
+
+    assert list(sorted(data['options'].keys())) == [
+        "--pdb", "--version", "-v,", "-w,"
+    ]
+
     assert not r.stderr
     assert not r.success
 
