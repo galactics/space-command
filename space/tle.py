@@ -242,7 +242,7 @@ class TleDb:
             if not filelist:
                 raise ValueError("No file to download")
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(trust_env=True) as session:
 
             # Task list initialisation
             tasks = [self.fetch_file(session, f) for f in filelist]
