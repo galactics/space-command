@@ -257,7 +257,7 @@ def wspace(*argv):
             log.error("The workspace '{}' does not exist".format(args["<name>"]))
         else:
             print(
-                "If you are sure to delete the workspace '{}', please enter it's name".format(
+                "If you are sure to delete the workspace '{}', please enter its name".format(
                     args["<name>"]
                 )
             )
