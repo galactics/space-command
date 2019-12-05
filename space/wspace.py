@@ -63,6 +63,7 @@ class Workspace:
     )
     HOOKS = ("init", "status", "full-init")
     DEFAULT = "main"
+    BACKUP_FOLDER = WORKSPACES / "_backup"
 
     def __new__(cls, *args, **kwargs):
         # Singleton
@@ -152,13 +153,22 @@ class Workspace:
         for entry in sorted(iter_entry_points("space.wshook"), key=lambda x: x.name):
             entry.load()(cmd)
 
+    @classmethod
+    def get_unique_name(self):
+        while True:
+            path = self.WORKSPACES.joinpath(str(uuid.uuid4()).split("-")[0])
+            if not path.exists():
+                break
+
+        return path
+
     def backup(self, filepath=None):
         """Backup the current workspace into a tar.gz file
         """
 
         if filepath is None:
             name = "{}-{:%Y%m%d_%H%M%S}.tar.gz".format(self.name, datetime.utcnow())
-            filepath = self.WORKSPACES / "_backup" / name
+            filepath = self.BACKUP_FOLDER / name
             if not filepath.parent.exists():
                 filepath.parent.mkdir(parents=True)
 
@@ -176,6 +186,22 @@ class Workspace:
 
         log.info("Backup created at {}".format(filepath))
 
+    def restore(self, name, rename=None):
+        filepath = self.BACKUP_FOLDER / name
+
+        directory = self.get_unique_name() if rename else self.WORKSPACES
+
+        with tarfile.open(filepath, "r:gz") as tar:
+            tar.extractall(directory)
+
+        if rename:
+            directory.joinpath(self.name).replace(self.WORKSPACES.joinpath(rename))
+            directory.rmdir()
+
+    def list_backups(self):
+        for bkp in self.BACKUP_FOLDER.glob("{}-*.tar.gz".format(self.name)):
+            yield bkp
+
 
 ws = Workspace()
 
@@ -188,6 +214,8 @@ def wspace(*argv):
         wspace status [<name>]
         wspace init [--full] [<name>]
         wspace backup [<name>]
+        wspace list-backups [<name>]
+        wspace restore [<name>] [<backup>] [--rename <rename>]
         wspace delete <name>
         wspace on <name> [--init]
         wspace tmp [--init]
@@ -201,6 +229,7 @@ def wspace(*argv):
         <name>     Name of the workspace to work in
         --full     When initializating the workspace, retrieve data to fill it
                    (download TLEs from celestrak)
+        --rename <rename>
 
     Examples
         $ export SPACE_WORKSPACE=test  # switch workspace
@@ -228,10 +257,7 @@ def wspace(*argv):
             ws.name = args["<name>"]
         else:
             # Temporary workspace
-            while True:
-                ws.name = str(uuid.uuid4()).split("-")[0]
-                if not ws.exists():
-                    break
+            ws.name = ws.get_unique_name()
 
         if args["--init"]:
             ws.init()
@@ -295,9 +321,41 @@ def wspace(*argv):
 
             if args["init"]:
                 ws.init(args["--full"])
+            elif args["backup"]:
+                ws.backup()
+            elif args["list-backups"]:
+                for bkp in sorted(ws.list_backups()):
+                    print(" ", bkp.name)
+            elif args["restore"]:
+
+                backups = sorted(ws.list_backups(), reverse=True)
+                # Restore the last backup available
+
+                if not backups:
+                    log.error("No backup available for workspace {}".format(ws.name))
+                    sys.exit(1)
+                elif args["<backup>"] is None:
+                    args["<backup>"] = backups[0].name
+                elif args["<backup>"] not in [x.name for x in backups]:
+                    log.error(
+                        "{} is not a valid backup for workspace {}".format(
+                            args["<backup>"], ws.name
+                        )
+                    )
+                    sys.exit(1)
+
+                print(
+                    "Are you sure you want to restore the workspace '{}' with the backup {}".format(
+                        args["--rename"] if args["--rename"] else ws.name,
+                        args["<backup>"],
+                    )
+                )
+                answer = input("yes/NO > ")
+                if answer == "yes":
+                    ws.restore(args["<backup>"], args["--rename"])
+                else:
+                    print("Restoration canceled")
+                    sys.exit(1)
             else:
                 ws.load()
-                if args["backup"]:
-                    ws.backup()
-                else:
-                    ws.status()
+                ws.status()
