@@ -10,7 +10,7 @@ import beyond.io.ccsds as ccsds
 
 from .utils import docopt
 from .station import StationDb
-from .utils import parse_date, parse_timedelta
+from .utils import parse_date, parse_timedelta, humanize
 from .wspace import ws
 
 
@@ -132,7 +132,7 @@ def space_planet(*args):
                 log.debug(url)
 
                 try:
-                    r = requests.get(url)
+                    r = requests.get(url, stream=True)
                 except requests.exceptions.ConnectionError as e:
                     log.error(e)
                 else:
@@ -141,9 +141,19 @@ def space_planet(*args):
                     except requests.exceptions.HTTPError as e:
                         log.error("{} {}".format(filepath.name, e))
                     else:
+                        total = int(r.headers.get("content-length", 0))
+                        size = 0
                         with filepath.open("bw") as fp:
-                            for chunk in r.iter_content(chunk_size=128):
+                            for chunk in r.iter_content(chunk_size=1024):
                                 fp.write(chunk)
+                                if total:
+                                    size += len(chunk)
+                                    print(
+                                        "\r> {:6.2f} %   {} / {}".format(100 * size / total, humanize(size), humanize(total)),
+                                        end="",
+                                    )
+                        if total:
+                            print("\r", " " * 40, end="\r")
                         success.append(str(filepath.absolute()))
                         log.debug(
                             "Adding {} to the list of jpl files".format(filepath.name)

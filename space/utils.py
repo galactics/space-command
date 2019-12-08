@@ -257,3 +257,17 @@ def hms2deg(h, m, s):
     """
 
     return h * 360 / 24 + m / 60.0 + s / 3600.0
+
+
+def humanize(byte_size):
+
+    cursor = byte_size
+    divisor = 1024
+
+    for i in "B KiB MiB GiB".split():
+        cursor, remainder = divmod(byte_size, divisor)
+        if cursor < 1:
+            break
+        byte_size = cursor + remainder / divisor
+
+    return "{:7.2f} {}".format(byte_size, i)
