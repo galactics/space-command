@@ -19,6 +19,7 @@ from peewee import (
 from beyond.io.tle import Tle
 
 from .wspace import ws
+from space.tle_dir.fetch import fetch_st_historic
 
 log = logging.getLogger(__name__)
 
@@ -167,6 +168,9 @@ class TleDb:
         full.raise_for_status()
 
         self.insert(full.text, "spacetrack.txt")
+
+    def fetch_spacetrack_hist(self, argv):
+        fetch_st_historic(self.insert, argv)
 
     async def fetch_file(self, session, filename):
         """Coroutine to retrieve the specified page
@@ -419,6 +423,7 @@ def space_tle(*argv):
       space-tle insert (-|<file>...)
       space-tle fetch [<file>...]
       space-tle fetch-st <selector>...
+      space-tle fetch-st-hist <noradid> <epochstr>
       space-tle find <text> ...
       space-tle history [--last <nb>] <selector>...
       space-tle dump [--all]
@@ -429,6 +434,7 @@ def space_tle(*argv):
       fetch            Retrieve TLEs from Celestrak website
       fetch-st         Retrieve a single TLE for a given object from the Space-Track
                        website. This request needs login informations (see below)
+      fetch-st-hist    Download historic TLEs from space-track
       find             Search for a string in the database of TLE (case insensitive)
       get              Display the last TLE of a selected object
       history          Display all the recorded TLEs for a given object
@@ -446,6 +452,7 @@ def space_tle(*argv):
       space tle norad=25544          # Display the TLE of the ISS
       space tle cospar=1998-067A     # Display the TLE of the ISS, too
       space tle insert file.txt      # Insert all TLEs from the file
+      space tle fetch-st-hist 25544 ">now-2" # Retrieve the TLEs for the ISS from the last 2 days
       echo "..." | space tle insert  # Insert TLEs from stdin
 
     Configuration:
@@ -460,7 +467,6 @@ def space_tle(*argv):
           satellites:
               auto-sync-tle: False
     """
-
     from .utils import docopt
     from .sat import Sat, Request, sync
 
@@ -497,7 +503,8 @@ def space_tle(*argv):
             if ws.config.get("satellites", "auto-sync-tle", fallback=True):
                 # Update the Satellite DB
                 sync("tle")
-
+    elif args["fetch-st-hist"]:
+        db.fetch_spacetrack_hist(argv)
     elif args["insert"]:
         # Process the file list provided by the command line
         if args["<file>"]:
