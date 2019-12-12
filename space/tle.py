@@ -20,6 +20,9 @@ from beyond.io.tle import Tle
 
 from .wspace import ws
 
+from space.tle_dir.plot import plot
+
+
 log = logging.getLogger(__name__)
 
 
@@ -422,6 +425,7 @@ def space_tle(*argv):
       space-tle find <text> ...
       space-tle history [--last <nb>] <selector>...
       space-tle dump [--all]
+      space-tle plot <selector>...
       space-tle stats
 
     Options:
@@ -434,6 +438,7 @@ def space_tle(*argv):
       history          Display all the recorded TLEs for a given object
       insert           Insert TLEs into the database (file or stdin)
       stats            Display statistics on the database
+      plot             Display the (altitude) history of an object
       <selector>       Selector of the object, see `space sat`
       <file>           File to insert in the database
       -l, --last <nb>  Get the last <nb> TLE
@@ -543,6 +548,9 @@ def space_tle(*argv):
             print("{0.name}\n{0}\n".format(tle))
     elif args["stats"]:
         print_stats()
+    elif args["plot"]:
+        sats = list(Sat.from_selector(*args["<selector>"]))
+        plot(db, sats)
     else:
         try:
             sats = list(Sat.from_selector(*args["<selector>"]))
