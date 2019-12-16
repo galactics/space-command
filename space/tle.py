@@ -626,8 +626,7 @@ def space_tle(*argv):
                     for tle in tles:
                         print("{0.name}\n{0}\n".format(tle))
                 else:
-                    tle = db.get(cospar_id=sat.cospar_id)
-                    print("{0.name}\n{0}\n".format(tle))
+                    print("{0.name}\n{0}\n".format(sat.orb.tle))
             except TleNotFound as e:
                 log.error(str(e))
                 sys.exit(1)
