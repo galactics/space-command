@@ -20,6 +20,9 @@ log = logging.getLogger(__name__)
 
 
 class WindowEphem(Ephem):
+    """Ephemeris used to display the ground-track of the orbit
+    """
+
     def __init__(self, orb, ref_orb):
         """
         Args:
@@ -176,7 +179,12 @@ class SatAnim:
         for i, sat in enumerate(self.sats):
             color = self.COLORS[i % len(self.COLORS)]
             # Updating position of the satellite
-            orb = sat.orb.propagate(date)
+
+            try:
+                orb = sat.orb.propagate(date)
+            except ValueError:
+                continue
+
             orb_sph = orb.copy(form="spherical", frame="ITRF")
             lon, lat = self.lonlat(orb_sph)
             sat.point.set_data([lon], [lat])
