@@ -1,10 +1,8 @@
 import sys
 import logging
-from datetime import timedelta
 
 from beyond.config import config
 import beyond.io.ccsds as ccsds
-from beyond.orbits import Ephem
 
 from .clock import Date
 from .station import StationDb

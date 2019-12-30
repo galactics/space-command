@@ -98,7 +98,6 @@ def space_phase(*argv):
         --file <file>     File
     """
     import sys
-    from .clock import Date
     from .utils import docopt, parse_date
     from .station import StationDb
 

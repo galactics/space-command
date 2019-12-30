@@ -10,7 +10,7 @@ from matplotlib.widgets import Button
 
 from beyond.constants import Earth
 from beyond.env.solarsystem import get_body
-from beyond.orbits import Orbit, Ephem
+from beyond.orbits import Ephem
 
 from .utils import circle
 from .station import StationDb

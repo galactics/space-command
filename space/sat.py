@@ -1,24 +1,19 @@
 import re
 import sys
 import logging
-from textwrap import indent
 from peewee import (
     Model,
     IntegerField,
     CharField,
-    SqliteDatabase,
-    IntegrityError,
     TextField,
 )
 
 from beyond.orbits import Ephem, Orbit
 import beyond.io.ccsds as ccsds
 from beyond.io.tle import Tle
-from beyond.propagators import get_propagator
-from beyond.env.solarsystem import get_body
 
-from .clock import Date, timedelta
-from .utils import parse_date, parse_timedelta
+from .clock import Date
+from .utils import parse_date
 from .wspace import ws
 from .ephem import EphemDb
 
@@ -486,8 +481,6 @@ def space_sat(*argv):
     # ISS@opm            : latest OPM
 
     from .utils import docopt
-    from .tle import space_tle
-    from .ephem import space_ephem
 
     args = docopt(space_sat.__doc__, argv=argv)
 

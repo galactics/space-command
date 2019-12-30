@@ -316,9 +316,7 @@ def space_log(*argv):
       -v, --verbose      Print DEBUG messages as well
       -f, --follow       Start directly in tail mode
     """
-    import time
     import subprocess
-    import select
 
     from space.utils import docopt
     from space.wspace import ws

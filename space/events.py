@@ -11,7 +11,6 @@ from beyond.orbits.listeners import (
     AnomalyListener,
 )
 
-from .clock import Date, timedelta
 from .station import StationDb
 from .sat import Sat
 from .utils import parse_date, parse_timedelta, docopt

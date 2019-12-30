@@ -10,7 +10,6 @@ from pkg_resources import iter_entry_points
 from docopt import DocoptExit
 
 from . import __version__
-from .utils import docopt
 from .wspace import ws
 
 log = logging.getLogger(__package__)
