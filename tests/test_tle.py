@@ -83,9 +83,8 @@ def test_stats(run):
 
     data = {}
     for line in r.stdout.splitlines():
-        k = line[:14].strip().lower()
-        v = line[14:].strip()
-        data[k] = v
+        k, _, v = line.partition(":")
+        data[k.strip().lower()] = v.strip()
 
     assert int(data["objects"]) >= 1
     assert int(data["tle"]) >= 1
@@ -122,10 +121,15 @@ def test_history(run):
 
 
 @mark.skip
-def test_fetch(run):
+def test_celestrak_fetch(run):
     pass
 
 
 @mark.skip
-def test_fetch_st(run):
+def test_celestrak_fetch_list(run):
+    pass
+
+
+@mark.skip
+def test_spacetrack_fetch(run):
     pass
