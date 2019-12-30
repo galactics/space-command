@@ -15,6 +15,8 @@ from beyond.orbits import Ephem
 from .utils import circle
 from .station import StationDb
 from .clock import Date, timedelta
+from .utils import docopt, parse_date
+from .sat import Sat
 
 log = logging.getLogger(__name__)
 
@@ -85,11 +87,15 @@ class SatAnim:
 
     COLORS = "r", "g", "b", "c", "m", "y", "k", "w"
 
-    def __init__(self, sats):
+    def __init__(self, sats, date, ground_track=True, circle=True):
         self.sats = sats
         self.multiplier = None
         self.interval = 200
-        self.circle = True
+        self.circle = circle
+
+        if abs(date - Date.now()).total_seconds() > 1:
+            self._date = date
+            self.multiplier = 1
 
         mpl.rcParams["toolbar"] = "None"
 
@@ -132,7 +138,7 @@ class SatAnim:
                 [], [], ".", ms=2, color=color, animated=True, zorder=10
             )
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)
-            sat.win_ephem = None
+            sat.win_ephem = None if ground_track else False
 
         self.breverse = Button(plt.axes([0.02, 0.02, 0.04, 0.05]), "Reverse")
         self.breverse.on_clicked(self.reverse)
@@ -426,16 +432,16 @@ def space_map(*argv):
     """Animated map of earth with ground track of satellites
 
     Usage:
-      space-map (- | <satellite>...)
+        space-map (- | <satellite>...) [options]
 
     Option:
-      <satellite>   Name of the satellites you want to display.
-      -             If used, the orbit should be provided as stdin in TLE or
-                    CCSDS format
+        <satellite>        Name of the satellites you want to display.
+        -                  If used, the orbit should be provided as stdin in
+                           TLE or CCSDS format
+        -d, --date <date>  Date from which to start the animation [default: now]
+        --no-ground-track  Hide ground-track by default
+        --no-circle        hide circle of visibility by default
     """
-
-    from .utils import docopt
-    from .sat import Sat
 
     args = docopt(space_map.__doc__)
     try:
@@ -448,6 +454,11 @@ def space_map(*argv):
         log.error(e)
         sys.exit(1)
 
-    sat_anim = SatAnim(sats)
+    sat_anim = SatAnim(
+        sats,
+        parse_date(args["--date"]),
+        ground_track=not args["--no-ground-track"],
+        circle=not args["--no-circle"],
+    )
 
     plt.show()
