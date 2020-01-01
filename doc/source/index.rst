@@ -3,13 +3,21 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-space-command
-=============
+space-command documentation
+===========================
+
+:Version: |release|
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   index
 
 Features
 --------
 
- * Retrieve orbits as TLE from celestrak or space-track
+ * Retrieve orbits as TLE from `Celestrak <http://celestrak.com/>`__ or `Space-Track <https://www.space-track.org/>`__
  * Compute visibility from a given point of observation
  * Compute phases of the Moon and other solar system bodies
  * Animated map of the orbit of satellites
@@ -21,7 +29,7 @@ Installation
 
 .. code-block:: shell
 
-    pip install space
+    $ pip install space
 
 If you need the last development version, make sure to also install
 the last version of `beyond <https://github.com/galactics/beyond>`__, which space
@@ -29,16 +37,16 @@ relies heavily upon.
 
 .. code-block:: shell
 
-    pip install git+https://github.com/galactics/beyond
-    pip install git+https://github.com/galactics/space-command
+    $ pip install git+https://github.com/galactics/beyond
+    $ pip install git+https://github.com/galactics/space-command
 
-Quick start
------------
+Quickstart
+----------
 
 .. code-block:: shell
 
-    wspace init        # Create the empty workspace structure
-    space tle fetch    # Retrieve orbital data for major satellites
+    $ wspace init        # Create the empty workspace structure
+    $ space tle fetch    # Retrieve orbital data for major satellites
 
 Stations are accessed by their abbreviation, and by default there is only
 one declared: TLS. As it is not likely you live in this area, you need to
@@ -46,9 +54,9 @@ declare a new station of observation.
 
 .. code-block:: shell
 
-    space station create                # Interactively create a station
-    space station --map                 # Check if your station is well where you want it to be
-    space passes <abbrev> "ISS (ZARYA)"  # Compute the next pass of the ISS from your location
+    $ space station create                # Interactively create a station
+    $ space station --map                 # Check if your station is well where you want it to be
+    $ space passes <abbrev> "ISS (ZARYA)"  # Compute the next pass of the ISS from your location
 
 Available commands
 ------------------
@@ -81,11 +89,11 @@ In addition, the following commands allow you to access non orbital informations
 
 ``space log`` : Access the log of all space commands
 
-Command Argmuents
-^^^^^^^^^^^^^^^^^
+Command argmuents
+-----------------
 
 Dates
-"""""
+^^^^^
 Unless otherwise specified, dates should be given following the ISO 8601
 format ``%Y-%m-%dT%H:%M:%S``. You can also use the keywords 'now', 'midnight' and 'tomorrow'.
 All dates are expressed in UTC
@@ -95,7 +103,7 @@ Example: It is *2019-07-04T20:11:37*, ``now`` will yield *2019-07-04T20:11:37*, 
 Dates are generally used to give the starting point of a computation.
 
 Time range
-""""""""""
+^^^^^^^^^^
 Time ranges may be expressed in weeks (*w*), days (*d*), hours (*h*), minutes (*m*) or seconds (*s*).
 All descriptors except weeks accept decimals:
 
@@ -106,12 +114,12 @@ All descriptors except weeks accept decimals:
 Time ranges are generally used to give the ending point and the step size of a computation.
 
 Station selection
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 Station selection is done using the abbreviation of the station. By default, only the station
 ``TLS`` (located in Toulouse, France) is present.
 
 Satellite selection
-"""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^
 Satellite selection, or rather *Orbit selection* can be made multiple ways.
 First you have to pick the descriptor of the satellite.
 For instance, the International Space Station (ISS) can be accessed by its name
@@ -129,7 +137,7 @@ As this could be a bit tiresome, it is possible to define aliases.
 
 .. code-block:: shell
 
-    space sat alias ISS norad=25544
+    $ space sat alias ISS norad=25544
 
 The ``ISS`` alias is already defined
 
@@ -161,9 +169,26 @@ ephemeris files (OEM).
     ISS@oem^2018-12-25 : first OEM after the date
     ISS@tle?2018-12-25 : first tle before the date
 
+.. _pipping:
+
+Piping commands
+---------------
+
+It is possible to chain commands in order to feed a result from one to another.
+Generaly, this is used to provide orbital data (TLE, ephemeris, etc.).
+In this case, the name of the satellite should be replaced by ``-`` in the second
+command.
+
+.. code-block:: shell
+
+    $ # Compute the pass of Mars above a station
+    $ space planet Mars | space passes TLS - -s 600s -g
+
+    $ # Search for TLEs and display them on a map
+    $ space tle find tintin | space map -
 
 Workspaces
-^^^^^^^^^^
+----------
 
 Workspaces allow the user to work on non-colluding databases. The default workspace is
 *main*.
@@ -205,23 +230,6 @@ to help visualize when working on workspaces
 By default all workspaces are located in the ``.space/`` folder in the home directory.
 It is possible to change the location with the ``SPACE_WORKSPACES_FOLDER`` environment variable.
 
-.. _pipping:
-
-Pipping commands
-^^^^^^^^^^^^^^^^
-
-It is possible to chain commands in order to feed a result from one to another.
-In this case, the name of the satellite should be replaced by ``-`` in the second
-command.
-
-.. code-block:: shell
-
-    # Compute the pass of Mars above a station
-    space planet Mars | space passes TLS - -s 600s -g
-
-    # Search for TLEs and display them on a map
-    space tle find tintin | space map -
-
 Extension
 ---------
 
@@ -234,9 +242,13 @@ additional subcommand.
 If you need to extend the initialisation process (``wspace init``), the entry point
 is ``space.wshook``.
 
-Indices and tables
-==================
+Proxy
+-----
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+By setting up the ``HTTP_PROXY`` and ``HTTPS_PROXY`` variables to correct
+values, space-command should be able to retrieve any file from the web
+
+.. code-block:: bash
+
+    $ export HTTP_PROXY=http://<login>:<password>@<adress>:<port>
+    $ export HTTPS_PROXY=https://<login>:<password>@<adress>:<port>

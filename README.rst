@@ -39,10 +39,10 @@ For the latest development version
 Features
 --------
 
-* Retrieve orbits as TLE from celestrak or space-track
+* Retrieve orbits as TLE from `Celestrak <http://celestrak.com/>`__ or `Space-Track <https://www.space-track.org/>`__
 * Compute visibility from a given point of observation
 * Compute phases of the Moon and other solar system bodies
-* Animated map of satellites' orbit
+* Animated map of the orbit of satellites
 * Compute events for a given satellite (day/night, node, AOS/LOS, etc.)
 * Retrieve Solar System bodies ephemeris
 
@@ -51,6 +51,38 @@ list of all the features.
 
 Changelog
 ---------
+
+[0.6] - 2020-01-01
+^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- `black <https://black.readthedocs.io/en/stable/>`__ code style
+- Retrieve available pages from Celestrak
+- Parse time scale of a datetime argument (i.e. "2020-01-01T14:36:00 TAI")
+- ``wspace`` can list and restore backups
+- ``space planet`` display the download progress
+- Support of Python 3.8
+- ``space events`` can compute Argument Of Latitude, and specific stations events
+- ``space map`` command arguments to start at a given date, disable ground track or disable visibility circle
+
+**Modified**
+
+- ``Sat.from_selector`` take a single selector and return a single Sat instance.
+  Use ``Sat.from_selectors()`` for a generator.
+- Refactoring the *space.tle* module into a subpackage
+
+**Fixed**
+
+- Correction of sorting algorithm for ``space tle``
+- ``space passes`` header
+- Support of environment variable to set a proxy, even in async code
+- ``map`` does not crash when an ephemeris is out of bound
+
+**Removed**
+
+- Support of python 3.5
+- Unused imports
 
 [0.5] - 2019-07-30
 ^^^^^^^^^^^^^^^^^^
