@@ -75,7 +75,9 @@ class Request:
   offset: {self.offset}
   limit: {self.limit}
   date: {self.date}
-""".format(self=self)
+""".format(
+            self=self
+        )
 
     @classmethod
     def from_text(cls, txt, alias=True, **kwargs):
@@ -531,7 +533,7 @@ def space_sat(*argv):
 
     elif args["infos"]:
         try:
-            sat, = Sat.from_input(args["<selector>"], orb=False)
+            (sat,) = Sat.from_input(args["<selector>"], orb=False)
             print(
                 """name       {0.name}
 cospar id  {0.cospar_id}

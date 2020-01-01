@@ -111,10 +111,10 @@ class SatAnim:
         plt.yticks(range(-90, 91, 30))
         plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.1)
 
-        self.sun, = plt.plot(
+        (self.sun,) = plt.plot(
             [], [], "yo", markersize=10, markeredgewidth=0, animated=True, zorder=2
         )
-        self.moon, = plt.plot(
+        (self.moon,) = plt.plot(
             [], [], "wo", markersize=10, markeredgewidth=0, animated=True, zorder=2
         )
         self.night = plt.fill_between(
@@ -131,10 +131,10 @@ class SatAnim:
         for i, sat in enumerate(self.sats):
             color = self.COLORS[i % len(self.COLORS)]
 
-            sat.point, = plt.plot(
+            (sat.point,) = plt.plot(
                 [], [], "o", ms=5, color=color, animated=True, zorder=10
             )
-            sat.circle, = plt.plot(
+            (sat.circle,) = plt.plot(
                 [], [], ".", ms=2, color=color, animated=True, zorder=10
             )
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)

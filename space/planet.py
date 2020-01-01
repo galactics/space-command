@@ -149,7 +149,11 @@ def space_planet(*args):
                                 if total:
                                     size += len(chunk)
                                     print(
-                                        "\r> {:6.2f} %   {} / {}".format(100 * size / total, humanize(size), humanize(total)),
+                                        "\r> {:6.2f} %   {} / {}".format(
+                                            100 * size / total,
+                                            humanize(size),
+                                            humanize(total),
+                                        ),
                                         end="",
                                     )
                         if total:

@@ -186,7 +186,7 @@ def space_ephem(*argv):  # pragma: no cover
                         steps.add(orb_j.date - orb_i.date)
 
                     if len(steps) == 1:
-                        steps, = steps
+                        (steps,) = steps
                     else:
                         steps = "[{}, {}]".format(min(steps), max(steps))
 
