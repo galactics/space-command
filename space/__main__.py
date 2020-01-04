@@ -93,12 +93,15 @@ def main():
 
         helper = "Available sub-commands :\n"
         addons = ""
+
+        _max = len(max(commands.keys(), key=len))
+
         for name, entry in sorted(commands.items()):
             cmd = entry.load()
             if entry.dist.project_name == "space-command":
-                helper += " {:<10} {}\n".format(name, get_doc(cmd))
+                helper += " {:<{}}  {}\n".format(name, _max, get_doc(cmd))
             else:
-                addons += " {:<10} {}\n".format(name, get_doc(cmd))
+                addons += " {:<{}}  {}\n".format(name, _max, get_doc(cmd))
 
         print(__doc__)
         print(helper)
