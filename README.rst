@@ -52,6 +52,12 @@ list of all the features.
 Changelog
 ---------
 
+[Unreleased]
+^^^^^^^^^^^^
+
+**Added**
+
+- ``space tle`` history range selection
 [0.6] - 2020-01-01
 ^^^^^^^^^^^^^^^^^^
 

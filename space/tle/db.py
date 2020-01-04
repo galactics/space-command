@@ -173,18 +173,26 @@ class TleDb:
         else:
             return Tle("%s\n%s" % (entity.name, entity.data), src=entity.src)
 
-    def history(self, number=None, **kwargs):
+    def history(self, *, number=None, start=None, stop=None, **kwargs):
         """Retrieve all the TLE of a given object
 
         Keyword Arguments:
             norad_id (int)
             cospar_id (str)
             name (str)
+            number (int): Number of TLE to retrieve (unlimited if None)
+            start (Date): Beginning of the range (- infinity if None)
+            stop (Date):  End of the range (now if None)
         Yield:
             TleModel:
         """
 
         query = self.model.select().filter(**kwargs).order_by(self.model.epoch)
+
+        if start:
+            query = query.where(self.model.epoch >= start.datetime)
+        if stop:
+            query = query.where(self.model.epoch <= stop.datetime)
 
         if not query:
             mode, selector = kwargs.popitem()
