@@ -491,7 +491,7 @@ def space_sat(*argv):
         name = args["<alias>"]
 
         try:
-            sat = Sat.from_input(selector)
+            sat = Sat.from_selector(selector, orb=False)
         except ValueError as e:
             log.error("Unknown satellite '{}'".format(selector))
             sys.exit(1)
