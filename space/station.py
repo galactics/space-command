@@ -7,6 +7,7 @@ from beyond.errors import UnknownFrameError
 from .wspace import ws
 from .utils import dms2deg, deg2dms
 
+
 log = logging.getLogger(__name__)
 
 
@@ -121,6 +122,7 @@ def space_station(*argv):
     import matplotlib.pyplot as plt
 
     from .utils import docopt
+    from .map.background import set_background
 
     args = docopt(space_station.__doc__)
 
@@ -180,19 +182,7 @@ def space_station(*argv):
             stations.append((station.name, lat, lon))
 
         if args["--map"]:
-            path = Path(__file__).parent / "static/earth.png"
-            im = plt.imread(str(path))
             plt.figure(figsize=(15.2, 8.2))
-            plt.imshow(im, extent=[-180, 180, -90, 90])
-            plt.xlim([-180, 180])
-            plt.ylim([-90, 90])
-            plt.grid(True, linestyle=":", alpha=0.4)
-            plt.xticks(range(-180, 181, 30))
-            plt.yticks(range(-90, 91, 30))
-            plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.1)
-
-            for name, lat, lon in stations:
-                plt.plot([lon], [lat], "ko")
-                plt.text(lon + 1, lat + 1, name)
-
+            set_background()
+            plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
             plt.show()

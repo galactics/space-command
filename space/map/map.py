@@ -1,5 +1,3 @@
-import sys
-import logging
 import numpy as np
 from pathlib import Path
 
@@ -10,106 +8,42 @@ from matplotlib.widgets import Button
 
 from beyond.constants import Earth
 from beyond.env.solarsystem import get_body
-from beyond.orbits import Ephem
 
-from .utils import circle
-from .station import StationDb
-from .clock import Date, timedelta
-from .utils import docopt, parse_date
-from .sat import Sat
+from ..utils import circle, orb2lonlat
+from ..clock import Date, timedelta
 
-log = logging.getLogger(__name__)
+from .wephem import WindowEphem
+from .background import set_background
 
 
-class WindowEphem(Ephem):
-    """Ephemeris used to display the ground-track of the orbit
-    """
-
-    def __init__(self, orb, ref_orb):
-        """
-        Args:
-            orb (Orbit) : Used as cursor
-            ref_orb (Orbit or Ephem): Used to propagate
-        """
-
-        self.span = orb.infos.period * 2
-        start = orb.date - self.span / 2
-        stop = start + self.span
-        self.orb = ref_orb
-        self.step = orb.infos.period / 100
-
-        orbs = ref_orb.ephemeris(start=start, stop=stop, step=self.step, strict=False)
-        super().__init__(orbs)
-
-    def propagate(self, date):
-        if self.start < date < self.stop:
-            date_diff = (date - self.start) / self.step
-            date_i = int(date_diff)
-            mid = len(self) // 2
-            new = (date_i - mid) * self.step
-
-            if date_i > mid:
-                orbs = list(
-                    self.orb.ephemeris(
-                        start=self.stop + self.step,
-                        stop=new,
-                        step=self.step,
-                        strict=False,
-                    )
-                )
-                for x in orbs:
-                    self._orbits.pop(0)
-                    self._orbits.append(x)
-            elif date_i < mid - 1:
-                orbs = list(
-                    self.orb.ephemeris(
-                        start=self.start - self.step,
-                        stop=new,
-                        step=-self.step,
-                        strict=False,
-                    )
-                )
-                for x in orbs:
-                    self._orbits.pop()
-                    self._orbits.insert(0, x)
-        else:
-            self._orbits = list(
-                self.orb.ephemeris(
-                    start=date - self.span / 2,
-                    stop=self.span,
-                    step=self.step,
-                    strict=False,
-                )
-            )
-
-
-class SatAnim:
+class MapAnim:
 
     COLORS = "r", "g", "b", "c", "m", "y", "k", "w"
 
-    def __init__(self, sats, date, ground_track=True, circle=True):
+    def __init__(self, sats, date, groundtrack=True, circle=True):
         self.sats = sats
         self.multiplier = None
         self.interval = 200
         self.circle = circle
+        self.groundtrack = groundtrack
 
         if abs(date - Date.now()).total_seconds() > 1:
-            self._date = date
+            self.date = date
             self.multiplier = 1
 
         mpl.rcParams["toolbar"] = "None"
 
-        path = Path(__file__).parent / "static/earth.png"
-        im = plt.imread(str(path))
         self.fig = plt.figure(figsize=(15.2, 8.2))
         self.ax = plt.subplot(111)
-        plt.imshow(im, extent=[-180, 180, -90, 90])
-        plt.xlim([-180, 180])
-        plt.ylim([-90, 90])
-        plt.grid(True, linestyle=":", alpha=0.4)
-        plt.xticks(range(-180, 181, 30))
-        plt.yticks(range(-90, 91, 30))
+        set_background()
         plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.1)
+
+        self.make_empty_plots()
+        self.make_buttons()
+
+        self.ani = FuncAnimation(self.fig, self, interval=self.interval, blit=True)
+
+    def make_empty_plots(self):
 
         (self.sun,) = plt.plot(
             [], [], "yo", markersize=10, markeredgewidth=0, animated=True, zorder=2
@@ -122,11 +56,6 @@ class SatAnim:
         )
         self.date_text = plt.text(-175, 80, "")
 
-        for station in StationDb.list().values():
-            lat, lon = np.degrees(station.latlonalt[:-1])
-            plt.plot([lon], [lat], "k+")
-            plt.text(lon + 1, lat + 1, station.abbr)
-
         # For each satellite, initialisation of graphical representation
         for i, sat in enumerate(self.sats):
             color = self.COLORS[i % len(self.COLORS)]
@@ -138,8 +67,9 @@ class SatAnim:
                 [], [], ".", ms=2, color=color, animated=True, zorder=10
             )
             sat.text = plt.text(0, 0, sat.name, color=color, animated=True, zorder=10)
-            sat.win_ephem = None if ground_track else False
+            sat.win_ephem = None if self.groundtrack else False
 
+    def make_buttons(self):
         self.breverse = Button(plt.axes([0.02, 0.02, 0.04, 0.05]), "Reverse")
         self.breverse.on_clicked(self.reverse)
         self.bslow = Button(plt.axes([0.07, 0.02, 0.04, 0.05]), "Slower")
@@ -156,14 +86,32 @@ class SatAnim:
         self.ground = Button(plt.axes([0.9, 0.02, 0.08, 0.05]), "Ground-Track")
         self.ground.on_clicked(self.toggle_groundtrack)
 
-        self.ani = FuncAnimation(self.fig, self, interval=self.interval, blit=True)
+    def propagate(self):
 
-    def __call__(self, frame):
+        if self.multiplier is None:
+            self.date = Date.now()
+        else:
+            self.date += self.increment
 
-        plot_list = []
+        for sat in self.sats:
+            try:
+                sat.propagated = sat.orb.propagate(self.date)
+            except ValueError:
+                sat.propagated = None
+            else:
+                # Ground track
+                if sat.win_ephem is None:
+                    try:
+                        sat.win_ephem = WindowEphem(sat.propagated, sat.orb)
+                    except ValueError:
+                        # In case of faulty windowed ephemeris, disable groundtrack
+                        # altogether
+                        sat.win_ephem = False
 
-        date = self.date()
+                if sat.win_ephem:
+                    sat.win_ephem.propagate(self.date)
 
+    def update_text(self):
         if self.multiplier is None:
             text = "real time"
         else:
@@ -179,20 +127,24 @@ class SatAnim:
             sign = "" if self.multiplier > 0 else "-"
             text = "{}x{:0.0f} {}".format(sign, value, adj)
 
-        self.date_text.set_text("{:%Y-%m-%d %H:%M:%S}\n{}".format(date, text))
-        plot_list.append(self.date_text)
+        self.date_text.set_text("{:%Y-%m-%d %H:%M:%S}\n{}".format(self.date, text))
+        return self.date_text
+
+    def update_sats(self):
+
+        plot_list = []
 
         for i, sat in enumerate(self.sats):
             color = self.COLORS[i % len(self.COLORS)]
             # Updating position of the satellite
 
-            try:
-                orb = sat.orb.propagate(date)
-            except ValueError:
+            if sat.propagated is None:
                 continue
 
+            orb = sat.propagated
+
             orb_sph = orb.copy(form="spherical", frame="ITRF")
-            lon, lat = self.lonlat(orb_sph)
+            lon, lat = orb2lonlat(orb_sph)
             sat.point.set_data([lon], [lat])
             plot_list.append(sat.point)
 
@@ -207,60 +159,10 @@ class SatAnim:
                 sat.circle.set_data(lonlat[:, 0], lonlat[:, 1])
                 plot_list.append(sat.circle)
 
-            # Ground track
-            if sat.win_ephem is None:
-                try:
-                    sat.win_ephem = WindowEphem(orb, sat.orb)
-                except ValueError:
-                    # In case of faulty windowed ephemeris, disable groundtrack
-                    # altogether
-                    sat.win_ephem = False
-
             if sat.win_ephem:
-                sat.win_ephem.propagate(date)
-
-                lons, lats = [], []
-                segments = []
-                prev_lon, prev_lat = None, None
-                for win_orb in sat.win_ephem:
-                    lon, lat = self.lonlat(win_orb.copy(form="spherical", frame="ITRF"))
-
-                    # Creation of multiple segments in order to not have a ground track
-                    # doing impossible paths
-                    if prev_lon is None:
-                        lons = []
-                        lats = []
-                        segments.append((lons, lats))
-                    elif orb.infos.kep.i < np.pi / 2 and (
-                        np.sign(prev_lon) == 1 and np.sign(lon) == -1
-                    ):
-                        lons.append(lon + 360)
-                        lats.append(lat)
-                        lons = [prev_lon - 360]
-                        lats = [prev_lat]
-                        segments.append((lons, lats))
-                    elif orb.infos.kep.i > np.pi / 2 and (
-                        np.sign(prev_lon) == -1 and np.sign(lon) == 1
-                    ):
-                        lons.append(lon - 360)
-                        lats.append(lat)
-                        lons = [prev_lon + 360]
-                        lats = [prev_lat]
-                        segments.append((lons, lats))
-                    elif abs(prev_lon) > 150 and (np.sign(prev_lon) != np.sign(lon)):
-                        lons.append(lon - 360)
-                        lats.append(lat)
-                        lons = [prev_lon + 360]
-                        lats = [prev_lat]
-                        segments.append((lons, lats))
-
-                    lons.append(lon)
-                    lats.append(lat)
-                    prev_lon = lon
-                    prev_lat = lat
-
+                # Ground-track
                 sat.gt = []
-                for lons, lats in segments:
+                for lons, lats in sat.win_ephem.segments():
                     sat.gt.append(
                         self.ax.plot(
                             lons, lats, color=color, alpha=0.5, lw=2, animated=True
@@ -268,9 +170,15 @@ class SatAnim:
                     )
                     plot_list.append(sat.gt[-1])
 
+        return plot_list
+
+    def update_bodies(self):
+
+        plot_list = []
+
         # Updating the sun
-        sun = get_body("Sun").propagate(date).copy(form="spherical", frame="ITRF")
-        lon, lat = self.lonlat(sun)
+        sun = get_body("Sun").propagate(self.date).copy(form="spherical", frame="ITRF")
+        lon, lat = orb2lonlat(sun)
         self.sun.set_data([lon], [lat])
         plot_list.append(self.sun)
 
@@ -293,6 +201,7 @@ class SatAnim:
         # Eclipse (part of the orbit when the satellite is not illuminated by
         # the sun)
         if len(self.sats) == 1:
+            orb_sph = self.sats[0].propagated.copy(form="spherical", frame="ITRF")
             virt_alt = Earth.r * orb_sph.r / np.sqrt(orb_sph.r ** 2 - Earth.r ** 2)
             theta = sun.theta + np.pi
             phi = -sun.phi
@@ -341,30 +250,28 @@ class SatAnim:
                     verts.append(v)
 
         self.night.set_verts(verts)
-        plot_list.insert(0, self.night)
+        plot_list.append(self.night)
 
         # Updating the moon
-        moon = get_body("Moon").propagate(date).copy(frame="ITRF", form="spherical")
-        lon, lat = self.lonlat(moon)
+        moon = (
+            get_body("Moon").propagate(self.date).copy(frame="ITRF", form="spherical")
+        )
+        lon, lat = orb2lonlat(moon)
         self.moon.set_data([lon], [lat])
         plot_list.append(self.moon)
 
         return plot_list
 
-    @classmethod
-    def lonlat(cls, orb):
-        orb = orb.copy(form="spherical", frame="ITRF")
-        lon, lat = np.degrees(orb[1:3])
-        lon = ((lon + 180) % 360) - 180
-        return lon, lat
+    def __call__(self, frame):
 
-    def date(self):
-        if self.multiplier is None:
-            self._date = Date.now()
-        else:
-            self._date += self.increment
+        self.propagate()
 
-        return self._date
+        plot_list = []
+        plot_list.append(self.update_text())
+        plot_list.extend(self.update_sats())
+        plot_list.extend(self.update_bodies())
+
+        return plot_list
 
     @property
     def increment(self):
@@ -426,39 +333,3 @@ class SatAnim:
                 sat.circle.set_data([], [])
 
         self.circle ^= True
-
-
-def space_map(*argv):
-    """Animated map of earth with ground track of satellites
-
-    Usage:
-        space-map (- | <satellite>...) [options]
-
-    Option:
-        <satellite>        Name of the satellites you want to display.
-        -                  If used, the orbit should be provided as stdin in
-                           TLE or CCSDS format
-        -d, --date <date>  Date from which to start the animation [default: now]
-        --no-ground-track  Hide ground-track by default
-        --no-circle        hide circle of visibility by default
-    """
-
-    args = docopt(space_map.__doc__)
-    try:
-        sats = list(
-            Sat.from_input(
-                *args["<satellite>"], text=sys.stdin.read() if args["-"] else ""
-            )
-        )
-    except ValueError as e:
-        log.error(e)
-        sys.exit(1)
-
-    sat_anim = SatAnim(
-        sats,
-        parse_date(args["--date"]),
-        ground_track=not args["--no-ground-track"],
-        circle=not args["--no-circle"],
-    )
-
-    plt.show()

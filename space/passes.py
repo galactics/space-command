@@ -13,6 +13,7 @@ from beyond.errors import UnknownFrameError
 from .utils import circle, docopt, parse_date, parse_timedelta
 from .station import StationDb
 from .sat import Sat
+from .map.background import set_background
 
 log = logging.getLogger(__name__)
 
@@ -217,9 +218,7 @@ def space_passes(*argv):
 
             plt.subplot(122)
             # Ground-track of the passes
-            path = Path(__file__).parent
-            im = plt.imread("%s/static/earth.png" % path)
-            plt.imshow(im, extent=[-180, 180, -90, 90])
+            set_background()
             plt.plot(lons, lats, "b.")
 
             plt.plot(lons_e, lats_e, "r.")
@@ -228,12 +227,10 @@ def space_passes(*argv):
 
             # Ground Station
             sta_lat, sta_lon = np.degrees(station.latlonalt[:-1])
-            plt.plot([sta_lon], [sta_lat], "o", color=color)
-            plt.text(sta_lon + 1, sta_lat + 1, station.abbr, color=color)
 
             # Visibility circle
             lon, lat = np.degrees(
-                list(zip(*circle(orb_itrf.r, np.radians(sta_lon), np.radians(sta_lat))))
+                list(zip(*circle(orb_itrf.r, *station.latlonalt[-2::-1])))
             )
             lon = ((lon + 180) % 360) - 180
             plt.plot(lon, lat, ".", color=color, ms=2)

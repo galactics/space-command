@@ -2,7 +2,7 @@ import re
 import sys
 from textwrap import dedent
 from docopt import docopt as true_docopt
-from numpy import cos, sin, arccos, arcsin, pi, ones, linspace, copysign
+from numpy import cos, sin, arccos, arcsin, pi, ones, linspace, copysign, degrees
 
 from beyond.constants import Earth
 
@@ -163,6 +163,13 @@ def circle(alt, lon, lat, mask=0):
         result.append((point_lon, point_lat))
 
     return result
+
+
+def orb2lonlat(orb):
+    orb = orb.copy(form="spherical", frame="ITRF")
+    lon, lat = degrees(orb[1:3])
+    lon = ((lon + 180) % 360) - 180
+    return lon, lat
 
 
 def deg2dmstuple(deg):

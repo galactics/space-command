@@ -58,6 +58,11 @@ Changelog
 **Added**
 
 - ``space tle`` history range selection
+
+**Modified**
+
+- refactoring of ``space map``, as a subpackage
+
 [0.6] - 2020-01-01
 ^^^^^^^^^^^^^^^^^^
 
