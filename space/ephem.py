@@ -2,7 +2,7 @@ import sys
 import logging
 
 from beyond.config import config
-import beyond.io.ccsds as ccsds
+from beyond.io import ccsds
 
 from .clock import Date
 from .station import StationDb
@@ -44,13 +44,16 @@ class EphemDb:
 
         log.info("{} saved".format(filepath))
 
+    def get_raw(self, offset=0):
+
+        for i, f in enumerate(sorted(self.sat.folder.glob(self.pattern))):
+            if i == offset:
+                return f.open().read()
+        else:
+            raise ValueError("No")
+
     def get(self, offset=0):
-        files = list(sorted(self.sat.folder.glob(self.pattern)))
-
-        if not files or len(files) <= offset:
-            raise ValueError()
-
-        return ccsds.load(files[-(1 + offset)].open())
+        return ccsds.loads(self.get_raw(offset))
 
     def get_dated(self, limit, date):
 
@@ -210,9 +213,9 @@ def space_ephem(*argv):  # pragma: no cover
     elif args["get"]:
         ephems = []
         try:
-            for sat in Sat.from_selectors(*args["<selector>"], src="oem"):
+            for sat in Sat.from_selectors(*args["<selector>"], src="oem", orb=False):
                 if not isinstance(sat.req.date, Date):
-                    ephem = EphemDb(sat).get(offset=sat.req.offset)
+                    ephem = EphemDb(sat).get_raw(offset=sat.req.offset)
                 else:
                     ephem = EphemDb(sat).get_dated(
                         date=sat.req.date, limit=sat.req.limit
@@ -222,4 +225,5 @@ def space_ephem(*argv):  # pragma: no cover
             log.error(e)
             sys.exit(1)
 
-        print(ccsds.dumps(ephems))
+        # print(ccsds.dumps(ephems))
+        print(ephems[0])
