@@ -521,7 +521,7 @@ def space_sat(*argv):
 
     elif args["orb"]:
         try:
-            sat = list(Sat.from_selectors(args["<selector>"]))[0]
+            sat = Sat.from_selector(args["<selector>"])
         except ValueError as e:
             log.error(e)
             sys.exit(1)
