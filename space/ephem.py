@@ -162,7 +162,7 @@ def space_ephem(*argv):  # pragma: no cover
             for sat in Sat.from_selectors(*args["<selector>"], type="oem"):
 
                 print(sat.name)
-                print("idx  Start                Stop                 Steps")
+                print("idx  Frame     Start                Stop                 Steps")
                 print("-" * 55)
 
                 for idx, ephem in enumerate(EphemDb(sat).list()):
@@ -187,11 +187,13 @@ def space_ephem(*argv):  # pragma: no cover
 
                     if len(steps) == 1:
                         (steps,) = steps
+                    elif (max(steps) - min(steps)).total_seconds() < 1e-5:
+                        steps = max(steps)
                     else:
                         steps = "[{}, {}]".format(min(steps), max(steps))
 
                     print(
-                        "{color}{idx:<2} {ephem.start:{fmt}}  {ephem.stop:{fmt}}  {steps}{endcolor}".format(
+                        "{color}{idx:<2} {ephem.frame.name:8}  {ephem.start:{fmt}}  {ephem.stop:{fmt}}  {steps}{endcolor}".format(
                             idx=idx,
                             ephem=ephem,
                             fmt="%Y-%m-%dT%H:%M:%S",
