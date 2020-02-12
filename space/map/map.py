@@ -9,7 +9,7 @@ from matplotlib.widgets import Button
 from beyond.constants import Earth
 from beyond.env.solarsystem import get_body
 
-from ..utils import circle, orb2lonlat
+from ..utils import circle, orb2circle, orb2lonlat
 from ..clock import Date, timedelta
 
 from .wephem import WindowEphem
@@ -154,7 +154,7 @@ class MapAnim:
 
             if self.circle:
                 # Updating the circle of visibility
-                lonlat = np.degrees(circle(*orb_sph[:3]))
+                lonlat = np.degrees(orb2circle(orb_sph))
                 lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
                 sat.circle.set_data(lonlat[:, 0], lonlat[:, 1])
                 plot_list.append(sat.circle)
@@ -183,7 +183,7 @@ class MapAnim:
         plot_list.append(self.sun)
 
         # Updating the night
-        lonlat = np.degrees(circle(*sun[:3]))
+        lonlat = np.degrees(orb2circle(sun))
         lonlat[:, 0] = ((lonlat[:, 0] + 180) % 360) - 180
         season = -95 if lat > 0 else 95
         lonlat = lonlat[lonlat[:, 0].argsort()]  # Sorting array by ascending longitude

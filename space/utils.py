@@ -7,7 +7,7 @@ from numpy import cos, sin, arccos, arcsin, pi, ones, linspace, copysign, degree
 from beyond.constants import Earth
 
 
-__all__ = ["circle", "docopt"]
+__all__ = ["circle", "orb2circle", "docopt", "parse_date", "parse_timedelta"]
 
 
 def parse_date(txt, fmt="full"):
@@ -114,6 +114,18 @@ def parse_timedelta(txt, negative=False):
 def docopt(doc, argv=None, **kwargs):
     argv = argv if argv else sys.argv[2:]
     return true_docopt(dedent("    " + doc), argv=argv, **kwargs)
+
+
+def orb2circle(orb, mask=0):
+    """Compute a circle of visibility of an orbit
+
+    Args:
+        orb (Orbit):
+        mark (float):
+    Return:
+        list: List of longitude/latitude couple (in radians)
+    """
+    return circle(*orb.copy(form="spherical")[:3])
 
 
 def circle(alt, lon, lat, mask=0):
