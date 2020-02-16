@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pkg_resources import iter_entry_points
 from peewee import SqliteDatabase
 
-from .utils import docopt
+from .utils import docopt, humanize
 from .config import SpaceConfig
 
 log = logging.getLogger(__name__)
@@ -213,9 +213,9 @@ def wspace(*argv):
         wspace list
         wspace status [<name>]
         wspace init [--full] [<name>]
+        wspace backup create [<name>]
+        wspace backup restore [<name>] [<backup>] [--rename <rename>]
         wspace backup [<name>]
-        wspace list-backups [<name>]
-        wspace restore [<name>] [<backup>] [--rename <rename>]
         wspace delete <name>
         wspace on <name> [--init]
         wspace tmp [--init]
@@ -225,7 +225,9 @@ def wspace(*argv):
         list       List existing workspaces
         delete     Delete a workspace
         status     Print informations on a workspace
-        backup     Backup the workspace
+        backup     List available backups for a workspace
+          create   Make a new backup
+          restore  Restore a backup (possibly in a new workspace)
         <name>     Name of the workspace to work in
         --full     When initializating the workspace, retrieve data to fill it
                    (download TLEs from celestrak)
@@ -304,7 +306,7 @@ def wspace(*argv):
         else:
             name = Workspace.DEFAULT
 
-        if args["list"]:
+        if args["list"] and not args["backup"]:
             for _ws in Workspace.list():
                 if name == _ws.name:
                     mark = "*"
@@ -322,40 +324,48 @@ def wspace(*argv):
             if args["init"]:
                 ws.init(args["--full"])
             elif args["backup"]:
-                ws.backup()
-            elif args["list-backups"]:
-                for bkp in sorted(ws.list_backups()):
-                    print(" ", bkp.name)
-            elif args["restore"]:
+                if args["create"]:
+                    ws.backup()
+                elif args["restore"]:
+                    backups = sorted(ws.list_backups(), reverse=True)
+                    # Restore the last backup available
 
-                backups = sorted(ws.list_backups(), reverse=True)
-                # Restore the last backup available
+                    if not backups:
+                        log.error(
+                            "No backup available for workspace {}".format(ws.name)
+                        )
+                        sys.exit(1)
+                    elif args["<backup>"] is None:
+                        args["<backup>"] = backups[0].name
+                    elif args["<backup>"] not in [x.name for x in backups]:
+                        log.error(
+                            "{} is not a valid backup for workspace {}".format(
+                                args["<backup>"], ws.name
+                            )
+                        )
+                        sys.exit(1)
 
-                if not backups:
-                    log.error("No backup available for workspace {}".format(ws.name))
-                    sys.exit(1)
-                elif args["<backup>"] is None:
-                    args["<backup>"] = backups[0].name
-                elif args["<backup>"] not in [x.name for x in backups]:
-                    log.error(
-                        "{} is not a valid backup for workspace {}".format(
-                            args["<backup>"], ws.name
+                    print(
+                        "Are you sure you want to restore the workspace '{}' with the backup {}".format(
+                            args["--rename"] if args["--rename"] else ws.name,
+                            args["<backup>"],
                         )
                     )
-                    sys.exit(1)
-
-                print(
-                    "Are you sure you want to restore the workspace '{}' with the backup {}".format(
-                        args["--rename"] if args["--rename"] else ws.name,
-                        args["<backup>"],
-                    )
-                )
-                answer = input("yes/NO > ")
-                if answer == "yes":
-                    ws.restore(args["<backup>"], args["--rename"])
+                    answer = input("yes/NO > ")
+                    if answer == "yes":
+                        ws.restore(args["<backup>"], args["--rename"])
+                    else:
+                        print("Restoration canceled")
+                        sys.exit(1)
                 else:
-                    print("Restoration canceled")
-                    sys.exit(1)
+                    for bkp in sorted(ws.list_backups()):
+                        print(
+                            " {}  {:%Y-%m-%d %H:%M}  {}".format(
+                                bkp.name,
+                                datetime.fromtimestamp(bkp.stat().st_mtime),
+                                humanize(bkp.stat().st_size),
+                            )
+                        )
             else:
                 ws.load()
                 ws.status()
