@@ -44,8 +44,8 @@ def test_list_subcommands(run):
         subdict[k] = v.strip()
 
     assert list(sorted(data['subcommands'].keys())) == [
-        "clock", "config", "ephem", "events", "log", "map", "passes",
-        "phase", "planet", "sat", "station", "tle"
+        "clock", "config", "events", "log", "map", "oem", "opm",
+        "passes", "phase", "planet", "sat", "station", "tle"
     ]
 
     assert list(sorted(data['options'].keys())) == [

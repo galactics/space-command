@@ -9,13 +9,13 @@ from peewee import (
 )
 
 from beyond.orbits import Ephem, Orbit
-import beyond.io.ccsds as ccsds
 from beyond.io.tle import Tle
 
 from .clock import Date
 from .utils import parse_date
 from .wspace import ws
-from .ephem import EphemDb
+from .ccsds import CcsdsDb
+from . import ccsds
 
 log = logging.getLogger(__name__)
 
@@ -130,11 +130,11 @@ class Request:
         if "src" in kwargs:
             src = kwargs["src"]
         else:
-            m = re.search(r"@(oem|tle)", txt, flags=re.I)
+            m = re.search(r"@([a-zA-Z0-9]+)", txt, flags=re.I)
             if m:
                 src = m.group(1).lower()
             else:
-                src = ws.config.get("satellites", "default_selector", fallback="tle")
+                src = ws.config.get("satellites", "default-orbit-type", fallback="tle")
 
         if "limit" in kwargs and "date" in kwargs:
             limit = kwargs["limit"]
@@ -278,9 +278,10 @@ class Sat:
 
         sat = cls(model)
         sat.req = req
+        type = type if type is not None else sat.req.src
 
         if orb:
-            if type == "tle" or (type is None and sat.req.src == "tle"):
+            if type == "tle":
                 if sat.req.limit == "any":
                     try:
                         tles = list(
@@ -307,21 +308,19 @@ class Sat:
                         raise NoDataError(sat.req)
                     else:
                         sat.orb = tle.orbit()
-            elif type == "oem" or (type is None and sat.req.src == "oem"):
+            elif type in ("oem", "opm"):
                 pattern = "*.{}".format(sat.req.src)
                 if sat.folder.exists():
-                    if sat.req.limit == "any":
-                        try:
-                            sat.orb = EphemDb(sat).get(offset=sat.req.offset)
-                        except ValueError:
-                            raise NoDataError(sat.req)
-                    else:
-                        try:
-                            sat.orb = EphemDb(sat).get_dated(
-                                limit=sat.req.limit, date=sat.req.date
-                            )
-                        except ValueError:
-                            raise NoDataError(sat.req)
+                    try:
+                        sat.orb = CcsdsDb.get(sat)
+                    except ValueError:
+                        raise NoDataError(sat.req)
+                else:
+                    raise NoDataError(sat.req)
+            else:
+                tags = CcsdsDb.tags(sat)
+                if sat.req.src in tags.keys():
+                    sat.orb = ccsds.load(tags[sat.req.src].open())
                 else:
                     raise NoDataError(sat.req)
 
@@ -526,10 +525,10 @@ def space_sat(*argv):
             log.error(e)
             sys.exit(1)
 
-        if isinstance(sat.orb, Ephem):
-            print(ccsds.dumps(sat.orb))
-        else:
+        if hasattr(sat.orb, "tle"):
             print("{0.name}\n{0}".format(sat.orb.tle))
+        else:
+            print(ccsds.dumps(sat.orb))
 
     elif args["infos"]:
         try:

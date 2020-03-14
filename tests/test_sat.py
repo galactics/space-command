@@ -160,7 +160,7 @@ def test_get_tle(space_tmpdir, run):
 
 def test_get_ephem(space_tmpdir, run):
 
-    r = run("space ephem insert -", stdin=ephem)
+    r = run("space oem insert -", stdin=ephem)
     assert r.success
 
     sat = Sat.from_selector('ISS@oem')
