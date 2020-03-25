@@ -1,10 +1,13 @@
 import sys
+import logging
 import matplotlib.pyplot as plt
 
 from ..utils import docopt, parse_date
 from ..sat import Sat
 
 from .map import MapAnim
+
+log = logging.getLogger(__name__)
 
 
 def space_map(*argv):
