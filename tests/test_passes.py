@@ -56,7 +56,7 @@ def test_date(run_date):
 
     r = run_date("space passes TLS ISS --date 2018-11-01 11:00:00 --csv")
     assert not r.success
-    assert r.stderr == "time data '2018-11-01' does not match format '%Y-%m-%dT%H:%M:%S'\n"
+    assert r.stderr == "No satellite corresponding to name=11:00:00\n"
     assert not r.stdout
 
 

@@ -10,12 +10,13 @@ from beyond.constants import Earth
 __all__ = ["circle", "orb2circle", "docopt", "parse_date", "parse_timedelta"]
 
 
-def parse_date(txt, fmt="full"):
+def parse_date(txt, fmt=None):
     """
 
     Args:
         txt (str):  Text to convert to a date
-        fmt (str):  Format in which the date is expressed
+        fmt (str):  Format in which the date is expressed. if ``None``
+                    tries %Y-%m-%dT%H:%M:%S, and then %Y-%m-%d
     Return:
         beyond.dates.date.Date:
     Raise:
@@ -31,7 +32,7 @@ def parse_date(txt, fmt="full"):
         >>> print(parse_date("naw"))
         Traceback (most recent call last):
           ...
-        ValueError: time data 'naw' does not match format '%Y-%m-%dT%H:%M:%S'
+        ValueError: time data 'naw' does not match formats '%Y-%m-%d' or '%Y-%m-%dT%H:%M:%S'
     """
 
     from .clock import Date
@@ -52,6 +53,19 @@ def parse_date(txt, fmt="full"):
         date = Date(Date.now().d, scale=scale)
     elif txt == "tomorrow":
         date = Date(Date.now().d + 1, scale=scale)
+    elif fmt is None:
+        try:
+            date = Date.strptime(txt, fmts["full"], scale=scale)
+        except ValueError:
+            try:
+                date = Date.strptime(txt, fmts["date"], scale=scale)
+            except ValueError as e:
+                raise ValueError(
+                    "time data '{0}' does not match formats '{1[date]}' or '{1[full]}'".format(
+                        txt, fmts
+                    )
+                )
+
     else:
         date = Date.strptime(txt, fmts.get(fmt, fmt), scale=scale)
 
