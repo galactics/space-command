@@ -184,7 +184,7 @@ def space_passes(*argv):
                     break
 
         # Plotting
-        if args["--graphs"]:
+        if args["--graphs"] and azims:
 
             # Polar plot of the passes
             plt.figure(figsize=(15.2, 8.2))
