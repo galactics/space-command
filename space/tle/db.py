@@ -209,19 +209,22 @@ class TleDb:
         with open(filepath) as fh:
             self.insert(fh.read(), os.path.basename(filepath))
 
-    def insert(self, text, src):
+    def insert(self, tles, src=None):
         """
         Args:
-            text (str): text containing the TLEs
+            tles (str or List[Tle]): text containing the TLEs
             src (str): Where those TLEs come from
         Return:
             2-tuple: Number of tle inserted, total tle found in the text
         """
 
+        if isinstance(tles, str):
+            tles = Tle.from_string(tles)
+
         with self.db.atomic():
             entities = []
             i = None
-            for i, tle in enumerate(Tle.from_string(text)):
+            for i, tle in enumerate(tles):
                 try:
                     # An entry in the table correponding to this TLE has been
                     # found, there is no need to update it
@@ -248,7 +251,7 @@ class TleDb:
             elif i is None:
                 raise ValueError("{} contains no TLE".format(src))
 
-        log.info("{:<30}   {:>3}/{}".format(src, len(entities), i + 1))
+        log.info("{}  {:>3}/{}".format(src, len(entities), i + 1))
 
     def find(self, txt):
         """Retrieve every TLE containing a string. For each object, only get the
