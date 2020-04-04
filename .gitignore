@@ -6,3 +6,4 @@ doc/build/
 .tox/
 .pytest_cache/
 .coverage
+.coverage.*
