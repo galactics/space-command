@@ -175,7 +175,7 @@ def space_tle(*argv):
         db.print_stats(args["--graph"])
     else:
         try:
-            sats = list(Sat.from_selectors(*args["<selector>"]))
+            sats = list(Sat.from_selectors(*args["<selector>"], type="tle"))
         except ValueError as e:
             log.error(str(e))
             sys.exit(1)
