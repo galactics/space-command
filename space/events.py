@@ -9,6 +9,7 @@ from beyond.orbits.listeners import (
     MaxEvent,
     TerminatorListener,
     AnomalyListener,
+    RadialVelocityListener,
 )
 
 from .station import StationDb
@@ -37,6 +38,7 @@ def space_events(*argv):
         apside             Display periapsis and apoapsis events
         terminator         Display terminator crossing event
         aol=<aol>          Display crossing of an Argument of Latitude (in deg)
+        radial=<station>   Display radial velocity crossing event
         all                Display all non-specific events (station, light, node
                            apside, and terminator)
     Example:
@@ -80,11 +82,13 @@ def space_events(*argv):
                 listeners.append(ApsideListener())
             if "terminator" in args["--events"] or args["--events"] == "all":
                 listeners.append(TerminatorListener())
-            if "aol" in args["--events"]:
-                for x in args["--events"].split():
-                    if x.strip().startswith("aol="):
-                        v = float(x.partition("aol=")[2])
-                        listeners.append(AnomalyListener(np.radians(v), anomaly="aol"))
+            for x in args["--events"].split():
+                if x.strip().startswith("radial="):
+                    name = x.partition("radial=")[2].strip()
+                    listeners.append(RadialVelocityListener(StationDb.get(name), sight=True))
+                elif x.strip().startswith("aol="):
+                    v = float(x.partition("aol=")[2])
+                    listeners.append(AnomalyListener(np.radians(v), anomaly="aol"))
 
             for orb in sat.orb.iter(
                 start=start, stop=stop, step=step, listeners=listeners
