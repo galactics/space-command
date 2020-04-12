@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from beyond.orbits.listeners import LightListener
+from beyond.orbits.listeners import LightListener, RadialVelocityListener
 from beyond.errors import UnknownFrameError
 
 from .utils import circle, docopt, parse_date, parse_timedelta
@@ -42,6 +42,7 @@ def space_passes(*argv):
       -z --zenital       Reverse direction of azimut angle on the polar plot
                          to show as the passes as seen from the station
                          looking to the sky
+      --radial           Compute radial velocity nullation point
       --csv              Print in CSV format
       --sep=<sep>        CSV separator [default: ,]
 
@@ -83,6 +84,12 @@ def space_passes(*argv):
 
     if args["--light"] and events:
         events = [light, LightListener(LightListener.PENUMBRA)]
+    if args["--radial"]:
+        rad = RadialVelocityListener(station, sight=True)
+        if isinstance(events, list):
+            events.append(rad)
+        else:
+            events = rad
 
     # Computation of the passes
     for sat in sats:
