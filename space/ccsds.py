@@ -533,7 +533,7 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
 
 
 def space_oem(*argv):
-    """Compute ephemeris from a given TLE
+    """Handle oem files
 
     Usage:
         space-oem get <selector>...
@@ -544,21 +544,23 @@ def space_oem(*argv):
         space-oem list-tags <selector>...
         space-oem tag <selector> <tag> [options]
 
-    Option
-        get                   Retrieve an existing ephemeris from the database
+    Options:
+        get                   Retrieve an existing OEM from the database
+        insert                Insert an OEM into the database
+        compute               Compute OEM from an other OPM, OEM or TLE
         list                  List existing ephemerides
-        compute               Compute ephemeris from a selected orbit
-        insert                Insert an ephemeris into the database
         purge                 Remove old OEMs. Use --last option
-        <selector>            Selector of the satellite
+        list-tags             List available tags for ephems of the selected objects
+        tag                   Create a tag for a particular ephem
+        <selector>            Selector of the satellite (see help of the "sat" command)
         -f, --frame <frame>   Frame in which to write the file to
         -d, --date <date>     Start date of the ephem [default: midnight]
                               (format %Y-%m-%dT%H:%M:%S)
         -r, --range <days>    Duration of extrapolation [default: 3d]
-        -s, --step <step>     Step size of the ephemeris [default: 180s]
+        -s, --step <step>     Step size of the OEM [default: 180s]
         -i, --interp <inter>  Interpolation method (linear, lagrange) [default: lagrange]
         -l, --last <last>     When listing print the last N OEM [default: 10]
-        -I, --insert          Insert the computed ephemeris into the database
+        -I, --insert          Insert the computed OEM into the database
         -F, --force           Force insertion
         --until <until>       When purging, remove all file older than this date [default: 4w]
                               May be a duration, or a date
@@ -568,30 +570,30 @@ def space_oem(*argv):
 
 
 def space_opm(*argv):
-    """Compute ephemeris from a given TLE
+    """Handle state vectors
 
     Usage:
         space-opm get <selector>...
         space-opm insert (- | <file>)
         space-opm compute (- | <selector>...) [options]
-        space-opm list <selector>... [options]
+        space-opm list <selector>... [-l <last>]
         space-opm purge <selector>... [--until <until>]
         space-opm list-tags <selector>...
         space-opm tag <selector> <tag> [options]
 
-    Option
-        get                   Retrieve an existing ephemeris from the database
+    Options:
+        get                   Retrieve an existing OPM from the database
+        insert                Insert an OPM into the database
+        compute               Compute a new OPM from an other OPM, OEM or TLE
         list                  List existing ephemerides
-        insert                Insert a ephemeris into the database
-        <selector>            Selector of the satellite
+        <selector>            Selector of the satellite (see help of the "sat" command)
         -f, --frame <frame>   Frame in which to write the file to
-        -d, --date <date>     Start date of the ephem [default: now]
-                              (format %Y-%m-%dT%H:%M:%S)
+        -d, --date <date>     Date of the new OPM [default: now]
         -p, --propagator <p>  Propagator [default: KeplerNum]
         -s, --step <step>     Step size for extrapolator [default: 60s]
         -b, --body <body>     Central body [default: Earth]
         -l, --last <last>     When listing print the last N OPMs [default: 10]
-        -I, --insert          Insert the computed ephemeris into the database
+        -I, --insert          Insert the computed OPM into the database
         -F, --force           Force insertion
         --until <until>       When purging, remove all file older than this date [default: 4w]
                               May be a duration, or a date
