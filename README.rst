@@ -58,10 +58,21 @@ Changelog
 **Added**
 
 - ``space tle`` history range selection
+- ``wspace backup`` command to create, list and restore workspaces backups
+- ``orb2circle()`` function to quickly compute the circle of visibility of a spacecraft
+- ``space opm`` and ``space oem`` commands for OPM and OEM handling.
+- ``tox`` passes command-line arguments to ``pytest`` if provided after ``--``
 
 **Modified**
 
 - refactoring of ``space map``, as a subpackage
+- ``parse_date()`` tries both default date format ("%Y-%m-%dT%H:%M:%S" and "%Y-%m-%d"),
+  allowing for more relaxed dates command arguments
+- refactoring ``space sat`` with documentation on each function
+
+**Removed**
+
+- ``space ephem`` is replaced by ``space oem``
 
 [0.6] - 2020-01-01
 ^^^^^^^^^^^^^^^^^^
