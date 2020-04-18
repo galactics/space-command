@@ -365,7 +365,7 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
         max_idx = int(args["--last"])
 
         try:
-            for sat in Sat.from_selectors(*args["<selector>"], type=ext, orb=False):
+            for sat in Sat.from_selectors(*args["<selector>"], src=ext, orb=False):
 
                 print(sat.name.center(65))
 

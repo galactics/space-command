@@ -261,7 +261,7 @@ class Sat:
         return sats
 
     @classmethod
-    def _from_request(cls, req, create=False, orb=True, type=None, **kwargs):
+    def _from_request(cls, req, create=False, orb=True, **kwargs):
         # Retrieving the corresponding orbit or ephem object
         from .tle import TleDb, TleNotFound
 
@@ -278,10 +278,9 @@ class Sat:
 
         sat = cls(model)
         sat.req = req
-        type = type if type is not None else sat.req.src
 
         if orb:
-            if type == "tle":
+            if sat.req.src == "tle":
                 if sat.req.limit == "any":
                     try:
                         tles = list(
@@ -308,7 +307,7 @@ class Sat:
                         raise NoDataError(sat.req)
                     else:
                         sat.orb = tle.orbit()
-            elif type in ("oem", "opm"):
+            elif sat.req.src in ("oem", "opm"):
                 pattern = "*.{}".format(sat.req.src)
                 if sat.folder.exists():
                     try:
