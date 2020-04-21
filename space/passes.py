@@ -65,7 +65,7 @@ def space_passes(*argv):
         step = parse_timedelta(args["--step"])
         stop = parse_timedelta(args["--range"])
         pass_nb = int(args["--passes"])
-        sats = Sat.from_input(
+        sats = Sat.from_command(
             *args["<satellite>"], text=sys.stdin.read() if args["-"] else ""
         )
     except ValueError as e:

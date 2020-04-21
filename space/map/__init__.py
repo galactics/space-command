@@ -28,7 +28,7 @@ def space_map(*argv):
     args = docopt(space_map.__doc__)
     try:
         sats = list(
-            Sat.from_input(
+            Sat.from_command(
                 *args["<satellite>"], text=sys.stdin.read() if args["-"] else ""
             )
         )

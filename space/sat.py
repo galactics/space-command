@@ -217,14 +217,37 @@ class Sat:
         return sat
 
     @classmethod
-    def from_selector(cls, selector, **kwargs):
+    def from_selector(cls, string, **kwargs):
         """Method to parse a selector string such as 'norad=25544@oem~~'
+
+        This method is oriented toward developers, to allow them to access
+        quickly and simply an orbital object.
+
+        Args:
+            string (str): Selector string
+
+        Any field of the selector string can be overridden by its associated
+        keyword argument.
+
+        Keyword Args:
+            selector (str) : "name", "cospar" or "norad"
+            value (str) : The value associated with the selector
+            offset (int) :
+            src (str) : Orbital data
+            limit (str) : "after" or "before"
+            date (Date) : 
+
+        Example:
+            Sat.from_selector("ISS@tle")  # retrieve the latest TLE of the ISS
+            Sat.from_selector("ISS@tle^2020-01-01")  # retrieve the first TLE of the year 
         """
-        req = Request.from_text(selector, **kwargs)
+        req = Request.from_text(string, **kwargs)
         return cls._from_request(req, **kwargs)
 
     @classmethod
     def from_selectors(cls, *selectors, **kwargs):
+        """Retrieve multiples sa
+        """
         for sel in selectors:
             yield cls.from_selector(sel, **kwargs)
 
@@ -248,7 +271,18 @@ class Sat:
         return sats
 
     @classmethod
-    def from_input(cls, *selector, text="", alias=True, create=False, orb=True):
+    def from_command(cls, *selector, text="", alias=True, create=False, orb=True):
+        """This method is intended to be used as parser of command line arguments
+        to handle both selector strings ("norad=25544@tle~32") as well as stdin
+        inputs.
+
+        The canonical way to use this method is:
+
+            Sat.from_command(
+                *args["<satellite>"],
+                text=sys.stdin.read() if args["-"] else ""
+            )
+        """
 
         sats = list(cls.from_selectors(*selector, alias=alias, create=create, orb=orb))
 
@@ -262,7 +296,10 @@ class Sat:
 
     @classmethod
     def _from_request(cls, req, create=False, orb=True, **kwargs):
-        # Retrieving the corresponding orbit or ephem object
+        """This method convert a Request object to a Sat object with the
+        associated orbital data (TLE, OEM or OPM)
+        """
+
         from .tle import TleDb, TleNotFound
 
         try:
@@ -531,7 +568,7 @@ def space_sat(*argv):
 
     elif args["infos"]:
         try:
-            (sat,) = Sat.from_input(args["<selector>"], orb=False)
+            (sat,) = Sat.from_command(args["<selector>"], orb=False)
             print(
                 """name       {0.name}
 cospar id  {0.cospar_id}

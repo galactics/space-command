@@ -48,7 +48,7 @@ def space_events(*argv):
     args = docopt(space_events.__doc__, argv=argv)
 
     try:
-        satlist = Sat.from_input(
+        satlist = Sat.from_command(
             *args["<sat>"], text=sys.stdin.read() if args["-"] else ""
         )
         start = parse_date(args["--date"])

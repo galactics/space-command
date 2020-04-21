@@ -296,7 +296,7 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
             if ext == "oem":
                 stop = parse_timedelta(args["--range"])
                 step = parse_timedelta(args["--step"])
-            satlist = Sat.from_input(
+            satlist = Sat.from_command(
                 *args["<selector>"], text=sys.stdin.read() if args["-"] else ""
             )
         except ValueError as e:
@@ -350,7 +350,7 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
             txt = open(args["<file>"]).read()
 
         try:
-            sats = Sat.from_input(text=txt, create=True)
+            sats = Sat.from_command(text=txt, create=True)
         except ValueError as e:
             log.error(e)
             sys.exit(1)
