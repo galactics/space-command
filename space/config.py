@@ -330,7 +330,7 @@ def space_log(*argv):
 
         lines = logfile.read_text().splitlines()
         filtered_lines = [
-            l for l in lines if args["--verbose"] or ":: DEBUG ::" not in l
+            l for l in lines if ws.config.verbose or ":: DEBUG ::" not in l
         ]
 
         for line in filtered_lines[-nb:]:
