@@ -35,59 +35,6 @@ class TleNotFound(Exception):
 
 class TleDb:
 
-    SPACETRACK_URL_AUTH = "https://www.space-track.org/ajaxauth/login"
-    SPACETRACK_URL = "https://www.space-track.org/basicspacedata/query/class/tle_latest/{mode}/{selector}/orderby/ORDINAL%20asc/limit/1/format/3le/emptyresult/show"
-    CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
-
-    TMP_FOLDER = ws.folder / "tmp" / "tle"
-    PAGE_LIST_CONFIG = ("celestrak", "page-list")
-
-    DEFAULT_FILES = [
-        "stations.txt",
-        "tle-new.txt",
-        "visual.txt",
-        "weather.txt",
-        "noaa.txt",
-        "goes.txt",
-        "resource.txt",
-        "sarsat.txt",
-        "dmc.txt",
-        "tdrss.txt",
-        "argos.txt",
-        "geo.txt",
-        "intelsat.txt",
-        "gorizont.txt",
-        "raduga.txt",
-        "molniya.txt",
-        "iridium.txt",
-        "orbcomm.txt",
-        "globalstar.txt",
-        "amateur.txt",
-        "x-comm.txt",
-        "other-comm.txt",
-        "gps-ops.txt",
-        "glo-ops.txt",
-        "galileo.txt",
-        "beidou.txt",
-        "sbas.txt",
-        "nnss.txt",
-        "musson.txt",
-        "science.txt",
-        "geodetic.txt",
-        "engineering.txt",
-        "education.txt",
-        "military.txt",
-        "radar.txt",
-        "cubesat.txt",
-        "other.txt",
-        "active.txt",
-        "analyst.txt",
-        "planet.txt",
-        "spire.txt",
-        "ses.txt",
-        "iridium-NEXT.txt",
-    ]
-
     db = SqliteDatabase(None)
 
     def __new__(cls, *args, **kwargs):
