@@ -87,7 +87,7 @@ class Request:
         For example ``Request.from_text("ISS@tle", src='oem')`` will deliver a
         request object with ``req.src == 'oem'``.
 
-        Unseparable pairs are selector/value and limit/date respectively
+        Inseparable pairs are selector/value and limit/date respectively
         """
 
         delimiters = r"[@~\^\?\$]"
@@ -225,6 +225,18 @@ class Sat:
 
         Args:
             string (str): Selector string
+        Keyword Args:
+            temporary (bool) : if True, a Sat object is created even if there is no match
+                for the request in the database. This Sat object is not saved into the database.
+                False by default.
+            save (bool) : if True, a Sat object is created even if there is no match
+                for the request in the database. This Sat object is then saved into the database.
+                False by default.
+            orb (bool) : if False, do not retrieve the orbital data associated with the request.
+                True by default.
+            alias (bool) : if False, disable aliases lookup. True by default.
+        Return:
+            Sat
 
         Any field of the selector string can be overridden by its associated
         keyword argument.
@@ -232,14 +244,17 @@ class Sat:
         Keyword Args:
             selector (str) : "name", "cospar" or "norad"
             value (str) : The value associated with the selector
-            offset (int) :
-            src (str) : Orbital data
-            limit (str) : "after" or "before"
+            offset (int) : offset of orbital data to retrieve. for example offset=1 will get you
+                the first before last orbital data available
+            src (str) : Orbital data source ("oem", "opm" or "tle")
+            limit (str) : Date action. "after", "before" or "any"
             date (Date) : 
 
         Example:
-            Sat.from_selector("ISS@tle")  # retrieve the latest TLE of the ISS
-            Sat.from_selector("ISS@tle^2020-01-01")  # retrieve the first TLE of the year 
+            # retrieve the latest TLE of the ISS
+            Sat.from_selector("ISS@tle")
+            # retrieve the first TLE of the year (after 2020-01-01 at midnight)
+            Sat.from_selector("ISS@tle^2020-01-01")
         """
         req = Request.from_text(string, **kwargs)
         return cls._from_request(req, **kwargs)
@@ -271,7 +286,7 @@ class Sat:
         return sats
 
     @classmethod
-    def from_command(cls, *selector, text="", alias=True, create=False, orb=True):
+    def from_command(cls, *selector, text="", **kwargs):
         """This method is intended to be used as parser of command line arguments
         to handle both selector strings ("norad=25544@tle~32") as well as stdin
         inputs.
@@ -282,9 +297,11 @@ class Sat:
                 *args["<satellite>"],
                 text=sys.stdin.read() if args["-"] else ""
             )
+
+        see :py:meth:`Sat.from_selector` for the others keyword arguments
         """
 
-        sats = list(cls.from_selectors(*selector, alias=alias, create=create, orb=orb))
+        sats = list(cls.from_selectors(*selector, **kwargs))
 
         if not sats:
             if text:
@@ -295,19 +312,23 @@ class Sat:
         return sats
 
     @classmethod
-    def _from_request(cls, req, create=False, orb=True, **kwargs):
+    def _from_request(cls, req, create=False, temporary=False, orb=True, **kwargs):
         """This method convert a Request object to a Sat object with the
         associated orbital data (TLE, OEM or OPM)
         """
+
+        if create or temporary:
+            orb = False
 
         from .tle import TleDb, TleNotFound
 
         try:
             model = SatModel.select().filter(**{req.selector: req.value}).get()
         except SatModel.DoesNotExist:
-            if create:
+            if temporary or create:
                 model = SatModel(**{req.selector: req.value})
-                model.save()
+                if create:
+                    model.save()
             else:
                 raise ValueError(
                     "No satellite corresponding to {0.selector}={0.value}".format(req)
