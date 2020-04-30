@@ -10,11 +10,23 @@ from beyond.orbits.listeners import (
     TerminatorListener,
     AnomalyListener,
     RadialVelocityListener,
+    events_iterator,
 )
 
 from .station import StationDb
 from .sat import Sat
 from .utils import parse_date, parse_timedelta, docopt
+
+
+def complete_iterator(satlist, start, stop, step, listeners):
+    """Iterate over satellite list and date range
+
+    Its only use is to be fed to sorted() when this is requested
+    """
+    for sat in satlist:
+        iterator = sat.orb.iter(start=start, stop=stop, step=step, listeners=listeners)
+        for orb in events_iterator(iterator):
+            yield sat, orb
 
 
 def space_events(*argv):
@@ -29,6 +41,9 @@ def space_events(*argv):
         -r, --range <range>    Range of the computation [default: 6h]
         -s, --step <step>      Step of the conmputation [default: 3m] 
         -e, --events <events>  Selected events, space separated [default: all]
+        --csv                  Data in CSV
+        --sep <sep>            Separator [default: ,]
+        --sort                 If multiple satellites are provided, sort all results by date
 
     Available events:
         station=<station>  Display AOS, LOS and max elevation events for a station
@@ -58,62 +73,62 @@ def space_events(*argv):
         print(e, file=sys.stdout)
         sys.exit(1)
 
-    try:
-        for sat in satlist:
-            print(sat.name)
-            print("=" * len(sat.name))
-            listeners = []
+    listeners = []
 
-            if "station" in args["--events"] or args["--events"] == "all":
-                if "station=" in args["--events"]:
-                    for x in args["--events"].split():
-                        if x.strip().startswith("station="):
-                            name = x.partition("station=")[2].strip()
-                            listeners.extend(stations_listeners(StationDb.get(name)))
-                else:
-                    for sta in StationDb.list().values():
-                        listeners.extend(stations_listeners(sta))
-            if "light" in args["--events"] or args["--events"] == "all":
-                listeners.append(LightListener())
-                listeners.append(LightListener("penumbra"))
-            if "node" in args["--events"] or args["--events"] == "all":
-                listeners.append(NodeListener())
-            if "apside" in args["--events"] or args["--events"] == "all":
-                listeners.append(ApsideListener())
-            if "terminator" in args["--events"] or args["--events"] == "all":
-                listeners.append(TerminatorListener())
+    if "station" in args["--events"] or args["--events"] == "all":
+        if "station=" in args["--events"]:
             for x in args["--events"].split():
-                if x.strip().startswith("radial="):
-                    name = x.partition("radial=")[2].strip()
-                    listeners.append(RadialVelocityListener(StationDb.get(name), sight=True))
-                elif x.strip().startswith("aol="):
-                    v = float(x.partition("aol=")[2])
-                    listeners.append(AnomalyListener(np.radians(v), anomaly="aol"))
+                if x.strip().startswith("station="):
+                    name = x.partition("station=")[2].strip()
+                    listeners.extend(stations_listeners(StationDb.get(name)))
+        else:
+            for sta in StationDb.list().values():
+                listeners.extend(stations_listeners(sta))
+    if "light" in args["--events"] or args["--events"] == "all":
+        listeners.append(LightListener())
+        listeners.append(LightListener("penumbra"))
+    if "node" in args["--events"] or args["--events"] == "all":
+        listeners.append(NodeListener())
+    if "apside" in args["--events"] or args["--events"] == "all":
+        listeners.append(ApsideListener())
+    if "terminator" in args["--events"] or args["--events"] == "all":
+        listeners.append(TerminatorListener())
+    for x in args["--events"].split():
+        if x.strip().startswith("radial="):
+            name = x.partition("radial=")[2].strip()
+            listeners.append(
+                RadialVelocityListener(StationDb.get(name), sight=True)
+            )
+        elif x.strip().startswith("aol="):
+            v = float(x.partition("aol=")[2])
+            listeners.append(AnomalyListener(np.radians(v), anomaly="aol"))
 
-            for orb in sat.orb.iter(
-                start=start, stop=stop, step=step, listeners=listeners
-            ):
+    try:
+        if args["--sort"]:
+            iterator = sorted(complete_iterator(satlist, start, stop, step, listeners), key=lambda x: x[1].date)
+        else:
+            iterator = complete_iterator(satlist, start, stop, step, listeners)
 
-                if orb.event is None:
-                    continue
+        for sat, orb in iterator:
 
-                if isinstance(orb.event, (MaxEvent, SignalEvent)):
-                    if isinstance(orb.event, SignalEvent) and orb.event.elev == 0:
-                        # Discard comments for null elevation
-                        comment = ""
-                    else:
-                        orb2 = orb.copy(frame=orb.event.station, form="spherical")
-                        comment = "{:0.2f} deg".format(np.degrees(orb2.phi))
-                else:
+            if isinstance(orb.event, (MaxEvent, SignalEvent)):
+                if isinstance(orb.event, SignalEvent) and orb.event.elev == 0:
+                    # Discard comments for null elevation
                     comment = ""
+                else:
+                    orb2 = orb.copy(frame=orb.event.station, form="spherical")
+                    comment = "{:0.2f} deg".format(np.degrees(orb2.phi))
+            else:
+                comment = ""
 
-                print(
-                    "{:%Y-%m-%dT%H:%M:%S.%f}  {}  {}".format(
-                        orb.date, orb.event, comment
-                    )
-                )
+            if args["--csv"]:
+                sep = args["--sep"]
+                print_str = f"{orb.date:%Y-%m-%dT%H:%M:%S.%f}{sep}{sat.name}{sep}{getattr(orb.event, 'station', '')}{sep}{orb.event}{sep}{comment}"
+            else:
+                print_str = f"{orb.date:%Y-%m-%dT%H:%M:%S.%f}  {sat.name}  {orb.event}  {comment}"
 
-            print()
+            print(print_str)
+
     except KeyboardInterrupt:
         print("\r    ")
         print("Interrupted")
