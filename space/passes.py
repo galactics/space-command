@@ -9,6 +9,7 @@ from pathlib import Path
 
 from beyond.orbits.listeners import LightListener, RadialVelocityListener
 from beyond.errors import UnknownFrameError
+from beyond.env.solarsystem import get_body
 
 from .utils import circle, docopt, parse_date, parse_timedelta
 from .station import StationDb
@@ -124,6 +125,7 @@ def space_passes(*argv):
             print("=" * len(header))
 
         count = 0
+        dates = []
         for orb in station.visibility(
             sat.orb, start=start, stop=stop, step=step, events=events
         ):
@@ -135,6 +137,7 @@ def space_passes(*argv):
             elev = np.degrees(orb.phi)
             azims.append(azim)
             elevs.append(90 - elev)
+            dates.append(orb.date)
             r = orb.r / 1000.0
 
             if orb.event:
@@ -216,6 +219,21 @@ def space_passes(*argv):
 
                 plt.plot(-m_azims, m_elevs)
 
+            # Add the Moon and Sun traces
+            bodies = (('Sun', 'yo', None), ('Moon', 'wo', 'k'))
+            bodies_ephem = {}
+
+            for body, marker, edge in bodies:
+
+                b_ephem = get_body(body).propagate(orb.date).ephem(dates=dates)
+                bodies_ephem[body] = b_ephem
+                mazim, melev = [], []
+                for m in station.visibility(b_ephem):
+                    mazim.append(-m.theta)
+                    melev.append(90 - np.degrees(m.phi))
+
+                plt.plot(mazim, melev, marker, mec=edge, mew=0.5)
+
             ax.set_yticks(range(0, 90, 20))
             ax.set_yticklabels(map(str, range(90, 0, -20)))
             ax.set_xticklabels(["N", "NE", "E", "SE", "S", "SW", "W", "NW"])
@@ -262,6 +280,13 @@ def space_passes(*argv):
                 )
                 lon = ((lon + 180) % 360) - 180
                 plt.plot(lon, lat, color="c", ms=2)
+
+            # Add the moon and sun traces
+            for body, marker, edge in bodies:
+                b_itrf = np.asarray(bodies_ephem[body].copy(frame="ITRF", form="spherical"))
+                lon = ((np.degrees(b_itrf[:, 1]) + 180 ) % 360) - 180
+                lat = np.degrees(b_itrf[:, 2])
+                plt.plot(lon, lat, marker, mec=edge, mew=0.5)
 
             plt.xlim([-180, 180])
             plt.ylim([-90, 90])
