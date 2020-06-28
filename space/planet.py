@@ -182,13 +182,14 @@ def space_planet(*args):
             print(e, file=sys.stderr)
             sys.exit(1)
 
-        # Create all frames from .bsp files, if they are available
-        try:
-            jpl.create_frames()
-        except jpl.JplError:
-            jpl_error = True
-        else:
-            jpl_error = False
+        if not args["--analytical"]:
+            # Create all frames from .bsp files, if they are available
+            try:
+                jpl.create_frames()
+            except jpl.JplError:
+                jpl_error = True
+            else:
+                jpl_error = False
 
         # Create all frames from stations database
         StationDb.list()
