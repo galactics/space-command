@@ -108,14 +108,21 @@ def space_station(*argv):
     """Stations management
 
     Usage:
-      space-station [--map]
-      space-station create
+      space-station list [--map]
+      space-station create <abbr> <name> <lat> <lon> <alt>
 
     Options
+      list       List available stations
       create     Interactively create a station
+      <abbr>     Abbreviation
+      <name>     Name of the station
+      <lat>      Latitude in degrees
+      <lon>      Longitude in degrees
+      <alt>      Altitude in meters
       -m, --map  Display the station on a map
 
-    If no option is provided, list all station available
+    Latitude and longitude both accept degrees as float or as
+    degrees, minutes and seconds of arc (e.g. 43°25"12')
     """
 
     from pathlib import Path
@@ -129,23 +136,23 @@ def space_station(*argv):
     station = StationDb()
 
     if args["create"]:
-        print("Create a new station")
-        abbr = input("Abbreviation : ")
-        name = input("Name : ")
+        abbr = args["<abbr>"]
+        name = args["<name>"]
+        latitude = args["<lat>"]
+        longitude = args["<lon>"]
+        altitude = args["<alt>"]
 
-        latitude = input("Latitude : ")
         if "°" in latitude:
             latitude = dms2deg(latitude)
         else:
             latitude = float(latitude)
 
-        longitude = input("Longitude : ")
         if "°" in longitude:
             longitude = dms2deg(longitude)
         else:
             longitude = float(longitude)
 
-        altitude = float(input("Altitude : "))
+        altitude = float(altitude)
 
         log.info("Creation of station '{}' ({})".format(name, abbr))
         log.debug(

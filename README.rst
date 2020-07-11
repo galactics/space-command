@@ -73,6 +73,7 @@ Changelog
 **Removed**
 
 - ``space ephem`` is replaced by ``space oem``
+- ``space station`` does not allow interactive station creation anymore
 
 [0.6] - 2020-01-01
 ^^^^^^^^^^^^^^^^^^
