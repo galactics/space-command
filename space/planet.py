@@ -222,7 +222,8 @@ def space_planet(*args):
     else:
         print("List of all available bodies")
         try:
-            txt = recurse(jpl.Bsp().top, set())
+            jpl.create_frames()
+            txt = recurse(jpl.get_frame("Earth").center.node, set())
         except jpl.JplError as e:
             print(" Sun")
             print(" Moon")

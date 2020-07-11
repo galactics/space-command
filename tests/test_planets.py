@@ -7,7 +7,7 @@ from pathlib import Path
 def jpl(run):
     r = run("space config unlock", stdin="yes")
     assert r.success
-    r = run("space config set beyond.env.jpl --append {}".format(Path(__file__).parent / "data" / "de403_2000-2020.bsp"))
+    r = run("space config set beyond.env.jpl.files --append {}".format(Path(__file__).parent / "data" / "de403_2000-2020.bsp"))
     assert r.success
 
     return run
@@ -41,6 +41,7 @@ def test_list_jpl(jpl, run):
   │  ├─ PlutoBarycenter
   │  └─ Sun
   ├─ Moon
+  Earth
 
 """
 
