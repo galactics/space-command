@@ -9,7 +9,7 @@ import yaml
 
 from beyond.config import config
 from beyond.io import ccsds
-from beyond.orbits import Orbit, Ephem
+from beyond.orbits import Orbit, StateVector, Ephem
 from beyond.propagators import get_propagator
 from beyond.env.solarsystem import get_body
 from beyond.dates import timedelta
@@ -39,7 +39,7 @@ def loads(text):
 
     orb = ccsds.loads(text)
 
-    if isinstance(orb, Orbit) and "ccsds_user_defined" in orb.complements:
+    if isinstance(orb, StateVector) and "ccsds_user_defined" in orb.complements:
         ud = orb.complements["ccsds_user_defined"]
 
         name = ud["PROPAGATOR"]
@@ -53,7 +53,7 @@ def loads(text):
         else:
             kwargs = {}
 
-        orb.propagator = get_propagator(name)(**kwargs)
+        orb.as_orbit(get_propagator(name)(**kwargs))
 
     return orb
 
