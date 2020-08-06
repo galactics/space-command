@@ -108,7 +108,7 @@ def space_station(*argv):
     """Stations management
 
     Usage:
-      space-station list [--map]
+      space-station list [--map] [<abbr>]
       space-station create <abbr> <name> <lat> <lon> <alt>
 
     Options
@@ -174,6 +174,10 @@ def space_station(*argv):
         stations = []
 
         for station in sorted(station.list().values(), key=lambda x: x.abbr):
+
+            if args["<abbr>"] and station.abbr != args["<abbr>"]:
+                continue
+
             print(station.name)
             print("-" * len(station.name))
             lat, lon, alt = station.latlonalt
