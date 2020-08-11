@@ -52,8 +52,8 @@ list of all the features.
 Changelog
 ---------
 
-[Unreleased]
-^^^^^^^^^^^^
+[0.7] - 2020-08-11
+^^^^^^^^^^^^^^^^^^
 
 **Added**
 
