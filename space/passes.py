@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from beyond.orbits.listeners import LightListener, RadialVelocityListener
+from beyond.propagators.listeners import LightListener, RadialVelocityListener
 from beyond.errors import UnknownFrameError
 from beyond.env.solarsystem import get_body
 
