@@ -52,6 +52,13 @@ list of all the features.
 Changelog
 ---------
 
+[0.7.1] - 2020-09-13
+^^^^^^^^^^^^^^^^^^^^
+
+**Modified**
+
+- follow ``beyond`` refactoring of listeners
+
 [0.7] - 2020-08-11
 ^^^^^^^^^^^^^^^^^^
 
