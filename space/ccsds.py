@@ -289,6 +289,9 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
 
     args = docopt(doc, argv=argv)
 
+    if args["--format"] is None:
+        args["--format"] = ccsds.commons.get_format()
+
     if "compute" in args and args["compute"]:
 
         try:
@@ -331,11 +334,17 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
                         orb.propagator = propagator_cls()
 
                 txt = dumps(
-                    orb, originator=config.get("center", "name", fallback="N/A")
+                    orb,
+                    originator=config.get("center", "name", fallback="N/A"),
+                    fmt=args["--format"].lower(),
                 )
 
         if ext == "oem":
-            txt = dumps(orbs, originator=config.get("center", "name", fallback="N/A"))
+            txt = dumps(
+                orbs,
+                originator=config.get("center", "name", fallback="N/A"),
+                fmt=args["--format"].lower(),
+            )
 
         if not args["--insert"]:
             print(txt)
@@ -564,6 +573,9 @@ def space_oem(*argv):
         -F, --force           Force insertion
         --until <until>       When purging, remove all file older than this date [default: 4w]
                               May be a duration, or a date
+        --format <format>     Force KVN or XML output format. The default is set thanks to the
+                              beyond.io.ccsds_default_format config variable
+
     """
 
     return _generic_cmd("oem", space_oem.__doc__, *argv)
@@ -597,6 +609,8 @@ def space_opm(*argv):
         -F, --force           Force insertion
         --until <until>       When purging, remove all file older than this date [default: 4w]
                               May be a duration, or a date
+        --format <format>     Force KVN or XML output format. The default is set thanks to the
+                              beyond.io.ccsds_default_format config variable
     """
 
     return _generic_cmd("opm", space_opm.__doc__, *argv)
