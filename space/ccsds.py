@@ -39,8 +39,8 @@ def loads(text):
 
     orb = ccsds.loads(text)
 
-    if isinstance(orb, StateVector) and "ccsds_user_defined" in orb.complements:
-        ud = orb.complements["ccsds_user_defined"]
+    if isinstance(orb, StateVector) and "ccsds_user_defined" in orb._data:
+        ud = orb._data["ccsds_user_defined"]
 
         name = ud["PROPAGATOR"]
         if name == "KeplerNum":
@@ -53,7 +53,7 @@ def loads(text):
         else:
             kwargs = {}
 
-        orb.as_orbit(get_propagator(name)(**kwargs))
+        orb = orb.as_orbit(get_propagator(name)(**kwargs))
 
     return orb
 
@@ -75,7 +75,7 @@ def dumps(data, **kwargs):
     """
 
     if isinstance(data, Orbit):
-        subdict = data.complements.setdefault("ccsds_user_defined", {})
+        subdict = data._data.setdefault("ccsds_user_defined", {})
         subdict["PROPAGATOR"] = data.propagator.__class__.__name__
         if data.propagator.__class__.__name__ == "KeplerNum":
             subdict["PROPAGATOR_STEP_SECONDS"] = "{:0.3f}".format(
@@ -204,7 +204,7 @@ class CcsdsDb:
         if not sat.folder.exists():
             sat.folder.mkdir(parents=True)
 
-        if isinstance(sat.orb, Orbit):
+        if isinstance(sat.orb, StateVector):
             ext = "opm"
         elif isinstance(sat.orb, Ephem):
             ext = "oem"
@@ -280,7 +280,7 @@ class CcsdsDb:
         )
 
 
-def _generic_cmd(ext, doc, *argv):  # pragma: no cover
+def _generic_cmd(ext, doc, *argv):
     """Generic command handling
     """
 
@@ -327,11 +327,13 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
                 if args["--propagator"]:
                     propagator_cls = get_propagator(args["--propagator"])
                     if issubclass(propagator_cls, get_propagator("KeplerNum")):
-                        orb.propagator = propagator_cls(
+                        propagator_obj = propagator_cls(
                             parse_timedelta(args["--step"]), get_body(args["--body"])
                         )
                     else:
-                        orb.propagator = propagator_cls()
+                        propagator_obj = propagator_cls()
+
+                    orb = orb.as_orbit(propagator_obj)
 
                 txt = dumps(
                     orb,
@@ -447,10 +449,10 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
                                 orb=orb,
                                 fmt="%Y-%m-%dT%H:%M:%S",
                                 propagator=orb.propagator.__class__.__name__
-                                if orb.propagator
+                                if isinstance(orb, Orbit)
                                 else "None",
                                 man=len(orb.maneuvers),
-                                cov="Yes" if orb.cov.any() else "None",
+                                cov="Yes" if orb.cov else "None",
                                 color=color,
                                 endcolor=endcolor,
                                 tagw=tagw,
