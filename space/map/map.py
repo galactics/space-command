@@ -80,6 +80,8 @@ class MapAnim:
         self.bplay.on_clicked(self.reset)
         self.bfast = Button(plt.axes([0.26, 0.02, 0.04, 0.05]), "Faster")
         self.bfast.on_clicked(self.faster)
+        self.bpause = Button(plt.axes([0.31, 0.02, 0.04, 0.05]), "Pause")
+        self.bpause.on_clicked(self.pause)
 
         self.bcircle = Button(plt.axes([0.8, 0.02, 0.08, 0.05]), "Circle")
         self.bcircle.on_clicked(self.toggle_circle)
@@ -114,6 +116,8 @@ class MapAnim:
     def update_text(self):
         if self.multiplier is None:
             text = "real time"
+        elif self.multiplier == 0:
+            text = "paused"
         else:
             if abs(self.multiplier) == 1:
                 adj = ""
@@ -294,6 +298,8 @@ class MapAnim:
 
         if self.multiplier is None:
             self.multiplier = 2
+        elif self.multiplier == 0:
+            self.multiplier = 1
         else:
             self.multiplier *= steps[self._step % len(steps)]
 
@@ -307,8 +313,13 @@ class MapAnim:
 
         if self.multiplier is None:
             self.multiplier = 1 / 2
+        elif self.multiplier == 0:
+            self.multiplier = 1
         else:
             self.multiplier /= steps[self._step % len(steps)]
+
+    def pause(self, *args, **kwargs):
+        self.multiplier = 0
 
     def reverse(self, *args, **kwargs):
         if self.multiplier is None:
