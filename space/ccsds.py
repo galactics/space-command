@@ -471,17 +471,10 @@ def _generic_cmd(ext, doc, *argv):
             for sat in Sat.from_selectors(*args["<selector>"], src=ext, orb=False):
                 ephem = CcsdsDb.get(sat, raw=True)
                 ephems.append(ephem)
-            else:
-                log.error(
-                    "No {} file corresponding to {}".format(
-                        sat.req.src.upper(), sat.req
-                    )
-                )
         except ValueError as e:
             log.error(e)
             sys.exit(1)
 
-        # print(dumps(ephems))
         print(ephems[0])
     elif args["purge"]:
 
