@@ -10,7 +10,13 @@ def jpl(run):
     r = run("space config set beyond.env.jpl.files --append {}".format(Path(__file__).parent / "data" / "de403_2000-2020.bsp"))
     assert r.success
 
-    return run
+    r = run("space clock set-date 2020-01-01T00:00:00.000")
+    assert r.success
+
+    yield run
+
+    r = run("space clock sync")
+    assert r.success
 
 
 def test_list_analytical(run):
