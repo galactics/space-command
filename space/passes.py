@@ -5,11 +5,13 @@ import sys
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from pathlib import Path
 
 from beyond.propagators.listeners import LightListener, RadialVelocityListener
 from beyond.errors import UnknownFrameError
 from beyond.env.solarsystem import get_body
+from beyond.dates import timedelta
 
 from .utils import circle, docopt, parse_date, parse_timedelta
 from .station import StationDb
@@ -43,6 +45,7 @@ def space_passes(*argv):
       -z --zenital       Reverse direction of azimut angle on the polar plot
                          to show as the passes as seen from the station
                          looking to the sky
+      --el --elevation   Plot elevation graphs
       --radial           Compute radial velocity nullation point
       --csv              Print in CSV format
       --sep=<sep>        CSV separator [default: ,]
@@ -93,7 +96,7 @@ def space_passes(*argv):
             events = rad
 
     # Computation of the passes
-    for sat in sats:
+    for i_sat, sat in enumerate(sats):
 
         lats, lons = [], []
         lats_e, lons_e = [], []
@@ -126,6 +129,7 @@ def space_passes(*argv):
 
         count = 0
         dates = []
+        lights = []
         for orb in station.visibility(
             sat.orb, start=start, stop=stop, step=step, events=events
         ):
@@ -145,6 +149,7 @@ def space_passes(*argv):
                 elevs_e.append(90 - elev)
 
             light_info = "Umbra" if light(orb) <= 0 else "Light"
+            lights.append(light_info)
 
             if args["--csv"]:
                 fmt = [
@@ -197,7 +202,7 @@ def space_passes(*argv):
         if args["--graphs"] and azims:
 
             # Polar plot of the passes
-            plt.figure(figsize=(15.2, 8.2))
+            plt.figure(f"{sat.name}", figsize=(15.2, 8.2))
 
             ax = plt.subplot(121, projection="polar")
             ax.set_theta_zero_location("N")
@@ -220,7 +225,7 @@ def space_passes(*argv):
                 plt.plot(-m_azims, m_elevs)
 
             # Add the Moon and Sun traces
-            bodies = (('Sun', 'yo', None), ('Moon', 'wo', 'k'))
+            bodies = (("Sun", "yo", None), ("Moon", "wo", "k"))
             bodies_ephem = {}
 
             for body, marker, edge in bodies:
@@ -283,8 +288,10 @@ def space_passes(*argv):
 
             # Add the moon and sun traces
             for body, marker, edge in bodies:
-                b_itrf = np.asarray(bodies_ephem[body].copy(frame="ITRF", form="spherical"))
-                lon = ((np.degrees(b_itrf[:, 1]) + 180 ) % 360) - 180
+                b_itrf = np.asarray(
+                    bodies_ephem[body].copy(frame="ITRF", form="spherical")
+                )
+                lon = ((np.degrees(b_itrf[:, 1]) + 180) % 360) - 180
                 lat = np.degrees(b_itrf[:, 2])
                 plt.plot(lon, lat, marker, mec=edge, mew=0.5)
 
@@ -296,5 +303,73 @@ def space_passes(*argv):
             plt.tight_layout()
             plt.subplots_adjust(left=0.02, right=0.98, top=0.98, bottom=0.02)
 
-    if args["--graphs"]:
+        if args["--elevation"]:
+
+            plt.figure("Baleine", figsize=(12, 7))
+
+            if "axb" not in locals():
+                axb = None
+
+            axb = plt.subplot(len(sats), 1, i_sat + 1, sharex=axb)
+
+            plt.plot(dates, 90 - np.array(elevs), label="passes")
+            light_curve = np.repeat(np.nan, len(dates))
+            for i, l in enumerate(lights):
+                if l == "Light":
+                    light_curve[i] = 90 - elevs[i]
+
+            plt.plot(dates, light_curve, "r", label="illuminated passes")
+
+            ylim = plt.ylim()
+            xlim = plt.xlim()
+            sun_orb = get_body("Sun").propagate(start)
+            sun_dates = [start]
+
+            if sun_orb.copy(frame=station, form="spherical").phi > 0:
+                sun = [0]
+            else:
+                sun = [91]
+
+            for s in station.visibility(
+                sun_orb, start=start, stop=stop, step=timedelta(minutes=20), events=True
+            ):
+                if not s.event or s.event.info not in ("AOS", "LOS"):
+                    continue
+
+                sun_dates.append(s.date)
+                if s.event.info == "LOS":
+                    sun.append(91)
+                else:
+                    sun.append(0)
+
+            if (
+                sun_orb.propagate(start + stop)
+                .copy(frame=station, form="spherical")
+                .phi
+                > 0
+            ):
+                sun.append(0)
+            else:
+                sun.append(91)
+            sun_dates.append(start + stop)
+
+            plt.fill_between(
+                sun_dates, sun, step="post", color="k", alpha=0.2, zorder=-100
+            )
+
+            plt.ylim(0, ylim[1])
+            # plt.xlim(*xlim)
+            plt.grid(ls=":")
+            plt.ylabel(sat.name)
+
+            if i_sat != len(sats) - 1:
+                plt.xticks(color="w")
+
+            axb.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+
+            plt.suptitle(station.name)
+            plt.tight_layout()
+            plt.subplots_adjust(hspace=0)
+
+    if args["--graphs"] or args["--elevation"]:
         plt.show()
