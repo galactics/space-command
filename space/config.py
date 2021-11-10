@@ -3,6 +3,7 @@ import yaml
 import shutil
 import logging.config
 from pathlib import Path
+from copy import copy
 from textwrap import indent
 from datetime import datetime, timedelta
 
@@ -19,6 +20,30 @@ class SpaceFilter(logging.Filter):
     def filter(self, record):
         pkg, sep, rest = record.name.partition(".")
         return pkg in ("space", "beyond")
+
+
+class ColoredFormatter(logging.Formatter):
+
+    RESET = "\033[0m"
+
+    COLORS = {
+        "WARNING": "\033[33m",
+        "INFO": "",
+        "DEBUG": "\033[37m",
+        "ERROR": "\033[91m",
+        "CRITICAL": "\033[31m",
+    }
+
+    def format(self, record):
+        if record.levelname in self.COLORS:
+            # Create a copy of the record in order to not modify the original record,
+            # as it may be used by other formatters/loggers
+            record = copy(record)
+            c = self.COLORS[record.levelname]
+            record.levelname = f"{c}{record.levelname}{self.RESET}"
+            record.msg = f"{c}{record.msg}{self.RESET}"
+
+        return super().format(record)
 
 
 class SpaceConfig(BeyondConfig):
@@ -38,8 +63,7 @@ class SpaceConfig(BeyondConfig):
             self.save()
 
     def init(self):
-        """Initialize a given workspace folder and config file
-        """
+        """Initialize a given workspace folder and config file"""
 
         if self.filepath.exists():
             raise FileExistsError(self.filepath)
@@ -48,8 +72,7 @@ class SpaceConfig(BeyondConfig):
         self.save()
 
     def load(self):
-        """Load the config file and create missing directories
-        """
+        """Load the config file and create missing directories"""
 
         data = yaml.safe_load(self.filepath.open())
         self.update(data)
@@ -68,11 +91,12 @@ class SpaceConfig(BeyondConfig):
                         "datefmt": "%Y-%m-%dT%H:%M:%S",
                     },
                     "simple": {"format": "%(message)s"},
+                    "colored": {"()": ColoredFormatter},
                 },
                 "handlers": {
                     "console": {
                         "class": "logging.StreamHandler",
-                        "formatter": "simple",
+                        "formatter": "colored",
                         "level": "INFO" if not self.verbose else "DEBUG",
                         "filters": ["space_filter"],
                     },
@@ -340,13 +364,8 @@ def space_log(*argv):
             with colorized.open("w") as fp:
                 for line in logfile.open().read().splitlines():
                     fields = line.split(" :: ")
-                    if len(fields) > 2:
-                        if fields[2] == "ERROR":
-                            line = f"\033[91m{line}\033[0m"
-                        elif fields[2] == "WARNING":
-                            line = f"\033[33m{line}\033[0m"
-                        elif fields[2] == "DEBUG":
-                            line = f"\033[37m{line}\033[0m"
+                    if len(fields) > 2 and fields[2] in ColoredFormatter.COLORS:
+                        line = f"{ColoredFormatter.COLORS[fields[2]]}{line}{ColoredFormatter.RESET}"
                     elif line == "Traceback (most recent call last):":
                         line = f"\033[1;4m{line}\033[0m"
                     elif "Error" in line:
