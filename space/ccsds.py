@@ -541,7 +541,7 @@ def space_oem(*argv):
 
     Usage:
         space-oem get <selector>...
-        space-oem insert (- | <file>)
+        space-oem insert (- | <file>) [options]
         space-oem compute (- | <selector>...) [options]
         space-oem list <selector>... [options]
         space-oem purge <selector>... [--until <until>]
@@ -581,7 +581,7 @@ def space_opm(*argv):
 
     Usage:
         space-opm get <selector>...
-        space-opm insert (- | <file>)
+        space-opm insert (- | <file>) [options]
         space-opm compute (- | <selector>...) [options]
         space-opm list <selector>... [-l <last>]
         space-opm purge <selector>... [--until <until>]
