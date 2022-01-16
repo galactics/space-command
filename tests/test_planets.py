@@ -66,7 +66,7 @@ def test_ephem_analytical(run):
 
     r = run("space planet Mars")
     assert not r.stdout
-    assert r.stderr == "Unknown body 'mars'\n"
+    assert r.stderr == "Unknown body 'Mars'\n"
     assert not r.success
 
 
