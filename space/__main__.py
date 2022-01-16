@@ -72,6 +72,12 @@ def main():
         verbose = False
         logging.basicConfig(level=logging.INFO, format="%(message)s")
 
+    colors = True
+    if "--no-color" in sys.argv:
+        log.debug("Disable colors on logging")
+        colors = False
+        sys.argv.remove("--no-color")
+
     # Retrieve the workspace if defined both as a command argument or as a
     # environment variable. The command line argument takes precedence
     if "-w" in sys.argv or "--workspace" in sys.argv:
@@ -117,6 +123,7 @@ def main():
         print(" --version               Show the version of the space-command utility")
         print(" -v, --verbose           Show DEBUG level messages")
         print(" -w, --workspace <name>  Select the workspace to use")
+        print(" --no-color              Disable colored output")
         print()
         print(
             "To list, create and delete workspaces, use the companion command 'wspace'"
@@ -128,6 +135,7 @@ def main():
     _, command, *args = sys.argv
 
     ws.config.verbose = verbose
+    ws.config.colors = colors
 
     # Before loading the workspace, no file logging is initialized, so any logging will
     # only be reported on console thanks to the `logging.basicConfig()` above

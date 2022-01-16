@@ -39,9 +39,15 @@ class ColoredFormatter(logging.Formatter):
             # Create a copy of the record in order to not modify the original record,
             # as it may be used by other formatters/loggers
             record = copy(record)
-            c = self.COLORS[record.levelname]
-            record.levelname = f"{c}{record.levelname}{self.RESET}"
-            record.msg = f"{c}{record.msg}{self.RESET}"
+
+            if record.levelname != "INFO":
+                c = self.COLORS[record.levelname]
+                r = self.RESET
+            else:
+                c = r = ""
+
+            record.levelname = f"{c}{record.levelname}{r}"
+            record.msg = f"{c}{record.msg}{r}"
 
         return super().format(record)
 
@@ -49,6 +55,7 @@ class ColoredFormatter(logging.Formatter):
 class SpaceConfig(BeyondConfig):
 
     verbose = False
+    colors = True
 
     def __init__(self, workspace):
         self.workspace = workspace
@@ -96,7 +103,7 @@ class SpaceConfig(BeyondConfig):
                 "handlers": {
                     "console": {
                         "class": "logging.StreamHandler",
-                        "formatter": "colored",
+                        "formatter": "colored" if self.colors else "simple",
                         "level": "INFO" if not self.verbose else "DEBUG",
                         "filters": ["space_filter"],
                     },

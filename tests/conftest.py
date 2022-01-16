@@ -42,6 +42,11 @@ def run(script_runner, space_tmpdir):
 
         if isinstance(args, str):
             args = args.split()
+        elif isinstance(args, tuple):
+            args = list(args)
+
+        # Disable colored output
+        args.append("--no-color")
 
         return script_runner.run(*args, **kwargs)
 

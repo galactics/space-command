@@ -49,7 +49,7 @@ def test_list_subcommands(run):
     ]
 
     assert list(sorted(data['options'].keys())) == [
-        "--pdb", "--version", "-v,", "-w,"
+        "--no-color", "--pdb", "--version", "-v,", "-w,"
     ]
 
     assert not r.stderr
