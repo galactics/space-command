@@ -177,14 +177,14 @@ class CcsdsDb:
         yaml.safe_dump(tags, cls._tagfile(sat).open("w"))
 
     @classmethod
-    def _list(cls, sat, ext, reverse=True):
+    def _list(cls, sat, ext, reverse=False):
         """Iterator providing file paths
         """
         for file in sorted(sat.folder.glob(cls._pattern(ext)), reverse=reverse):
             yield file
 
     @classmethod
-    def list(cls, sat, ext, reverse=True):
+    def list(cls, sat, ext, reverse=False):
         """Iterator providing Orbit or Ephem instances
         """
         for file in cls._list(sat, ext, reverse=reverse):
@@ -257,7 +257,7 @@ class CcsdsDb:
             else:
                 raise exception
         else:
-            for i, file in enumerate(cls._list(sat, sat.req.src)):
+            for i, file in enumerate(cls._list(sat, sat.req.src, reverse=True)):
                 if i == sat.req.offset:
                     txt = file.open().read()
                     break
@@ -401,7 +401,7 @@ def _generic_cmd(ext, doc, *argv):
                     )
                     print("-" * (65 + tagw))
 
-                for idx, orb in enumerate(CcsdsDb.list(sat, ext)):
+                for idx, orb in enumerate(CcsdsDb.list(sat, ext, reverse=True)):
 
                     if sat.req.limit == "any" and idx == sat.req.offset:
                         color = "* \033[32m"
@@ -492,7 +492,7 @@ def _generic_cmd(ext, doc, *argv):
             rtags = CcsdsDb.rtags(sat)
 
             sublist = []
-            for file in CcsdsDb._list(sat, ext):
+            for file in CcsdsDb._list(sat, ext, reverse=True):
                 mtime = Date.strptime(file.stem.partition("_")[2], "%Y%m%d_%H%M%S")
                 if mtime < until:
                     sublist.append(file)
