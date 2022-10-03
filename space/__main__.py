@@ -154,6 +154,7 @@ def main():
         sys.exit(1)
 
     log.debug("=== starting command '{}' ===".format(command))
+    log.debug(f"args : space {command} {' '.join(args)}")
 
     # get the function associated with the subcommand
     func = commands[command].load()
