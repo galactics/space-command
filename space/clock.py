@@ -24,8 +24,7 @@ class Date(LegacyDate):
 
 
 def sync():
-    """Synchronise the system date and the clock date
-    """
+    """Synchronise the system date and the clock date"""
     ws.config.set(Date.CONFIG_FIELD, 0, save=True)
     log.info("Clock set to system time")
 

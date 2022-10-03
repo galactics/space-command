@@ -206,7 +206,7 @@ class MapAnim:
         # the sun)
         if len(self.sats) == 1:
             orb_sph = self.sats[0].propagated.copy(form="spherical", frame="ITRF")
-            virt_alt = Earth.r * orb_sph.r / np.sqrt(orb_sph.r ** 2 - Earth.r ** 2)
+            virt_alt = Earth.r * orb_sph.r / np.sqrt(orb_sph.r**2 - Earth.r**2)
             theta = sun.theta + np.pi
             phi = -sun.phi
             lonlat = np.degrees(circle(virt_alt, theta, phi))

@@ -151,8 +151,7 @@ class TleDb:
             yield Tle("%s\n%s" % (el.name, el.data), src=el.src)
 
     def load(self, filepath):
-        """Insert the TLEs contained in a file in the database
-        """
+        """Insert the TLEs contained in a file in the database"""
         with open(filepath) as fh:
             self.insert(fh.read(), os.path.basename(filepath))
 
@@ -256,8 +255,7 @@ class TleDb:
 
 
 class TleModel(Model):
-    """Peewee description of the database structure for storing TLEs
-    """
+    """Peewee description of the database structure for storing TLEs"""
 
     norad_id = IntegerField()
     cospar_id = CharField()

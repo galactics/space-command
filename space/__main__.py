@@ -16,8 +16,7 @@ log = logging.getLogger(__package__)
 
 
 def pm_on_crash(type, value, tb):
-    """Exception hook, in order to start pdb when an exception occurs
-    """
+    """Exception hook, in order to start pdb when an exception occurs"""
     import pdb
     import traceback
 
@@ -26,8 +25,7 @@ def pm_on_crash(type, value, tb):
 
 
 def log_on_crash(type, value, tb):
-    """Uncaught exceptions handler
-    """
+    """Uncaught exceptions handler"""
     log.exception(value, exc_info=(type, value, tb))
     # sys.__excepthook__(type, value, tb)
 
@@ -37,8 +35,7 @@ def get_doc(func):
 
 
 def main():
-    """Direct the user to the right subcommand
-    """
+    """Direct the user to the right subcommand"""
 
     if "--pdb" in sys.argv:
         sys.argv.remove("--pdb")

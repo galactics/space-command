@@ -76,8 +76,7 @@ def fetch(files=None):
 
 
 def fetch_list():
-    """Retrieve list of available celestrak files
-    """
+    """Retrieve list of available celestrak files"""
 
     log.info("Retrieving list of available celestrak files")
 
@@ -127,8 +126,7 @@ async def _fetch_file(session, filename):
 
 
 async def _fetch(files=None):
-    """Retrieve TLE from the celestrak.com website asynchronously
-    """
+    """Retrieve TLE from the celestrak.com website asynchronously"""
 
     celestrak_pages = ws.config.get(*PAGE_LIST_CONFIG, fallback=DEFAULT_FILES)
 

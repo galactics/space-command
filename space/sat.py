@@ -157,8 +157,7 @@ class Request:
 
 
 class MyModel(Model):
-    """Generic database object
-    """
+    """Generic database object"""
 
     class Meta:
         database = ws.db
@@ -197,8 +196,7 @@ class Sat:
 
     @classmethod
     def from_orb(cls, orb):
-        """From an Orbit or Ephem object
-        """
+        """From an Orbit or Ephem object"""
         try:
             model = SatModel.select().where(SatModel.cospar_id == orb.cospar_id).get()
         except SatModel.DoesNotExist:
@@ -247,7 +245,7 @@ class Sat:
                 the first before last orbital data available
             src (str) : Orbital data source ("oem", "opm" or "tle")
             limit (str) : Date action. "after", "before" or "any"
-            date (Date) : 
+            date (Date) :
 
         Example:
             # retrieve the latest TLE of the ISS
@@ -260,15 +258,13 @@ class Sat:
 
     @classmethod
     def from_selectors(cls, *selectors, **kwargs):
-        """Retrieve multiples sa
-        """
+        """Retrieve multiples satellites at once"""
         for sel in selectors:
             yield cls.from_selector(sel, **kwargs)
 
     @classmethod
     def from_text(cls, text):
-        """This method is used to parse an orbit from stdin
-        """
+        """This method is used to parse an orbit from stdin"""
         sats = [cls.from_orb(tle) for tle in Tle.from_string(text)]
 
         if not sats:

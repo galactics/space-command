@@ -76,7 +76,7 @@ def parse_timedelta(txt, negative=False, zero=False):
     """Convert a timedelta input string into a timedelta object
 
     Args:
-        txt (str): 
+        txt (str):
         negative (bool): Allow for negative value
         zero (bool) : Allow for zero timedelta
     Return:

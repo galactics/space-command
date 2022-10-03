@@ -178,15 +178,13 @@ class CcsdsDb:
 
     @classmethod
     def _list(cls, sat, ext, reverse=False):
-        """Iterator providing file paths
-        """
+        """Iterator providing file paths"""
         for file in sorted(sat.folder.glob(cls._pattern(ext)), reverse=reverse):
             yield file
 
     @classmethod
     def list(cls, sat, ext, reverse=False):
-        """Iterator providing Orbit or Ephem instances
-        """
+        """Iterator providing Orbit or Ephem instances"""
         for file in cls._list(sat, ext, reverse=reverse):
             orb = load(file.open())
             orb.filepath = file
@@ -272,8 +270,7 @@ class CcsdsDb:
 
     @classmethod
     def filename(cls, sat, ext):
-        """Method used to determine the CCSDS filename of an Orbit or Ephem object
-        """
+        """Method used to determine the CCSDS filename of an Orbit or Ephem object"""
         date = sat.orb.date if ext == "opm" else sat.orb.start
         return "{sat.cospar_id}_{date:%Y%m%d_%H%M%S}.{ext}".format(
             sat=sat, ext=ext, date=date
@@ -281,8 +278,7 @@ class CcsdsDb:
 
 
 def _generic_cmd(ext, doc, *argv):
-    """Generic command handling
-    """
+    """Generic command handling"""
 
     from .utils import docopt
     from .sat import Sat
