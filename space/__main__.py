@@ -134,6 +134,9 @@ def main():
     # retrieve the subcommand and its arguments
     _, command, *args = sys.argv
 
+    if command == "log":
+        # disable logging when using the log command
+        ws.config["logging"] = {}
     ws.config.verbose = verbose
     ws.config.colors = colors
 

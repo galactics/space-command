@@ -132,7 +132,8 @@ class SpaceConfig(BeyondConfig):
                 "version": 1,
             }
 
-        logging.config.dictConfig(logging_dict)
+        if logging_dict:
+            logging.config.dictConfig(logging_dict)
 
     def save(self):
         yaml.safe_dump(dict(self), self.filepath.open("w"), indent=4)
