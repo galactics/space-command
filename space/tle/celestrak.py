@@ -13,52 +13,53 @@ from .db import TleDb
 log = logging.getLogger(__name__)
 
 TMP_FOLDER = TMP_FOLDER / "celestrak"
-CELESTRAK_URL = "http://celestrak.org/NORAD/elements/"
+CELESTRAK_LIST = "http://celestrak.org/NORAD/elements/"
+CELESTRAK_URL = "http://celestrak.org/NORAD/elements/gp.php?FORMAT=3le&GROUP={}"
 PAGE_LIST_CONFIG = ("celestrak", "page-list")
 DEFAULT_FILES = [
-    "stations.txt",
-    "tle-new.txt",
-    "visual.txt",
-    "weather.txt",
-    "noaa.txt",
-    "goes.txt",
-    "resource.txt",
-    "sarsat.txt",
-    "dmc.txt",
-    "tdrss.txt",
-    "argos.txt",
-    "geo.txt",
-    "intelsat.txt",
-    "gorizont.txt",
-    "raduga.txt",
-    "molniya.txt",
-    "iridium.txt",
-    "orbcomm.txt",
-    "globalstar.txt",
-    "amateur.txt",
-    "x-comm.txt",
-    "other-comm.txt",
-    "gps-ops.txt",
-    "glo-ops.txt",
-    "galileo.txt",
-    "beidou.txt",
-    "sbas.txt",
-    "nnss.txt",
-    "musson.txt",
-    "science.txt",
-    "geodetic.txt",
-    "engineering.txt",
-    "education.txt",
-    "military.txt",
-    "radar.txt",
-    "cubesat.txt",
-    "other.txt",
-    "active.txt",
-    "analyst.txt",
-    "planet.txt",
-    "spire.txt",
-    "ses.txt",
-    "iridium-NEXT.txt",
+    "stations",
+    "last-30-days",
+    "visual",
+    "weather",
+    "noaa",
+    "goes",
+    "resource",
+    "sarsat",
+    "dmc",
+    "tdrss",
+    "argos",
+    "geo",
+    "intelsat",
+    "gorizont",
+    "raduga",
+    "molniya",
+    "iridium",
+    "orbcomm",
+    "globalstar",
+    "amateur",
+    "x-comm",
+    "other-comm",
+    "gps-ops",
+    "glo-ops",
+    "galileo",
+    "beidou",
+    "sbas",
+    "nnss",
+    "musson",
+    "science",
+    "geodetic",
+    "engineering",
+    "education",
+    "military",
+    "radar",
+    "cubesat",
+    "other",
+    "active",
+    "analyst",
+    "planet",
+    "spire",
+    "ses",
+    "iridium-NEXT",
 ]
 
 
@@ -81,8 +82,8 @@ def fetch_list():
 
     log.info("Retrieving list of available celestrak files")
 
-    log.debug("Downloading from %s", CELESTRAK_URL)
-    page = requests.get(CELESTRAK_URL)
+    log.debug("Downloading from %s", CELESTRAK_LIST)
+    page = requests.get(CELESTRAK_LIST)
 
     files = []
     bs = BeautifulSoup(page.text, features="lxml")
@@ -90,7 +91,7 @@ def fetch_list():
         if "href" in link.attrs:
             linkmatch = re.fullmatch(r"gp\.php\?GROUP=([A-Za-z0-9\-]+)&FORMAT=tle", link["href"])
             if linkmatch is not None:
-                files.append(linkmatch.group(1) + ".txt")
+                files.append(linkmatch.group(1) + "")
 
     log.info("%d celestrak files found", len(files))
 
@@ -114,7 +115,7 @@ async def _fetch_file(session, filename):
     When the page is totally retrieved, the function will call insert
     """
     with async_timeout.timeout(30):
-        async with session.get(CELESTRAK_URL + filename) as response:
+        async with session.get(CELESTRAK_URL.format(filename)) as response:
             text = await response.text()
 
             filepath = TMP_FOLDER / filename
