@@ -2,6 +2,7 @@ import logging
 import asyncio
 import aiohttp
 import async_timeout
+import re
 import requests
 from bs4 import BeautifulSoup
 
@@ -84,8 +85,10 @@ def fetch_list():
     files = []
     bs = BeautifulSoup(page.text, features="lxml")
     for link in bs.body.find_all("a"):
-        if "href" in link.attrs and link["href"].endswith(".txt"):
-            files.append(link.get("href"))
+        if "href" in link.attrs:
+            linkmatch = re.fullmatch(r"gp\.php\?GROUP=([A-Za-z0-9\-]+)&FORMAT=tle", link["href"])
+            if linkmatch is not None:
+                files.append(linkmatch.group(1) + ".txt")
 
     log.info("%d celestrak files found", len(files))
 
