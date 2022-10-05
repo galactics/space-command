@@ -89,7 +89,9 @@ def fetch_list():
     bs = BeautifulSoup(page.text, features="lxml")
     for link in bs.body.find_all("a"):
         if "href" in link.attrs:
-            linkmatch = re.fullmatch(r"gp\.php\?GROUP=([A-Za-z0-9\-]+)&FORMAT=tle", link["href"])
+            linkmatch = re.fullmatch(
+                r"gp\.php\?GROUP=([A-Za-z0-9\-]+)&FORMAT=tle", link["href"]
+            )
             if linkmatch is not None:
                 files.append(linkmatch.group(1) + "")
 
