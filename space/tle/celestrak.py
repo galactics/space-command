@@ -12,7 +12,7 @@ from .db import TleDb
 log = logging.getLogger(__name__)
 
 TMP_FOLDER = TMP_FOLDER / "celestrak"
-CELESTRAK_URL = "http://celestrak.com/NORAD/elements/"
+CELESTRAK_URL = "http://celestrak.org/NORAD/elements/"
 PAGE_LIST_CONFIG = ("celestrak", "page-list")
 DEFAULT_FILES = [
     "stations.txt",
