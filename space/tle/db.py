@@ -194,7 +194,10 @@ class TleDb:
                     entities.append(entity)
 
             if entities:
-                TleModel.insert_many(entities).execute()
+                # Split up the list into chunks of at most 999 items, as SQlite
+                # can only handle a limited number of elements per operation.
+                for i in range(0, len(entities), 999):
+                    TleModel.insert_many(entities[i:i + 999]).execute()
             elif i is None:
                 raise ValueError("{} contains no TLE".format(src))
 
