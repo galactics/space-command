@@ -52,6 +52,19 @@ list of all the features.
 Changelog
 ---------
 
+[0.7.2] - 2022-10-14
+^^^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- Python 3.9 and 3.10 support
+- Option to force CCSDS format (XML or KVN)
+- ``space map`` add pause button
+- ``space passes`` elevation graph
+- ``space log`` colorized log
+- ``space tle`` now parses GP data instead of old-style files
+- ``space tle`` now inserts tles in chuncks to avoid sqlite locks (@hamarituc)
+
 [0.7.1] - 2020-09-13
 ^^^^^^^^^^^^^^^^^^^^
 
