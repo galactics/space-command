@@ -8,13 +8,12 @@ from peewee import (
     TextField,
 )
 
-from beyond.orbits import Ephem, Orbit
+from beyond.orbits import Ephem, Orbit, StateVector
 from beyond.io.tle import Tle
 
 from .clock import Date
 from .utils import parse_date
 from .wspace import ws
-from .ccsds import CcsdsDb
 from . import ccsds
 
 log = logging.getLogger(__name__)
@@ -158,8 +157,7 @@ class Request:
 
 
 class MyModel(Model):
-    """Generic database object
-    """
+    """Generic database object"""
 
     class Meta:
         database = ws.db
@@ -198,8 +196,7 @@ class Sat:
 
     @classmethod
     def from_orb(cls, orb):
-        """From an Orbit or Ephem object
-        """
+        """From an Orbit or Ephem object"""
         try:
             model = SatModel.select().where(SatModel.cospar_id == orb.cospar_id).get()
         except SatModel.DoesNotExist:
@@ -248,7 +245,7 @@ class Sat:
                 the first before last orbital data available
             src (str) : Orbital data source ("oem", "opm" or "tle")
             limit (str) : Date action. "after", "before" or "any"
-            date (Date) : 
+            date (Date) :
 
         Example:
             # retrieve the latest TLE of the ISS
@@ -261,15 +258,13 @@ class Sat:
 
     @classmethod
     def from_selectors(cls, *selectors, **kwargs):
-        """Retrieve multiples sa
-        """
+        """Retrieve multiples satellites at once"""
         for sel in selectors:
             yield cls.from_selector(sel, **kwargs)
 
     @classmethod
     def from_text(cls, text):
-        """This method is used to parse an orbit from stdin
-        """
+        """This method is used to parse an orbit from stdin"""
         sats = [cls.from_orb(tle) for tle in Tle.from_string(text)]
 
         if not sats:
@@ -278,7 +273,7 @@ class Sat:
             except ValueError:
                 raise ValueError("No valid TLE nor CCSDS")
             else:
-                if isinstance(orb, (Ephem, Orbit)):
+                if isinstance(orb, (Ephem, StateVector)):
                     sats = [cls.from_orb(orb)]
                 else:
                     sats = [cls.from_orb(ephem) for ephem in orb]
@@ -369,13 +364,13 @@ class Sat:
                 pattern = "*.{}".format(sat.req.src)
                 if sat.folder.exists():
                     try:
-                        sat.orb = CcsdsDb.get(sat)
+                        sat.orb = ccsds.CcsdsDb.get(sat)
                     except ValueError:
                         raise NoDataError(sat.req)
                 else:
                     raise NoDataError(sat.req)
             else:
-                tags = CcsdsDb.tags(sat)
+                tags = ccsds.CcsdsDb.tags(sat)
                 if sat.req.src in tags.keys():
                     sat.orb = ccsds.load(tags[sat.req.src].open())
                 else:

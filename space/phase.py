@@ -26,7 +26,7 @@ def draw_umbra(phase_norm):
 
     radius = 138
     y = np.linspace(-radius, radius, 100)
-    x = np.sqrt(radius ** 2 - y ** 2)
+    x = np.sqrt(radius**2 - y**2)
     r = 2 * x
 
     if phase_norm < 0.5:

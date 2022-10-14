@@ -18,8 +18,7 @@ log = logging.getLogger(__name__)
 
 
 def pm_on_crash(type, value, tb):
-    """Exception hook, in order to start pdb when an exception occurs
-    """
+    """Exception hook, in order to start pdb when an exception occurs"""
     import pdb
     import traceback
 
@@ -36,7 +35,7 @@ def switch_workspace(name, init=False, delete=False):
         init (bool): If ``True``, this will perform an init of the workspace
         delete (bool): At the end of the use of the workspace, delete it
     Yield:
-        Workspace 
+        Workspace
     """
     old_name = ws.name
     ws.name = name
@@ -55,8 +54,7 @@ def switch_workspace(name, init=False, delete=False):
 
 
 class Workspace:
-    """Workspace handling class
-    """
+    """Workspace handling class"""
 
     WORKSPACES = Path(
         os.environ.get("SPACE_WORKSPACES_FOLDER", Path.home() / ".space/")
@@ -82,8 +80,7 @@ class Workspace:
 
     @classmethod
     def list(cls):
-        """List available workspaces
-        """
+        """List available workspaces"""
         for _ws in cls.WORKSPACES.iterdir():
             if _ws.is_dir():
                 if _ws.name == "_backup":
@@ -96,8 +93,7 @@ class Workspace:
         log.debug("{} database initialized".format(filepath.name))
 
     def load(self):
-        """Load the workspace
-        """
+        """Load the workspace"""
         self.config.load()
         log.debug("{} loaded".format(self.config.filepath.name))
         self._db_init()
@@ -112,16 +108,14 @@ class Workspace:
 
     @property
     def folder(self):
-        """Path to the folder of this workspace, as a pathlib.Path object
-        """
+        """Path to the folder of this workspace, as a pathlib.Path object"""
         return self.WORKSPACES / self.name
 
     def exists(self):
         return self.folder.exists()
 
     def init(self, full=False):
-        """Initilize the workspace
-        """
+        """Initilize the workspace"""
 
         print("Initializing workspace '{}'".format(self.name))
         if not self.exists():
@@ -163,8 +157,7 @@ class Workspace:
         return path
 
     def backup(self, filepath=None):
-        """Backup the current workspace into a tar.gz file
-        """
+        """Backup the current workspace into a tar.gz file"""
 
         if filepath is None:
             name = "{}-{:%Y%m%d_%H%M%S}.tar.gz".format(self.name, datetime.utcnow())
@@ -173,8 +166,7 @@ class Workspace:
                 filepath.parent.mkdir(parents=True)
 
         def _filter(tarinfo):
-            """Filtering function
-            """
+            """Filtering function"""
             if "tmp" in tarinfo.name or "jpl" in tarinfo.name:
                 return None
             else:

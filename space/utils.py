@@ -72,12 +72,13 @@ def parse_date(txt, fmt=None):
     return date
 
 
-def parse_timedelta(txt, negative=False):
+def parse_timedelta(txt, negative=False, zero=False):
     """Convert a timedelta input string into a timedelta object
 
     Args:
-        txt (str): 
+        txt (str):
         negative (bool): Allow for negative value
+        zero (bool) : Allow for zero timedelta
     Return:
         timedelta:
     Raise:
@@ -119,7 +120,7 @@ def parse_timedelta(txt, negative=False):
     days += 7 * weeks
     seconds += minutes * 60 + hours * 3600
 
-    if days == seconds == 0:
+    if not zero and (days == seconds == 0):
         raise ValueError("No timedelta found in '{}'".format(txt))
 
     return sign * timedelta(days, seconds)

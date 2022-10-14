@@ -39,7 +39,7 @@ def space_events(*argv):
         <sat>                  Name of the satellite
         -d, --date <date>      Starting date of the computation [default: now]
         -r, --range <range>    Range of the computation [default: 6h]
-        -s, --step <step>      Step of the conmputation [default: 3m] 
+        -s, --step <step>      Step of the conmputation [default: 3m]
         -e, --events <events>  Selected events, space separated [default: all]
         --csv                  Data in CSV
         --sep <sep>            Separator [default: ,]
@@ -96,16 +96,17 @@ def space_events(*argv):
     for x in args["--events"].split():
         if x.strip().startswith("radial="):
             name = x.partition("radial=")[2].strip()
-            listeners.append(
-                RadialVelocityListener(StationDb.get(name), sight=True)
-            )
+            listeners.append(RadialVelocityListener(StationDb.get(name), sight=True))
         elif x.strip().startswith("aol="):
             v = float(x.partition("aol=")[2])
             listeners.append(AnomalyListener(np.radians(v), anomaly="aol"))
 
     try:
         if args["--sort"]:
-            iterator = sorted(complete_iterator(satlist, start, stop, step, listeners), key=lambda x: x[1].date)
+            iterator = sorted(
+                complete_iterator(satlist, start, stop, step, listeners),
+                key=lambda x: x[1].date,
+            )
         else:
             iterator = complete_iterator(satlist, start, stop, step, listeners)
 

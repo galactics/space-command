@@ -165,12 +165,12 @@ def space_tle(*argv):
             sys.exit(1)
 
         for tle in result:
-            print("{0.name}\n{0}\n".format(tle))
+            print(str(tle), end="\n\n")
 
         log.info("==> %d entries found for '%s'", len(result), txt)
     elif args["dump"]:
         for tle in db.dump(all=args["--all"]):
-            print("{0.name}\n{0}\n".format(tle))
+            print(tle, end="\n\n")
     elif args["stats"]:
         db.print_stats(args["--graph"])
     else:
@@ -187,9 +187,9 @@ def space_tle(*argv):
                     tles = db.history(number=number, cospar_id=sat.cospar_id)
 
                     for tle in tles:
-                        print("{0.name}\n{0}\n".format(tle))
+                        print(str(tle), end="\n\n")
                 else:
-                    print("{0.name}\n{0}\n".format(sat.orb.tle))
+                    print(str(sat.orb.tle), end="\n\n")
             except TleNotFound as e:
                 log.error(str(e))
                 sys.exit(1)

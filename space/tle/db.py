@@ -151,8 +151,7 @@ class TleDb:
             yield Tle("%s\n%s" % (el.name, el.data), src=el.src)
 
     def load(self, filepath):
-        """Insert the TLEs contained in a file in the database
-        """
+        """Insert the TLEs contained in a file in the database"""
         with open(filepath) as fh:
             self.insert(fh.read(), os.path.basename(filepath))
 
@@ -194,7 +193,10 @@ class TleDb:
                     entities.append(entity)
 
             if entities:
-                TleModel.insert_many(entities).execute()
+                # Split up the list into chunks of at most 999 items, as SQlite
+                # can only handle a limited number of elements per operation.
+                for idx in range(0, len(entities), 999):
+                    TleModel.insert_many(entities[idx:idx + 999]).execute()
             elif i is None:
                 raise ValueError("{} contains no TLE".format(src))
 
@@ -256,8 +258,7 @@ class TleDb:
 
 
 class TleModel(Model):
-    """Peewee description of the database structure for storing TLEs
-    """
+    """Peewee description of the database structure for storing TLEs"""
 
     norad_id = IntegerField()
     cospar_id = CharField()

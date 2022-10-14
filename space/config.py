@@ -3,6 +3,7 @@ import yaml
 import shutil
 import logging.config
 from pathlib import Path
+from copy import copy
 from textwrap import indent
 from datetime import datetime, timedelta
 
@@ -21,9 +22,40 @@ class SpaceFilter(logging.Filter):
         return pkg in ("space", "beyond")
 
 
+class ColoredFormatter(logging.Formatter):
+
+    RESET = "\033[0m"
+
+    COLORS = {
+        "WARNING": "\033[33m",
+        "INFO": "",
+        "DEBUG": "\033[37m",
+        "ERROR": "\033[91m",
+        "CRITICAL": "\033[31m",
+    }
+
+    def format(self, record):
+        if record.levelname in self.COLORS:
+            # Create a copy of the record in order to not modify the original record,
+            # as it may be used by other formatters/loggers
+            record = copy(record)
+
+            if record.levelname != "INFO":
+                c = self.COLORS[record.levelname]
+                r = self.RESET
+            else:
+                c = r = ""
+
+            record.levelname = f"{c}{record.levelname}{r}"
+            record.msg = f"{c}{record.msg}{r}"
+
+        return super().format(record)
+
+
 class SpaceConfig(BeyondConfig):
 
     verbose = False
+    colors = True
 
     def __init__(self, workspace):
         self.workspace = workspace
@@ -38,8 +70,7 @@ class SpaceConfig(BeyondConfig):
             self.save()
 
     def init(self):
-        """Initialize a given workspace folder and config file
-        """
+        """Initialize a given workspace folder and config file"""
 
         if self.filepath.exists():
             raise FileExistsError(self.filepath)
@@ -48,8 +79,7 @@ class SpaceConfig(BeyondConfig):
         self.save()
 
     def load(self):
-        """Load the config file and create missing directories
-        """
+        """Load the config file and create missing directories"""
 
         data = yaml.safe_load(self.filepath.open())
         self.update(data)
@@ -68,11 +98,12 @@ class SpaceConfig(BeyondConfig):
                         "datefmt": "%Y-%m-%dT%H:%M:%S",
                     },
                     "simple": {"format": "%(message)s"},
+                    "colored": {"()": ColoredFormatter},
                 },
                 "handlers": {
                     "console": {
                         "class": "logging.StreamHandler",
-                        "formatter": "simple",
+                        "formatter": "colored" if self.colors else "simple",
                         "level": "INFO" if not self.verbose else "DEBUG",
                         "filters": ["space_filter"],
                     },
@@ -101,7 +132,8 @@ class SpaceConfig(BeyondConfig):
                 "version": 1,
             }
 
-        logging.config.dictConfig(logging_dict)
+        if logging_dict:
+            logging.config.dictConfig(logging_dict)
 
     def save(self):
         yaml.safe_dump(dict(self), self.filepath.open("w"), indent=4)
@@ -305,37 +337,52 @@ def space_config(*argv):
 
 
 def space_log(*argv):
-    """Display the log
+    """Display the log, with colors
 
     Usage:
-      space-log [options]
+      space-log list
+      space-log [-fn] [--file <file>]
 
     Options:
-      -p, --print        Print instead of shoing the log via less
-      -n, --lines <num>  When printing define the number of lines to print [default: 20]
-      -v, --verbose      Print DEBUG messages as well
+      list               List available log files
+      -F, --file <file>  Selected file [default: space.log]
       -f, --follow       Start directly in tail mode
+      -n, --no-color     Disable log highlight
     """
     import subprocess
 
     from space.utils import docopt
     from space.wspace import ws
 
-    logfile = ws.folder / "space.log"
-
     args = docopt(space_log.__doc__, argv=argv)
 
-    if args["--print"]:
-        nb = int(args["--lines"])
-
-        lines = logfile.read_text().splitlines()
-        filtered_lines = [
-            l for l in lines if ws.config.verbose or ":: DEBUG ::" not in l
-        ]
-
-        for line in filtered_lines[-nb:]:
-            print(line)
+    if args["list"]:
+        for f in sorted(ws.folder.glob("space.log*")):
+            print(f.name)
     else:
+
+        logfile = ws.folder / args["--file"]
+        # This is not working in case of live view of log (-f option)
+        less_args = "-KS"
+
+        if not args["--no-color"] and not args["--follow"]:
+            less_args += "R"
+
+            colorized = ws.folder / "tmp" / "colorize.log"
+            with colorized.open("w") as fp:
+                for line in logfile.open().read().splitlines():
+                    fields = line.split(" :: ")
+                    if len(fields) > 2 and fields[2] in ColoredFormatter.COLORS:
+                        line = f"{ColoredFormatter.COLORS[fields[2]]}{line}{ColoredFormatter.RESET}"
+                    elif line == "Traceback (most recent call last):":
+                        line = f"\033[1;4m{line}\033[0m"
+                    elif "Error" in line:
+                        line = f"\033[1m{line}\033[0m"
+
+                    fp.write(f"{line}\n")
+
+            logfile = colorized
+
         try:
             # Handling the arguments of less
             # +G is for going directly at the bottom of the file
@@ -343,6 +390,6 @@ def space_log(*argv):
             # -K is for "quit on iterrupt"
             # -S chops long lines
             opt = "+F" if args["--follow"] else "+G"
-            f = subprocess.call(["less", "-KS", opt, str(logfile)])
+            f = subprocess.call(["less", less_args, opt, str(logfile)])
         except KeyboardInterrupt:
             pass

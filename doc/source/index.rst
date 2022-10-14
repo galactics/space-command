@@ -29,7 +29,7 @@ Installation
 
 .. code-block:: shell
 
-    $ pip install space
+    $ pip install space-command
 
 If you need the last development version, make sure to also install
 the last version of `beyond <https://github.com/galactics/beyond>`__, which space

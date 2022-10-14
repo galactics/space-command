@@ -82,8 +82,7 @@ class WindowEphem(Ephem):
             )
 
     def segments(self):
-        """Cut the ephemeris in segments for easy display
-        """
+        """Cut the ephemeris in segments for easy display"""
 
         lons, lats = [], []
         segments = []

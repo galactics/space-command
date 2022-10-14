@@ -39,8 +39,8 @@ def loads(text):
 
     orb = ccsds.loads(text)
 
-    if isinstance(orb, StateVector) and "ccsds_user_defined" in orb.complements:
-        ud = orb.complements["ccsds_user_defined"]
+    if isinstance(orb, StateVector) and "ccsds_user_defined" in orb._data:
+        ud = orb._data["ccsds_user_defined"]
 
         name = ud["PROPAGATOR"]
         if name == "KeplerNum":
@@ -53,7 +53,7 @@ def loads(text):
         else:
             kwargs = {}
 
-        orb.as_orbit(get_propagator(name)(**kwargs))
+        orb = orb.as_orbit(get_propagator(name)(**kwargs))
 
     return orb
 
@@ -75,7 +75,7 @@ def dumps(data, **kwargs):
     """
 
     if isinstance(data, Orbit):
-        subdict = data.complements.setdefault("ccsds_user_defined", {})
+        subdict = data._data.setdefault("ccsds_user_defined", {})
         subdict["PROPAGATOR"] = data.propagator.__class__.__name__
         if data.propagator.__class__.__name__ == "KeplerNum":
             subdict["PROPAGATOR_STEP_SECONDS"] = "{:0.3f}".format(
@@ -177,16 +177,14 @@ class CcsdsDb:
         yaml.safe_dump(tags, cls._tagfile(sat).open("w"))
 
     @classmethod
-    def _list(cls, sat, ext, reverse=True):
-        """Iterator providing file paths
-        """
+    def _list(cls, sat, ext, reverse=False):
+        """Iterator providing file paths"""
         for file in sorted(sat.folder.glob(cls._pattern(ext)), reverse=reverse):
             yield file
 
     @classmethod
-    def list(cls, sat, ext, reverse=True):
-        """Iterator providing Orbit or Ephem instances
-        """
+    def list(cls, sat, ext, reverse=False):
+        """Iterator providing Orbit or Ephem instances"""
         for file in cls._list(sat, ext, reverse=reverse):
             orb = load(file.open())
             orb.filepath = file
@@ -204,7 +202,7 @@ class CcsdsDb:
         if not sat.folder.exists():
             sat.folder.mkdir(parents=True)
 
-        if isinstance(sat.orb, Orbit):
+        if isinstance(sat.orb, StateVector):
             ext = "opm"
         elif isinstance(sat.orb, Ephem):
             ext = "oem"
@@ -257,7 +255,7 @@ class CcsdsDb:
             else:
                 raise exception
         else:
-            for i, file in enumerate(cls._list(sat, sat.req.src)):
+            for i, file in enumerate(cls._list(sat, sat.req.src, reverse=True)):
                 if i == sat.req.offset:
                     txt = file.open().read()
                     break
@@ -272,22 +270,23 @@ class CcsdsDb:
 
     @classmethod
     def filename(cls, sat, ext):
-        """Method used to determine the CCSDS filename of an Orbit or Ephem object
-        """
+        """Method used to determine the CCSDS filename of an Orbit or Ephem object"""
         date = sat.orb.date if ext == "opm" else sat.orb.start
         return "{sat.cospar_id}_{date:%Y%m%d_%H%M%S}.{ext}".format(
             sat=sat, ext=ext, date=date
         )
 
 
-def _generic_cmd(ext, doc, *argv):  # pragma: no cover
-    """Generic command handling
-    """
+def _generic_cmd(ext, doc, *argv):
+    """Generic command handling"""
 
     from .utils import docopt
     from .sat import Sat
 
     args = docopt(doc, argv=argv)
+
+    if args["--format"] is None:
+        args["--format"] = ccsds.commons.get_format()
 
     if "compute" in args and args["compute"]:
 
@@ -324,18 +323,26 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
                 if args["--propagator"]:
                     propagator_cls = get_propagator(args["--propagator"])
                     if issubclass(propagator_cls, get_propagator("KeplerNum")):
-                        orb.propagator = propagator_cls(
+                        propagator_obj = propagator_cls(
                             parse_timedelta(args["--step"]), get_body(args["--body"])
                         )
                     else:
-                        orb.propagator = propagator_cls()
+                        propagator_obj = propagator_cls()
+
+                    orb = orb.as_orbit(propagator_obj)
 
                 txt = dumps(
-                    orb, originator=config.get("center", "name", fallback="N/A")
+                    orb,
+                    originator=config.get("center", "name", fallback="N/A"),
+                    fmt=args["--format"].lower(),
                 )
 
         if ext == "oem":
-            txt = dumps(orbs, originator=config.get("center", "name", fallback="N/A"))
+            txt = dumps(
+                orbs,
+                originator=config.get("center", "name", fallback="N/A"),
+                fmt=args["--format"].lower(),
+            )
 
         if not args["--insert"]:
             print(txt)
@@ -390,7 +397,7 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
                     )
                     print("-" * (65 + tagw))
 
-                for idx, orb in enumerate(CcsdsDb.list(sat, ext)):
+                for idx, orb in enumerate(CcsdsDb.list(sat, ext, reverse=True)):
 
                     if sat.req.limit == "any" and idx == sat.req.offset:
                         color = "* \033[32m"
@@ -438,10 +445,10 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
                                 orb=orb,
                                 fmt="%Y-%m-%dT%H:%M:%S",
                                 propagator=orb.propagator.__class__.__name__
-                                if orb.propagator
+                                if isinstance(orb, Orbit)
                                 else "None",
                                 man=len(orb.maneuvers),
-                                cov="Yes" if orb.cov.any() else "None",
+                                cov="Yes" if orb.cov else "None",
                                 color=color,
                                 endcolor=endcolor,
                                 tagw=tagw,
@@ -460,17 +467,10 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
             for sat in Sat.from_selectors(*args["<selector>"], src=ext, orb=False):
                 ephem = CcsdsDb.get(sat, raw=True)
                 ephems.append(ephem)
-            else:
-                log.error(
-                    "No {} file corresponding to {}".format(
-                        sat.req.src.upper(), sat.req
-                    )
-                )
         except ValueError as e:
             log.error(e)
             sys.exit(1)
 
-        # print(dumps(ephems))
         print(ephems[0])
     elif args["purge"]:
 
@@ -488,7 +488,7 @@ def _generic_cmd(ext, doc, *argv):  # pragma: no cover
             rtags = CcsdsDb.rtags(sat)
 
             sublist = []
-            for file in CcsdsDb._list(sat, ext):
+            for file in CcsdsDb._list(sat, ext, reverse=True):
                 mtime = Date.strptime(file.stem.partition("_")[2], "%Y%m%d_%H%M%S")
                 if mtime < until:
                     sublist.append(file)
@@ -537,7 +537,7 @@ def space_oem(*argv):
 
     Usage:
         space-oem get <selector>...
-        space-oem insert (- | <file>)
+        space-oem insert (- | <file>) [options]
         space-oem compute (- | <selector>...) [options]
         space-oem list <selector>... [options]
         space-oem purge <selector>... [--until <until>]
@@ -564,6 +564,9 @@ def space_oem(*argv):
         -F, --force           Force insertion
         --until <until>       When purging, remove all file older than this date [default: 4w]
                               May be a duration, or a date
+        --format <format>     Force KVN or XML output format. The default is set thanks to the
+                              beyond.io.ccsds_default_format config variable
+
     """
 
     return _generic_cmd("oem", space_oem.__doc__, *argv)
@@ -574,7 +577,7 @@ def space_opm(*argv):
 
     Usage:
         space-opm get <selector>...
-        space-opm insert (- | <file>)
+        space-opm insert (- | <file>) [options]
         space-opm compute (- | <selector>...) [options]
         space-opm list <selector>... [-l <last>]
         space-opm purge <selector>... [--until <until>]
@@ -597,6 +600,8 @@ def space_opm(*argv):
         -F, --force           Force insertion
         --until <until>       When purging, remove all file older than this date [default: 4w]
                               May be a duration, or a date
+        --format <format>     Force KVN or XML output format. The default is set thanks to the
+                              beyond.io.ccsds_default_format config variable
     """
 
     return _generic_cmd("opm", space_opm.__doc__, *argv)

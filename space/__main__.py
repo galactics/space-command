@@ -16,8 +16,7 @@ log = logging.getLogger(__package__)
 
 
 def pm_on_crash(type, value, tb):
-    """Exception hook, in order to start pdb when an exception occurs
-    """
+    """Exception hook, in order to start pdb when an exception occurs"""
     import pdb
     import traceback
 
@@ -26,8 +25,7 @@ def pm_on_crash(type, value, tb):
 
 
 def log_on_crash(type, value, tb):
-    """Uncaught exceptions handler
-    """
+    """Uncaught exceptions handler"""
     log.exception(value, exc_info=(type, value, tb))
     # sys.__excepthook__(type, value, tb)
 
@@ -37,8 +35,7 @@ def get_doc(func):
 
 
 def main():
-    """Direct the user to the right subcommand
-    """
+    """Direct the user to the right subcommand"""
 
     if "--pdb" in sys.argv:
         sys.argv.remove("--pdb")
@@ -71,6 +68,12 @@ def main():
     else:
         verbose = False
         logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    colors = True
+    if "--no-color" in sys.argv:
+        log.debug("Disable colors on logging")
+        colors = False
+        sys.argv.remove("--no-color")
 
     # Retrieve the workspace if defined both as a command argument or as a
     # environment variable. The command line argument takes precedence
@@ -117,6 +120,7 @@ def main():
         print(" --version               Show the version of the space-command utility")
         print(" -v, --verbose           Show DEBUG level messages")
         print(" -w, --workspace <name>  Select the workspace to use")
+        print(" --no-color              Disable colored output")
         print()
         print(
             "To list, create and delete workspaces, use the companion command 'wspace'"
@@ -127,7 +131,11 @@ def main():
     # retrieve the subcommand and its arguments
     _, command, *args = sys.argv
 
+    if command == "log":
+        # disable logging when using the log command
+        ws.config["logging"] = {}
     ws.config.verbose = verbose
+    ws.config.colors = colors
 
     # Before loading the workspace, no file logging is initialized, so any logging will
     # only be reported on console thanks to the `logging.basicConfig()` above
@@ -143,6 +151,7 @@ def main():
         sys.exit(1)
 
     log.debug("=== starting command '{}' ===".format(command))
+    log.debug(f"args : space {command} {' '.join(args)}")
 
     # get the function associated with the subcommand
     func = commands[command].load()
