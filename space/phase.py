@@ -22,9 +22,10 @@ def illumination(phase):
     return (1 - np.cos(phase)) / 2
 
 
-def draw_umbra(phase_norm):
+def draw_umbra(phase, radius):
 
-    radius = 138
+    phase_norm = (phase % (2 * np.pi)) / (2 * np.pi)
+
     y = np.linspace(-radius, radius, 100)
     x = np.sqrt(radius**2 - y**2)
     r = 2 * x
@@ -46,8 +47,7 @@ def draw_phase(date, phase, body="Moon", filepath=False):
     fig = plt.figure()
     ax = plt.subplot(111)
 
-    phase_norm = (phase % (2 * np.pi)) / (2 * np.pi)
-    x, y = draw_umbra(phase_norm)
+    radius = 138
 
     img_path = (path / "static" / body.lower()).with_suffix(".png")
     if img_path.exists():
@@ -55,10 +55,11 @@ def draw_phase(date, phase, body="Moon", filepath=False):
         img = plt.imshow(im, extent=[-150, 150, -150, 150])
     else:
         # im = plt.imread(str(path / "static/moon.png"))
-        circle = plt.Circle((0, 0), 138, color="orange")
+        circle = plt.Circle((0, 0), radius, color="orange")
         ax.add_artist(circle)
         ax.set_aspect("equal")
 
+    x, y = draw_umbra(phase, radius)
     plt.fill_between(x, y, color="k", lw=0, alpha=0.8, zorder=100)
 
     plt.xlim([-150, 150])
