@@ -9,6 +9,8 @@ import logging
 from pkg_resources import iter_entry_points
 from docopt import DocoptExit
 
+import beyond
+
 from . import __version__
 from .wspace import ws
 
@@ -46,7 +48,6 @@ def main():
     sys.excepthook = func
 
     if "--version" in sys.argv:
-        import beyond
 
         print("space-command  {}".format(__version__))
         print("beyond         {}".format(beyond.__version__))
@@ -151,6 +152,7 @@ def main():
         sys.exit(1)
 
     log.debug("=== starting command '{}' ===".format(command))
+    log.debug(f"beyond {beyond.__version__} / space {__version__}")
     log.debug(f"args : space {command} {' '.join(args)}")
 
     # get the function associated with the subcommand
