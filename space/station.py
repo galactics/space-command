@@ -109,9 +109,9 @@ def space_station(*argv):
 
     Usage:
       space-station list [--map] [<abbr>]
-      space-station create <abbr> <name> <lat> <lon> <alt>
+      space-station create <abbr> <name> -- <lat> <lon> <alt>
 
-    Options
+    Options:
       list       List available stations
       create     Interactively create a station
       <abbr>     Abbreviation
@@ -123,6 +123,13 @@ def space_station(*argv):
 
     Latitude and longitude both accept degrees as float or as
     degrees, minutes and seconds of arc (e.g. 43°25"12')
+
+    The "--" delimiter is here to allow for negative coordinates.
+    Without it, any negative number would be interpreted as a command
+    line option.
+
+    Example:
+        $ space station create FWS FortWorth -- 32 -97 207
     """
 
     from pathlib import Path
