@@ -6,8 +6,26 @@
 import os
 import sys
 import logging
-from pkg_resources import iter_entry_points
 from docopt import DocoptExit
+
+if sys.version_info.minor >= 8:
+    from importlib.metadata import entry_points as vanilla_entry_points
+
+    if sys.version_info.minor >= 10:
+        entry_points = vanilla_entry_points
+    else:
+        # Creating a custom filtering function to circumvent the lack of filtering
+        # of the entry_points function in python 3.8 and 3.9
+        def entry_points(group=None):
+            entries = vanilla_entry_points()
+            if group:
+                entries = entries[group]
+            return entries
+
+else:
+    from pkg_resources import iter_entry_points
+
+    entry_points = lambda group=None: iter_entry_points(group)
 
 import beyond
 
@@ -15,6 +33,13 @@ from . import __version__
 from .wspace import ws
 
 log = logging.getLogger(__package__)
+
+
+def list_subcommands():
+    subcommands = {}
+    for entry in entry_points(group="space.commands"):
+        subcommands[entry.name] = entry.load
+    return subcommands
 
 
 def pm_on_crash(type, value, tb):
@@ -48,7 +73,6 @@ def main():
     sys.excepthook = func
 
     if "--version" in sys.argv:
-
         print("space-command  {}".format(__version__))
         print("beyond         {}".format(beyond.__version__))
         sys.exit(127)
@@ -57,7 +81,6 @@ def main():
     # This setting will be overridden when loading the workspace (see `ws.init()` below)
     # but it allow to have a crude logging of all the initialization process.
     if "-v" in sys.argv or "--verbose" in sys.argv:
-
         if "-v" in sys.argv:
             sys.argv.remove("-v")
         else:
@@ -90,7 +113,7 @@ def main():
     log.debug("workspace '{}'".format(ws.name))
 
     # List of available subcommands
-    commands = {entry.name: entry for entry in iter_entry_points("space.commands")}
+    commands = list_subcommands()
 
     if len(sys.argv) <= 1 or sys.argv[1] not in commands:
         # No or wrong subcommand
@@ -100,19 +123,11 @@ def main():
 
         _max = len(max(commands.keys(), key=len))
 
-        for name, entry in sorted(commands.items()):
-            cmd = entry.load()
-            if entry.dist.project_name == "space-command":
-                helper += " {:<{}}  {}\n".format(name, _max, get_doc(cmd))
-            else:
-                addons += " {:<{}}  {}\n".format(name, _max, get_doc(cmd))
+        for name, func_loader in sorted(commands.items()):
+            helper += " {:<{}}  {}\n".format(name, _max, get_doc(func_loader()))
 
         print(__doc__)
         print(helper)
-
-        if addons:
-            print("Available addons sub-commands :")
-            print(addons)
 
         print("Options :")
         print(
@@ -156,7 +171,7 @@ def main():
     log.debug(f"args : space {command} {' '.join(args)}")
 
     # get the function associated with the subcommand
-    func = commands[command].load()
+    func = commands[command]()
 
     try:
         # Call the function associated with the subcommand
@@ -170,17 +185,13 @@ def main():
         # So we have to catch the DocoptExit in order to modify the return code
         # and override it with a decent value.
         print(e, file=sys.stderr)
-        log.debug(
-            "=== command '{}' failed with return code 2 ===".format(command, e.code)
-        )
+        log.debug(f"=== command '{command}' failed with return code 2 ===")
         sys.exit(2)
     except SystemExit as e:
-        log.debug(
-            "=== command '{}' failed with return code {} ===".format(command, e.code)
-        )
+        log.debug(f"=== command '{command}' failed with return code {e.code} ===")
         raise
     else:
-        log.debug("=== command '{}' exited with return code 0 ===".format(command))
+        log.debug(f"=== command '{command}' exited with return code 0 ===")
 
 
 if __name__ == "__main__":
