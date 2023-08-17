@@ -128,7 +128,7 @@ async def _fetch_file(session, filename):
             with filepath.open("w") as fp:
                 fp.write(text)
 
-            TleDb().insert(text, filename)
+            return TleDb().insert(text, filename)
 
 
 async def _fetch(files=None):
@@ -153,8 +153,8 @@ async def _fetch(files=None):
             raise ValueError("No file to download")
 
     async with aiohttp.ClientSession(trust_env=True) as session:
-
         # Task list initialisation
         tasks = [_fetch_file(session, f) for f in filelist]
 
-        await asyncio.gather(*tasks)
+        mysum = await asyncio.gather(*tasks)
+        log.debug(f"{sum(mysum)} TLE inserted in total")
