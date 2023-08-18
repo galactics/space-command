@@ -52,6 +52,24 @@ list of all the features.
 Changelog
 ---------
 
+[0.7.3] - 2023-08-19
+^^^^^^^^^^^^^^^^^^^^
+
+**Added**
+
+- Python 3.11 support
+- ``space tle`` displays total insertions from celestrak
+- ``space station`` creation can now handle negative coordinates
+- ``space log`` show current versions of beyond and space-command
+
+**Modified**
+
+- Subcommands are now listed without discrimination between official and third-party entry points.
+
+**Removed**
+
+- Python 3.6 support
+
 [0.7.2] - 2022-10-14
 ^^^^^^^^^^^^^^^^^^^^
 
