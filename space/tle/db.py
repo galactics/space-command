@@ -201,6 +201,7 @@ class TleDb:
                 raise ValueError("{} contains no TLE".format(src))
 
         log.info("{}  {:>3}/{}".format(src, len(entities), i + 1))
+        return len(entities)
 
     def find(self, txt):
         """Retrieve every TLE containing a string. For each object, only get the

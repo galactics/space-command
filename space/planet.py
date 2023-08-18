@@ -75,7 +75,7 @@ def space_planet(*args):
         jup310.bsp     Jupiter and its major moons
         sat360xl.bsp   Saturn and its major moons
 
-    The 'beyond.env.jpl' config variable must be set to a list of bsp files
+    The 'beyond.env.jpl.files' config variable must be set to a list of bsp files
     paths. See beyond documentation about JPL files:
 
         http://beyond.readthedocs.io/en/latest/api/env.html#module-beyond.env.jpl
@@ -115,7 +115,7 @@ def space_planet(*args):
 
         success = []
 
-        filelist = ws.config.get("beyond", "env", "jpl", fallback="de403_2000-2020.bsp")
+        filelist = ws.config.get("beyond", "env", "jpl", "files", fallback="de432s.bsp")
         if not isinstance(filelist, list):
             filelist = [filelist]
 
@@ -168,7 +168,7 @@ def space_planet(*args):
 
         # Adding the file to the list and saving the new state of configuration
         if success:
-            ws.config.set("beyond", "env", "jpl", success)
+            ws.config.set("beyond", "env", "jpl", "files", success)
 
         ws.config.save()
 
