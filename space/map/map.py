@@ -41,7 +41,7 @@ class MapAnim:
         self.make_empty_plots()
         self.make_buttons()
 
-        self.ani = FuncAnimation(self.fig, self, interval=self.interval, blit=True)
+        self.ani = FuncAnimation(self.fig, self, interval=self.interval, blit=True, cache_frame_data=False)
 
     def make_empty_plots(self):
 
