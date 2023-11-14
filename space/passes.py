@@ -241,6 +241,7 @@ def space_passes(*argv):
 
             ax.set_yticks(range(0, 90, 20))
             ax.set_yticklabels(map(str, range(90, 0, -20)))
+            ax.set_xticks(np.arange(0, 2 * np.pi, np.pi / 4))
             ax.set_xticklabels(["N", "NE", "E", "SE", "S", "SW", "W", "NW"])
             ax.set_rmax(90)
 
