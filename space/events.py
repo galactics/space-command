@@ -4,6 +4,7 @@ from beyond.propagators.listeners import (
     NodeListener,
     ApsideListener,
     LightListener,
+    MoonEclipseListener,
     stations_listeners,
     SignalEvent,
     MaxEvent,
@@ -52,6 +53,7 @@ def space_events(*argv):
         node               Display ascending and descending nodes events
         apside             Display periapsis and apoapsis events
         terminator         Display terminator crossing event
+        eclipse            Display Moon eclipses
         aol=<aol>          Display crossing of an Argument of Latitude (in deg)
         radial=<station>   Display radial velocity crossing event
         all                Display all non-specific events (station, light, node
@@ -87,6 +89,9 @@ def space_events(*argv):
     if "light" in args["--events"] or args["--events"] == "all":
         listeners.append(LightListener())
         listeners.append(LightListener("penumbra"))
+    if "eclipse" in args["--events"] or args["--events"] == "all":
+        listeners.append(MoonEclipseListener())
+        listeners.append(MoonEclipseListener(type="penumbra"))
     if "node" in args["--events"] or args["--events"] == "all":
         listeners.append(NodeListener())
     if "apside" in args["--events"] or args["--events"] == "all":
