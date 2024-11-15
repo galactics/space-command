@@ -116,20 +116,24 @@ async def _fetch_file(session, filename):
 
     When the page is totally retrieved, the function will call insert
     """
-    with async_timeout.timeout(30):
-        async with session.get(CELESTRAK_URL.format(filename)) as response:
-            text = await response.text()
 
-            filepath = TMP_FOLDER / filename
+    try:
+        with async_timeout.timeout(30):
+            async with session.get(CELESTRAK_URL.format(filename)) as response:
+                text = await response.text()
 
-            if not TMP_FOLDER.exists():
-                TMP_FOLDER.mkdir(parents=True)
+                filepath = TMP_FOLDER / filename
 
-            with filepath.open("w") as fp:
-                fp.write(text)
+                if not TMP_FOLDER.exists():
+                    TMP_FOLDER.mkdir(parents=True)
 
-            return TleDb().insert(text, filename)
+                with filepath.open("w") as fp:
+                    fp.write(text)
 
+                return TleDb().insert(text, filename)
+    except asyncio.TimeoutError:
+        log.error(f"Timeout {filename}")
+        return 0
 
 async def _fetch(files=None):
     """Retrieve TLE from the celestrak.com website asynchronously"""

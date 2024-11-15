@@ -200,7 +200,7 @@ class TleDb:
             elif i is None:
                 raise ValueError("{} contains no TLE".format(src))
 
-        log.info("{}  {:>3}/{}".format(src, len(entities), i + 1))
+        log.info(f"{len(entities):>5}/{i+1:<5} {src}")
         return len(entities)
 
     def find(self, txt):
