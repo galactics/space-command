@@ -8,24 +8,10 @@ import sys
 import logging
 from docopt import DocoptExit
 
-if sys.version_info.minor >= 8:
-    from importlib.metadata import entry_points as vanilla_entry_points
-
-    if sys.version_info.minor >= 10:
-        entry_points = vanilla_entry_points
-    else:
-        # Creating a custom filtering function to circumvent the lack of filtering
-        # of the entry_points function in python 3.8 and 3.9
-        def entry_points(group=None):
-            entries = vanilla_entry_points()
-            if group:
-                entries = entries[group]
-            return entries
-
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
 else:
-    from pkg_resources import iter_entry_points
-
-    entry_points = lambda group=None: iter_entry_points(group)
+    from importlib.metadata import entry_points
 
 import beyond
 

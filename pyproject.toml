@@ -1,0 +1,94 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "space-command"
+dynamic = ["version"]
+authors = [
+  { name="Jules David", email="jules@onada.fr" },
+]
+description = "Space Command"
+readme = "README.rst"
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Astronomy",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "beyond",
+    "peewee",
+    "requests",
+    "aiohttp",
+    "async_timeout",
+    "docopt",
+    "matplotlib",
+    "pyyaml",
+    "beautifulsoup4",
+    "importlib_metadata >= 3.6; python_version < '3.10'",
+]
+keywords = ["flight dynamic", "satellite", "space"]
+
+[project.urls]
+Homepage = "https://github.com/galactics/space-command"
+Documentation = "https://space-command.readthedocs.io"
+Repository = "https://github.com/galactics/space-command"
+Issues = "https://github.com/galactics/space-command/issues"
+Changelog = "https://github.com/galactics/space-command/blob/master/CHANGELOG.md"
+
+[project.optional-dependencies]
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pytest-console-scripts",
+]
+
+[project.scripts]
+space = "space.__main__:main"
+wspace = "space.wspace:wspace"
+
+[project.entry-points.'space.commands']
+clock = "space.clock:space_clock"
+config = "space.config:space_config"
+events = "space.events:space_events"
+oem = "space.ccsds:space_oem"
+opm = "space.ccsds:space_opm"
+log = "space.config:space_log"
+map = "space.map:space_map"
+passes = "space.passes:space_passes"
+phase = "space.phase:space_phase"
+planet = "space.planet:space_planet"
+sat = "space.sat:space_sat"
+station = "space.station:space_station"
+tle = "space.tle:space_tle"
+
+[project.entry-points.'space.wshook']
+00 = "space.config:wshook"
+10 = "space.tle:wshook"
+20 = "space.station:wshook"
+30 = "space.sat:wshook"
+
+[tool.hatch.version]
+path = "src/space/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/space"]
+
+[tool.pytest.ini_options]
+addopts = "-v --cov space --cov-report html --doctest-modules src/space/ tests/"
+script_launch_mode = "subprocess"
+filterwarnings = [
+    "ignore: Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated, and in 3.8 it will stop working",
+]

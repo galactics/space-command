@@ -8,7 +8,12 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
-from pkg_resources import iter_entry_points
+
+if sys.version_info < (3, 10):
+    from importlib_metadata import entry_points
+else:
+    from importlib.metadata import entry_points
+
 from peewee import SqliteDatabase
 
 from .utils import docopt, humanize
@@ -144,7 +149,7 @@ class Workspace:
             raise ValueError("Unknown workspace command '{}'".format(cmd))
 
         # Each command is responsible of its own initialization, logging and error handling
-        for entry in sorted(iter_entry_points("space.wshook"), key=lambda x: x.name):
+        for entry in sorted(entry_points(group="space.wshook"), key=lambda x: x.name):
             entry.load()(cmd)
 
     @classmethod
