@@ -42,7 +42,7 @@ def test_insert(run):
     filepath = Path(__file__).parent / "data" / "visual.txt"
 
     r = run("space tle insert {}".format(filepath.absolute()))
-    assert r.stderr.startswith("visual.txt")
+    assert r.stderr.splitlines()[0].endswith("visual.txt")
     assert not r.stdout
     assert r.success
 
@@ -51,7 +51,7 @@ def test_insert(run):
 
     r = run("space tle insert {}".format(filepath.absolute()))
     assert not r.stdout
-    assert r.stderr.startswith("visual.txt")
+    assert r.stderr.splitlines()[0].endswith("visual.txt")
     assert r.success
 
     # from STDIN
@@ -60,7 +60,7 @@ def test_insert(run):
     r = run("space tle insert -", stdin=new_tle)
     assert r.success
     assert not r.stdout
-    assert r.stderr.startswith("stdin")
+    assert r.stderr.splitlines()[0].endswith("stdin")
 
 
 def test_find(run):
