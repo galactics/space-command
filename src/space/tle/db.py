@@ -12,6 +12,7 @@ from peewee import (
     fn,
 )
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 from beyond.io.tle import Tle
 from beyond.dates import Date, timedelta
@@ -247,6 +248,17 @@ class TleDb:
         print(f"Median age   : {timedelta(np.median(ages))} (last TLE for each object)")
 
         if graph:
+
+            q = self.model.select(
+                fn.date_trunc('day', self.model.insert_date).alias('day'),
+                fn.COUNT(self.model.id).alias('count')
+            ).group_by(fn.date_trunc('day', self.model.insert_date))
+            
+            dates, count = [], []
+            for tle in q:
+                dates.append(datetime.strptime(tle.day, "%Y-%m-%d %H:%M:%S"))
+                count.append(tle.count)
+
             plt.figure()
             plt.hist(ages, range(30), rwidth=0.9)
             plt.grid(linestyle=":", color="#666666")
@@ -255,6 +267,13 @@ class TleDb:
             plt.xlabel("days")
             plt.ylabel("number")
             plt.tight_layout()
+
+            plt.figure()
+            plt.plot(dates, np.cumsum(count))
+            plt.ylabel("Number of TLE")
+            plt.grid(ls=":")
+            plt.tight_layout()
+
             plt.show()
 
 
