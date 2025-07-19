@@ -118,7 +118,7 @@ async def _fetch_file(session, filename):
     """
 
     try:
-        with async_timeout.timeout(30):
+        with async_timeout.timeout(60):
             async with session.get(CELESTRAK_URL.format(filename)) as response:
                 text = await response.text()
 
