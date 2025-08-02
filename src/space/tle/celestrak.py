@@ -132,7 +132,7 @@ async def _fetch_file(session, filename):
 
                 return TleDb().insert(text, filename)
     except asyncio.TimeoutError:
-        log.error(f"Timeout {filename}")
+        log.error(f"Timeout for group '{filename}'")
         return 0
 
 async def _fetch(files=None):
