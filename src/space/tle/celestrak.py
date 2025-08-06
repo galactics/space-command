@@ -1,7 +1,6 @@
 import logging
 import asyncio
 import aiohttp
-import async_timeout
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -118,7 +117,7 @@ async def _fetch_file(session, filename):
     """
 
     try:
-        with async_timeout.timeout(60):
+        async with asyncio.timeout(60):
             async with session.get(CELESTRAK_URL.format(filename)) as response:
                 text = await response.text()
 
