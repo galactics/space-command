@@ -5,6 +5,7 @@ import shutil
 import logging
 import tarfile
 import subprocess
+from appdirs import AppDirs
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
@@ -58,11 +59,14 @@ def switch_workspace(name, init=False, delete=False):
         ws.name = old_name
 
 
+appdirs = AppDirs("space")
+
+
 class Workspace:
     """Workspace handling class"""
 
     WORKSPACES = Path(
-        os.environ.get("SPACE_WORKSPACES_FOLDER", Path.home() / ".space/")
+        os.environ.get("SPACE_WORKSPACES_FOLDER", appdirs.user_data_dir + "/space")
     )
     HOOKS = ("init", "status", "full-init")
     DEFAULT = "main"
