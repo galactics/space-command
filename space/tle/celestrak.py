@@ -1,10 +1,15 @@
 import logging
 import asyncio
 import aiohttp
-import async_timeout
 import re
 import requests
 from bs4 import BeautifulSoup
+import sys
+
+if sys.version_info >= (3, 11):
+    from asyncio import timeout
+else:
+    from async_timeout import timeout
 
 from .common import TMP_FOLDER
 from ..wspace import ws
@@ -116,7 +121,7 @@ async def _fetch_file(session, filename):
 
     When the page is totally retrieved, the function will call insert
     """
-    with async_timeout.timeout(30):
+    async with timeout(30):
         async with session.get(CELESTRAK_URL.format(filename)) as response:
             text = await response.text()
 
