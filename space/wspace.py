@@ -8,7 +8,26 @@ import subprocess
 from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
-from pkg_resources import iter_entry_points
+
+if sys.version_info.minor >= 8:
+    from importlib.metadata import entry_points as vanilla_entry_points
+
+    if sys.version_info.minor >= 10:
+        entry_points = vanilla_entry_points
+    else:
+        # Creating a custom filtering function to circumvent the lack of filtering
+        # of the entry_points function in python 3.8 and 3.9
+        def entry_points(group=None):
+            entries = vanilla_entry_points()
+            if group:
+                entries = entries[group]
+            return entries
+
+else:
+    from pkg_resources import iter_entry_points
+
+    entry_points = lambda group=None: iter_entry_points(group)
+
 from peewee import SqliteDatabase
 
 from .utils import docopt, humanize
@@ -144,7 +163,7 @@ class Workspace:
             raise ValueError("Unknown workspace command '{}'".format(cmd))
 
         # Each command is responsible of its own initialization, logging and error handling
-        for entry in sorted(iter_entry_points("space.wshook"), key=lambda x: x.name):
+        for entry in sorted(entry_points("space.wshook"), key=lambda x: x.name):
             entry.load()(cmd)
 
     @classmethod
