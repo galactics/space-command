@@ -69,9 +69,8 @@ def fetch(files=None):
         files (List[str]) : List of files to download
             if ``None`, all pages are downloaded
     """
-    loop = asyncio.get_event_loop()
     try:
-        loop.run_until_complete(_fetch(files))
+        asyncio.run(_fetch(files))
     except aiohttp.ClientError as e:
         log.error(e)
 
