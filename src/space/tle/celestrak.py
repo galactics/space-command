@@ -132,6 +132,9 @@ async def _fetch_file(session, filename):
     except asyncio.TimeoutError:
         log.error(f"Timeout for group '{filename}'")
         return 0
+    except ValueError as e:
+        log.error(e)
+        return 0
 
 async def _fetch(files=None):
     """Retrieve TLE from the celestrak.com website asynchronously"""
